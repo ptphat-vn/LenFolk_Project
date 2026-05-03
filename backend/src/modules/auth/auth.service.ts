@@ -1,0 +1,151 @@
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+import { UserService } from '../user/user.service';
+import {
+  RefreshToken,
+  RefreshTokenDocument,
+} from './entities/refresh-token.entity';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { comparePassword, hashPassword } from '../../common/utils/hash.util';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    @InjectModel(RefreshToken.name)
+    private refreshTokenModel: Model<RefreshTokenDocument>,
+  ) {}
+
+  async register(registerDto: RegisterDto) {
+    const existing = await this.userService.findByEmail(registerDto.email);
+    if (existing) throw new ConflictException('Email already in use');
+
+    const user = await this.userService.create(registerDto);
+    const tokens = await this.generateTokens(
+      (user as any)._id.toString(),
+      (user as any).role,
+    );
+
+    return { user, ...tokens };
+  }
+
+  async login(loginDto: LoginDto, req: Request) {
+    const user = await this.userService.findByEmail(loginDto.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const isValid = await comparePassword(
+      loginDto.password,
+      (user as any).passwordHash,
+    );
+    if (!isValid) throw new UnauthorizedException('Invalid credentials');
+
+    if (!(user as any).isActive)
+      throw new UnauthorizedException('Account is deactivated');
+
+    const tokens = await this.generateTokens(
+      (user as any)._id.toString(),
+      (user as any).role,
+      req,
+    );
+
+    const { passwordHash: _, ...userWithoutPassword } = (user as any).toObject
+      ? (user as any).toObject()
+      : user;
+
+    return { user: userWithoutPassword, ...tokens };
+  }
+
+  async logout(refreshToken: string): Promise<void> {
+    await this.refreshTokenModel.findOneAndUpdate(
+      { token: refreshToken },
+      { isRevoked: true },
+    );
+  }
+
+  async refreshTokens(token: string, req: Request) {
+    const storedToken = await this.refreshTokenModel.findOne({
+      token,
+      isRevoked: false,
+    });
+
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    await this.refreshTokenModel.findByIdAndUpdate(storedToken._id, {
+      isRevoked: true,
+    });
+
+    const user = await this.userService.findById(storedToken.userId as any);
+    return this.generateTokens(
+      (user as any)._id.toString(),
+      (user as any).role,
+      req,
+    );
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user)
+      return { message: 'If the email exists, a reset link has been sent' };
+
+    // TODO: Generate reset token, queue email via BullMQ
+    return { message: 'If the email exists, a reset link has been sent' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    // TODO: Verify token, update password
+    const newHash = await hashPassword(dto.newPassword);
+    void newHash;
+    throw new BadRequestException('Reset token is invalid or expired');
+  }
+
+  async googleCallback(req: Request) {
+    // TODO: Handle Google OAuth2 callback via Passport
+    return { message: 'Google OAuth2 callback handler' };
+  }
+
+  private async generateTokens(userId: string, role: string, req?: Request) {
+    const payload = { sub: userId, role };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('jwt.accessSecret'),
+      expiresIn: this.configService.get('jwt.accessExpiresIn'),
+    });
+
+    const refreshExpiry = new Date();
+    refreshExpiry.setDate(refreshExpiry.getDate() + 7);
+
+    const refreshToken = this.jwtService.sign(
+      { ...payload, type: 'refresh' },
+      {
+        secret: this.configService.get('jwt.refreshSecret'),
+        expiresIn: this.configService.get('jwt.refreshExpiresIn'),
+      },
+    );
+
+    await this.refreshTokenModel.create({
+      userId,
+      token: refreshToken,
+      expiresAt: refreshExpiry,
+      userAgent: req?.headers['user-agent'] as string | undefined,
+      ipAddress: req?.ip as string | undefined,
+    });
+
+    return { accessToken, refreshToken };
+  }
+}
