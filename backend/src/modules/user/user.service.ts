@@ -25,6 +25,42 @@ export class UserService {
     return user.save();
   }
 
+  async createSocialUser(params: {
+    email: string;
+    fullName: string;
+    avatar?: string | null;
+    googleId?: string | null;
+  }): Promise<UserDocument> {
+    const user = new this.userModel({
+      email: params.email,
+      fullName: params.fullName,
+      avatar: params.avatar ?? null,
+      googleId: params.googleId ?? null,
+      authProvider: 'google',
+      isEmailVerified: true,
+    });
+    return user.save();
+  }
+
+  async linkGoogleAccount(
+    userId: Types.ObjectId,
+    googleId: string,
+    avatar?: string | null,
+  ): Promise<UserDocument | null> {
+    return this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          googleId,
+          authProvider: 'google',
+          isEmailVerified: true,
+          ...(avatar ? { avatar } : {}),
+        },
+        { new: true },
+      )
+      .lean();
+  }
+
   async findAll(query: QueryUserDto) {
     const { page = 1, limit = 20, search, role, isActive } = query;
     const filter: Record<string, unknown> = { isDeleted: false };

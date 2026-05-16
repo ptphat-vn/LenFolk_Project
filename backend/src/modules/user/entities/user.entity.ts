@@ -11,80 +11,87 @@ export enum UserRole {
 @Schema({ _id: false })
 export class Badge {
   @Prop({ required: true })
-  type: string;
+  type!: string;
 
   @Prop({ required: true })
-  name: string;
+  name!: string;
 
   @Prop({ required: true })
-  awardedAt: Date;
+  awardedAt!: Date;
 }
 export const BadgeSchema = SchemaFactory.createForClass(Badge);
 
 @Schema({ timestamps: true, collection: 'users' })
 export class User {
+  @Prop({ default: 'local' })
+  authProvider!: string;
+
+  @Prop({ type: String, default: null })
+  googleId!: string | null;
+
   @Prop({ required: true, unique: true, lowercase: true, trim: true })
-  email: string;
+  email!: string;
 
   @Prop({ select: false })
-  passwordHash: string;
+  passwordHash!: string;
 
   @Prop({ required: true, trim: true })
-  fullName: string;
+  fullName!: string;
 
   @Prop({ default: null })
-  avatar: string;
+  avatar!: string;
 
   @Prop({ default: null })
-  phoneNumber: string;
+  phoneNumber!: string;
 
   @Prop({ type: String, enum: UserRole, default: UserRole.USER })
-  role: UserRole;
+  role!: UserRole;
 
   @Prop({ type: Types.ObjectId, ref: 'SubscriptionPlan', default: null })
-  subscriptionPlan: Types.ObjectId;
+  subscriptionPlan!: Types.ObjectId;
 
   @Prop({ default: 0 })
-  currentStreak: number;
+  currentStreak!: number;
 
   @Prop({ default: 0 })
-  longestStreak: number;
+  longestStreak!: number;
 
   @Prop({ default: null })
-  lastActiveDate: Date;
+  lastActiveDate!: Date;
 
   @Prop({ default: 0 })
-  totalLearningMinutes: number;
+  totalLearningMinutes!: number;
 
   @Prop({ default: 0 })
-  xpPoints: number;
+  xpPoints!: number;
 
   @Prop({ default: 1 })
-  level: number;
+  level!: number;
 
   @Prop({ type: [BadgeSchema], default: [] })
-  badges: Badge[];
+  badges!: Badge[];
 
   @Prop({ type: [String], default: [] })
-  deviceTokens: string[];
+  deviceTokens!: string[];
 
   @Prop({ default: false })
-  isEmailVerified: boolean;
+  isEmailVerified!: boolean;
 
   @Prop({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Prop({ default: false })
-  isDeleted: boolean;
+  isDeleted!: boolean;
 
   @Prop({ default: null })
-  deletedAt: Date;
+  deletedAt!: Date;
 
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
-  deletedBy: Types.ObjectId;
+  deletedBy!: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ googleId: 1 }, { sparse: true });
 UserSchema.index({ role: 1, isActive: 1 });
