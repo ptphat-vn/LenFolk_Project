@@ -9,6 +9,7 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { OAuth2Client } from 'google-auth-library';
 import { UserService } from '../user/user.service';
 import {
   RefreshToken,
@@ -18,10 +19,13 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { comparePassword, hashPassword } from '../../common/utils/hash.util';
 
 @Injectable()
 export class AuthService {
+  private googleClient: OAuth2Client | null = null;
+
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
@@ -29,6 +33,18 @@ export class AuthService {
     @InjectModel(RefreshToken.name)
     private refreshTokenModel: Model<RefreshTokenDocument>,
   ) {}
+
+  private getGoogleClient(): OAuth2Client {
+    if (this.googleClient) return this.googleClient;
+
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    if (!clientId) {
+      throw new BadRequestException('Google client ID not configured');
+    }
+
+    this.googleClient = new OAuth2Client(clientId);
+    return this.googleClient;
+  }
 
   async register(registerDto: RegisterDto) {
     const existing = await this.userService.findByEmail(registerDto.email);
@@ -112,6 +128,64 @@ export class AuthService {
     const newHash = await hashPassword(dto.newPassword);
     void newHash;
     throw new BadRequestException('Reset token is invalid or expired');
+  }
+
+  async googleLogin(dto: GoogleLoginDto, req: Request) {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    if (!clientId) {
+      throw new BadRequestException('Google client ID not configured');
+    }
+
+    const ticket = await this.getGoogleClient().verifyIdToken({
+      idToken: dto.idToken,
+      audience: clientId,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+
+    if (!email) {
+      throw new UnauthorizedException('Google token missing email');
+    }
+
+    let user = await this.userService.findByEmail(email);
+
+    if (!user) {
+      const displayName =
+        payload?.name || email.split('@')[0] || 'Google User';
+
+      user = await this.userService.createSocialUser({
+        email,
+        fullName: displayName,
+        avatar: payload?.picture || null,
+        googleId: payload?.sub || null,
+      });
+    } else {
+      if (!(user as any).isActive)
+        throw new UnauthorizedException('Account is deactivated');
+
+      const needsLink = !(user as any).googleId && payload?.sub;
+      if (needsLink) {
+        await this.userService.linkGoogleAccount(
+          (user as any)._id,
+          payload?.sub,
+          payload?.picture || null,
+        );
+        user = await this.userService.findByEmail(email);
+      }
+    }
+
+    const tokens = await this.generateTokens(
+      (user as any)._id.toString(),
+      (user as any).role,
+      req,
+    );
+
+    const { passwordHash: _, ...userWithoutPassword } = (user as any).toObject
+      ? (user as any).toObject()
+      : user;
+
+    return { user: userWithoutPassword, ...tokens };
   }
 
   async googleCallback(req: Request) {
