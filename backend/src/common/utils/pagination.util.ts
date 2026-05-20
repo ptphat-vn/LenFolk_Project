@@ -1,14 +1,4 @@
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: PaginationMeta;
-}
+import { PaginatedResponse } from '../../types';
 
 export function paginate<T>(
   data: T[],
@@ -25,10 +15,4 @@ export function paginate<T>(
       totalPages: Math.ceil(total / limit),
     },
   };
-}
-
-export interface CursorPaginatedResponse<T> {
-  data: T[];
-  nextCursor: string | null;
-  hasMore: boolean;
 }

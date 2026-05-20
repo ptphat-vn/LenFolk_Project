@@ -22,4 +22,3 @@ export class Streak {
 }
 
 export const StreakSchema = SchemaFactory.createForClass(Streak);
-StreakSchema.index({ userId: 1 }, { unique: true });
