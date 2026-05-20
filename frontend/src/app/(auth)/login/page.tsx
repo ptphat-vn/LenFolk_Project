@@ -8,16 +8,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import { loginSchema, type LoginFormValues } from '@/schema/auth.schema';
 import { BrandPanel } from '@/components/auth/BrandPanel';
+import axiosInstance from '@/lib/axios';
+import { useAuthStore } from '@/stores/authStore';
+import { isAxiosError } from 'axios';
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const setToken = useAuthStore((state) => state.setToken);
 
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -28,10 +33,44 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async (_data: LoginFormValues) => {
-    // TODO: Integrate with your auth API
-    await new Promise((r) => setTimeout(r, 1000));
-    router.push('/dashboard');
+  const onSubmit = async (data: LoginFormValues) => {
+    try {
+      const response = await axiosInstance.post('/auth/login', {
+        email: data.email,
+        password: data.password,
+      });
+
+      const { accessToken, refreshToken, user } = response.data.data;
+      if (accessToken) {
+        setToken(accessToken, refreshToken);
+        if (user?.role === 'admin') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
+      }
+    } catch (error) {
+      if (isAxiosError(error) && error.response) {
+        const backendMessage = error.response.data?.message;
+        let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+        
+        if (typeof backendMessage === 'string') {
+          errorMessage = backendMessage;
+        } else if (backendMessage && typeof backendMessage === 'object') {
+          if (Array.isArray(backendMessage.message)) {
+            errorMessage = backendMessage.message[0];
+          } else if (typeof backendMessage.message === 'string') {
+            errorMessage = backendMessage.message;
+          }
+        }
+        
+        setError('root', { message: errorMessage });
+      } else {
+        setError('root', {
+          message: 'Đã có lỗi kết nối tới máy chủ. Vui lòng thử lại sau.',
+        });
+      }
+    }
   };
 
   return (
@@ -188,14 +227,14 @@ export default function LoginPage() {
             </button>
 
             {/* Register link */}
-            <div className="text-center mt-2">
+            {/* <div className="text-center mt-2">
               <Link
                 href="/register"
                 className="text-[14px] text-[#8E9E6E] hover:text-[#10120C] underline underline-offset-4 transition-colors"
               >
                 Chưa có tài khoản? Đăng ký ngay
               </Link>
-            </div>
+            </div> */}
           </form>
         </div>
 

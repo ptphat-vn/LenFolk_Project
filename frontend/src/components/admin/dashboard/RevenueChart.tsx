@@ -43,10 +43,11 @@ function RevenueTooltip({ active, payload, label }: TooltipProps) {
   );
 }
 
-export function RevenueChart() {
+export function RevenueChart({ data }: { data?: { month: string; revenue: number }[] }) {
+  const chartData = data?.length ? data : DATA;
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={DATA} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+      <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
         <defs>
           <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.15} />
