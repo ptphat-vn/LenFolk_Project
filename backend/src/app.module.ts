@@ -24,6 +24,10 @@ import { StreakModule } from './modules/streak/streak.module';
 import { RevenueModule } from './modules/revenue/revenue.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PromotionModule } from './modules/promotion/promotion.module';
+import { SupportModule } from './modules/support/support.module';
+import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
+import { ContentApprovalModule } from './modules/content-approval/content-approval.module';
 
 @Module({
   imports: [
@@ -63,6 +67,10 @@ import { AdminModule } from './modules/admin/admin.module';
     RevenueModule,
     NotificationModule,
     AdminModule,
+    PromotionModule,
+    SupportModule,
+    LeaderboardModule,
+    ContentApprovalModule,
   ],
   controllers: [AppController],
   providers: [AppService],
