@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
-import error from "next/error";
 
 const baseURL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api") + "/v1";
 
@@ -19,6 +18,12 @@ axiosInstance.interceptors.request.use(
       config.headers["Authorization"] = `Bearer ${token}`;
     }
     return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Add a response interceptor to handle token refresh
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -57,10 +62,8 @@ axiosInstance.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
-  }
-)
     return Promise.reject(error);
   }
+);
 
-)
 export default axiosInstance;
