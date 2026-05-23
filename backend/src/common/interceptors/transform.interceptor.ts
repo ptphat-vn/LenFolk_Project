@@ -6,30 +6,34 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-
-export interface Response<T> {
-  success: boolean;
-  data: T;
-  meta?: Record<string, unknown>;
-  timestamp: string;
-}
+import { ApiResponse } from '../../types';
 
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor<
   T,
-  Response<T>
+  ApiResponse<T>
 > {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<Response<T>> {
+  ): Observable<ApiResponse<T>> {
     return next.handle().pipe(
-      map((data) => ({
-        success: true,
-        data: data?.data ?? data,
-        meta: data?.meta ?? undefined,
-        timestamp: new Date().toISOString(),
-      })),
+      map((response: unknown) => {
+        if (typeof response === 'object' && response !== null && 'data' in response) {
+          const res = response as Record<string, unknown>;
+          return {
+            success: true,
+            data: res.data as T,
+            meta: res.meta as Record<string, unknown> | undefined,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        return {
+          success: true,
+          data: response as T,
+          timestamp: new Date().toISOString(),
+        };
+      }),
     );
   }
 }

@@ -17,7 +17,9 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/authStore';
+import axiosInstance from '@/lib/axios';
 
 const NAV_GROUPS = [
   {
@@ -89,7 +91,6 @@ const NAV_GROUPS = [
 ];
 
 export default function AdminSidebar({ 
-  user, 
   isCollapsed = false, 
   onToggle 
 }: { 
@@ -98,6 +99,21 @@ export default function AdminSidebar({
   onToggle?: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { refreshToken, clearToken } = useAuthStore();
+
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await axiosInstance.post('/auth/logout', { refreshToken });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      clearToken();
+      router.push('/login');
+    }
+  };
 
   return (
     <aside 
@@ -177,19 +193,18 @@ export default function AdminSidebar({
 
       {/* Logout */}
       <div className="p-3 border-t border-gray-100 shrink-0">
-        <form action="/logout" method="POST">
-          <button
-            type="submit"
-            title={isCollapsed ? "Đăng xuất" : undefined}
-            className={[
-              "flex items-center py-2.5 rounded-lg text-[13px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 w-full",
-              isCollapsed ? "justify-center px-0" : "gap-3 px-3"
-            ].join(' ')}
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">Đăng xuất</span>}
-          </button>
-        </form>
+        <button
+          onClick={handleLogout}
+          type="button"
+          title={isCollapsed ? "Đăng xuất" : undefined}
+          className={[
+            "flex items-center py-2.5 rounded-lg text-[13px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 w-full",
+            isCollapsed ? "justify-center px-0" : "gap-3 px-3"
+          ].join(' ')}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span className="whitespace-nowrap overflow-hidden">Đăng xuất</span>}
+        </button>
       </div>
     </aside>
   );

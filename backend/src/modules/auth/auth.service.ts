@@ -52,8 +52,8 @@ export class AuthService {
 
     const user = await this.userService.create(registerDto);
     const tokens = await this.generateTokens(
-      (user as any)._id.toString(),
-      (user as any).role,
+      user._id.toString(),
+      user.role,
     );
 
     return { user, ...tokens };
@@ -65,21 +65,21 @@ export class AuthService {
 
     const isValid = await comparePassword(
       loginDto.password,
-      (user as any).passwordHash,
+      user.passwordHash,
     );
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
 
-    if (!(user as any).isActive)
+    if (!user.isActive)
       throw new UnauthorizedException('Account is deactivated');
 
     const tokens = await this.generateTokens(
-      (user as any)._id.toString(),
-      (user as any).role,
+      user._id.toString(),
+      user.role,
       req,
     );
 
-    const { passwordHash: _, ...userWithoutPassword } = (user as any).toObject
-      ? (user as any).toObject()
+    const { passwordHash: _, ...userWithoutPassword } = user.toObject
+      ? user.toObject()
       : user;
 
     return { user: userWithoutPassword, ...tokens };
@@ -106,10 +106,10 @@ export class AuthService {
       isRevoked: true,
     });
 
-    const user = await this.userService.findById(storedToken.userId as any);
+    const user = await this.userService.findById(storedToken.userId);
     return this.generateTokens(
-      (user as any)._id.toString(),
-      (user as any).role,
+      user._id.toString(),
+      user.role,
       req,
     );
   }
@@ -161,28 +161,29 @@ export class AuthService {
         googleId: payload?.sub || null,
       });
     } else {
-      if (!(user as any).isActive)
+      if (!user.isActive)
         throw new UnauthorizedException('Account is deactivated');
 
-      const needsLink = !(user as any).googleId && payload?.sub;
+      const needsLink = !user.googleId && payload?.sub;
       if (needsLink) {
         await this.userService.linkGoogleAccount(
-          (user as any)._id,
+          user._id,
           payload?.sub,
           payload?.picture || null,
         );
         user = await this.userService.findByEmail(email);
+        if (!user) throw new UnauthorizedException('Account not found after link');
       }
     }
 
     const tokens = await this.generateTokens(
-      (user as any)._id.toString(),
-      (user as any).role,
+      user._id.toString(),
+      user.role,
       req,
     );
 
-    const { passwordHash: _, ...userWithoutPassword } = (user as any).toObject
-      ? (user as any).toObject()
+    const { passwordHash: _, ...userWithoutPassword } = user.toObject
+      ? user.toObject()
       : user;
 
     return { user: userWithoutPassword, ...tokens };

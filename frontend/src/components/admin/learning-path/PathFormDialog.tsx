@@ -46,6 +46,27 @@ const DEFAULT: FormData = {
   instructor: '',
 };
 
+const Field = ({
+  label,
+  error,
+  required,
+  children,
+}: {
+  label: string;
+  error?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-1.5">
+    <Label className="text-[13px] font-medium text-gray-700">
+      {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
+    </Label>
+    {children}
+    {error && <p className="text-[11px] text-red-500">{error}</p>}
+  </div>
+);
+
 export function PathFormDialog({
   open,
   onOpenChange,
@@ -60,6 +81,7 @@ export function PathFormDialog({
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(
         path
           ? {
@@ -97,26 +119,7 @@ export function PathFormDialog({
     onOpenChange(false);
   };
 
-  const Field = ({
-    label,
-    error,
-    required,
-    children,
-  }: {
-    label: string;
-    error?: string;
-    required?: boolean;
-    children: React.ReactNode;
-  }) => (
-    <div className="space-y-1.5">
-      <Label className="text-[13px] font-medium text-gray-700">
-        {label}
-        {required && <span className="text-red-500 ml-0.5">*</span>}
-      </Label>
-      {children}
-      {error && <p className="text-[11px] text-red-500">{error}</p>}
-    </div>
-  );
+
 
   const categoryLabels: Record<PathCategory, string> = {
     foundation: 'Nền tảng',

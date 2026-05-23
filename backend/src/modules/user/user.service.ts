@@ -141,12 +141,12 @@ export class UserService {
   async getStats(userId: Types.ObjectId) {
     const user = await this.findById(userId);
     return {
-      currentStreak: (user as any).currentStreak,
-      longestStreak: (user as any).longestStreak,
-      xpPoints: (user as any).xpPoints,
-      level: (user as any).level,
-      badges: (user as any).badges,
-      totalLearningMinutes: (user as any).totalLearningMinutes,
+      currentStreak: user.currentStreak,
+      longestStreak: user.longestStreak,
+      xpPoints: user.xpPoints,
+      level: user.level,
+      badges: user.badges,
+      totalLearningMinutes: user.totalLearningMinutes,
     };
   }
 }
