@@ -31,6 +31,4 @@ const streakSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-streakSchema.index({ userId: 1 })
-
 module.exports = mongoose.model('Streak', streakSchema)

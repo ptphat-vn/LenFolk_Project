@@ -1,159 +1,120 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-exports.register = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
-    if (password.length < 8) {
-      return res
-        .status(400)
-        .json({ message: 'Password must be at least 8 characters' });
-    }
-    const existEmail = await User.findOne({ email });
-    if (existEmail) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
-    const newUser = await User.create({ name, email, passwordHash: password });
-    const jwtSecret = process.env.JWT_SECRET;
-    const accessToken = jwt.sign(
-      {
-        id: newUser._id,
-        email: newUser.email,
-        role: newUser.role,
-      },
-      jwtSecret,
-      { expiresIn: process.env.JWT_EXPIRES_IN },
-    );
-    const refreshToken = jwt.sign(
-      {
-        id: newUser._id,
-        email: newUser.email,
-      },
-      jwtSecret,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN },
-    );
-    newUser.refreshToken = refreshToken;
-    await newUser.save();
-    const userData = {
-      _id: newUser._id,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      dateOfBirth: newUser.dateOfBirth,
-      gender: newUser.gender,
-      avatar: newUser.avatar,
-      phoneNumber: newUser.phoneNumber,
-      isActive: newUser.isActive,
-      isVerified: newUser.isVerified,
-      lastLoginAt: newUser.lastLoginAt,
-      deletedAt: newUser.deletedAt,
-      createdAt: newUser.createdAt,
-      updatedAt: newUser.updatedAt,
-    };
-    res.status(201).json({
-      data: {
-        message: 'User registered successfully',
-        user: userData,
-        accessToken,
-        refreshToken,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/AppError');
+
+const signToken = (id, email, role, expiresIn) => {
+  return jwt.sign({ id, email, role }, process.env.JWT_SECRET, {
+    expiresIn,
+  });
 };
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const jwtSecret = process.env.JWT_SECRET;
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-    const accessToken = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-      },
-      jwtSecret,
-      { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN },
-    );
-    const refreshToken = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-      },
-      jwtSecret,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN },
-    );
-    user.refreshToken = refreshToken;
-    await user.save();
-    res.status(200).json({
-      data: {
-        message: 'Login successful',
-        accessToken,
-        refreshToken,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+
+exports.register = catchAsync(async (req, res, next) => {
+  const { name, email, password } = req.body;
+  
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return next(new AppError('Email already in use', 400));
   }
-};
-exports.refreshToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ message: 'Refresh token is required' });
-    }
-    const jwtSecret = process.env.JWT_SECRET;
-    const decoded = jwt.verify(refreshToken, jwtSecret);
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid refresh token' });
-    }
-    const accessToken = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-      },
-      jwtSecret,
-      { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN },
-    );
-    res.status(200).json({
-      data: {
-        message: 'Token refreshed successfully',
-        accessToken,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  
+  if (password.length < 8) {
+    return next(new AppError('Password must be at least 8 characters', 400));
   }
-};
-exports.logout = async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
-      return res.status(400).json({ message: 'Refresh token is required' });
-    }
-    const jwtSecret = process.env.JWT_SECRET;
-    const decoded = jwt.verify(refreshToken, jwtSecret);
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid refresh token' });
-    }
-    user.refreshToken = null;
-    await user.save();
-    res.status(200).json({ message: 'Logout successful' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  
+  const newUser = await User.create({ name, email, passwordHash: password });
+  
+  const accessToken = signToken(newUser._id, newUser.email, newUser.role, process.env.JWT_EXPIRES_IN || '1h');
+  const refreshToken = signToken(newUser._id, newUser.email, newUser.role, process.env.JWT_REFRESH_EXPIRES_IN || '7d');
+  
+  newUser.refreshToken = refreshToken;
+  await newUser.save({ validateBeforeSave: false });
+  
+  const userData = newUser.toJSON();
+  
+  res.status(201).json({
+    success: true,
+    data: {
+      message: 'User registered successfully',
+      user: userData,
+      accessToken,
+      refreshToken,
+    },
+  });
+});
+
+exports.login = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return next(new AppError('Please provide email and password', 400));
   }
-};
+  
+  const user = await User.findOne({ email }).select('+passwordHash');
+  
+  if (!user || !(await user.comparePassword(password))) {
+    return next(new AppError('Invalid email or password', 401));
+  }
+  
+  const accessToken = signToken(user._id, user.email, user.role, process.env.JWT_ACCESS_EXPIRES_IN || '1h');
+  const refreshToken = signToken(user._id, user.email, user.role, process.env.JWT_REFRESH_EXPIRES_IN || '7d');
+  
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      message: 'Login successful',
+      accessToken,
+      refreshToken,
+    },
+  });
+});
+
+exports.refreshToken = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body;
+  
+  if (!refreshToken) {
+    return next(new AppError('Refresh token is required', 400));
+  }
+  
+  const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+  const user = await User.findById(decoded.id);
+  
+  if (!user) {
+    return next(new AppError('Invalid refresh token', 401));
+  }
+  
+  const accessToken = signToken(user._id, user.email, user.role, process.env.JWT_ACCESS_EXPIRES_IN || '1h');
+  
+  res.status(200).json({
+    success: true,
+    data: {
+      message: 'Token refreshed successfully',
+      accessToken,
+    },
+  });
+});
+
+exports.logout = catchAsync(async (req, res, next) => {
+  const { refreshToken } = req.body;
+  
+  if (!refreshToken) {
+    return next(new AppError('Refresh token is required', 400));
+  }
+  
+  const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+  const user = await User.findById(decoded.id);
+  
+  if (!user) {
+    return next(new AppError('Invalid refresh token', 401));
+  }
+  
+  user.refreshToken = null;
+  await user.save({ validateBeforeSave: false });
+  
+  res.status(200).json({
+    success: true,
+    message: 'Logout successful',
+  });
+});

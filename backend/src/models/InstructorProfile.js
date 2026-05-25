@@ -41,6 +41,4 @@ const instructorProfileSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-instructorProfileSchema.index({ userId: 1 })
-
 module.exports = mongoose.model('InstructorProfile', instructorProfileSchema)
