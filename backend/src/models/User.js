@@ -15,6 +15,15 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other'],
+      default: 'other',
+    },
+    dateOfBirth: {
+      type: Date,
+      default: null,
+    },
     passwordHash: {
       type: String,
       required: true,
