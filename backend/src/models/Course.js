@@ -1,0 +1,65 @@
+const mongoose = require('mongoose')
+
+const courseSchema = new mongoose.Schema(
+  {
+    instructorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: null,
+    },
+    thumbnail: {
+      type: String,
+      default: null,
+    },
+    level: {
+      type: String,
+      enum: ['beginner', 'intermediate', 'advanced'],
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ['draft', 'published', 'archived'],
+      default: 'draft',
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    totalLessons: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    enrollCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    publishedAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { timestamps: true }
+)
+
+courseSchema.index({ instructorId: 1 })
+courseSchema.index({ status: 1 })
+courseSchema.index({ tags: 1 })
+courseSchema.index({ isFeatured: 1 })
+courseSchema.index({ title: 'text', description: 'text' })
+
+module.exports = mongoose.model('Course', courseSchema)
