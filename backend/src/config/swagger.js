@@ -508,7 +508,26 @@ const options = {
         patch: {
           tags: ['Users'], summary: 'Update a user', security: [{ bearerAuth: [] }],
           parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c3' } }],
-          requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateUserInput' } } } },
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', example: 'Lê Thị B (Updated)' },
+                    gender: { type: 'string', enum: ['male', 'female', 'other'], example: 'female' },
+                    dateOfBirth: { type: 'string', format: 'date-time', example: '1998-05-20T00:00:00.000Z' },
+                    role: { type: 'string', enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'], example: 'moderator' },
+                    phoneNumber: { type: 'string', example: '+84111222333' },
+                    avatar: { type: 'string', format: 'binary', description: 'File hình ảnh đại diện (png, jpg, webp)' },
+                    isActive: { type: 'boolean', example: false },
+                  }
+                }
+              },
+              'application/json': { schema: { $ref: '#/components/schemas/UpdateUserInput' } }
+            }
+          },
           responses: { 
             200: { description: 'User updated', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean', example: true }, data: { $ref: '#/components/schemas/User' } } } } } }, 
             404: { description: 'User không tồn tại', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } } 
@@ -573,7 +592,7 @@ const options = {
       // ... Các route khác tương tự
     },
   },
-  apis: [],
+  apis: ['./src/routes/*.route.js'],
 };
 
 const swaggerSpec = swaggerJSDoc(options);

@@ -5,6 +5,7 @@ const userController = require('../controllers/user.controller');
 const { verifyToken, verifyAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { createUserSchema, updateUserSchema } = require('../validations/user.validation');
+const upload = require('../middlewares/upload.middleware');
 
 // All user routes require authentication
 router.use(verifyToken);
@@ -22,7 +23,7 @@ router
 router
   .route('/:id')
   .get(verifyAdmin, userController.getOne)
-  .patch(verifyAdmin, validate(updateUserSchema), userController.updateOne)
+  .patch(verifyAdmin, upload.single('avatar'), validate(updateUserSchema), userController.updateOne)
   .delete(verifyAdmin, userController.deleteOne);
 
 module.exports = router;

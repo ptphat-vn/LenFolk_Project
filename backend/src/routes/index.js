@@ -38,5 +38,6 @@ router.use('/transaction-records',   require('./transaction-record.route'));
 router.use('/permissions',           require('./permission.route'));
 router.use('/audit-logs',            require('./audit-log.route'));
 router.use('/moderator-logs',        require('./moderator-log.route'));
+router.use('/payments',              require('./payment.route'));
 
 module.exports = router;
