@@ -1,3 +1,10 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Subscriptions
+ *   description: Subscriptions management
+ */
+
 const express = require('express');
 const router = express.Router();
 
@@ -10,16 +17,106 @@ const { createSubscriptionSchema, updateSubscriptionSchema } = require('../valid
 // POST /api/subscriptions  - Admin only: create plan
 router
   .route('/')
-  .get(subscriptionController.getAll)
-  .post(verifyToken, verifyAdmin, validate(createSubscriptionSchema), subscriptionController.createOne);
+/**
+ * @swagger
+ * /subscriptions:
+ *   get:
+ *     tags: [Subscriptions]
+ *     summary: Get subscription
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.get(subscriptionController.getAll)
+/**
+ * @swagger
+ * /subscriptions:
+ *   post:
+ *     tags: [Subscriptions]
+ *     summary: Post subscription
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.post(verifyToken, verifyAdmin, validate(createSubscriptionSchema), subscriptionController.createOne);
 
 // GET    /api/subscriptions/:id  - Public
 // PATCH  /api/subscriptions/:id  - Admin only
 // DELETE /api/subscriptions/:id  - Admin only
 router
   .route('/:id')
-  .get(subscriptionController.getOne)
-  .patch(verifyToken, verifyAdmin, validate(updateSubscriptionSchema), subscriptionController.updateOne)
-  .delete(verifyToken, verifyAdmin, subscriptionController.deleteOne);
+/**
+ * @swagger
+ * /subscriptions/{id}:
+ *   get:
+ *     tags: [Subscriptions]
+ *     summary: Get subscription
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.get(subscriptionController.getOne)
+/**
+ * @swagger
+ * /subscriptions/{id}:
+ *   patch:
+ *     tags: [Subscriptions]
+ *     summary: Patch subscription
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.patch(verifyToken, verifyAdmin, validate(updateSubscriptionSchema), subscriptionController.updateOne)
+/**
+ * @swagger
+ * /subscriptions/{id}:
+ *   delete:
+ *     tags: [Subscriptions]
+ *     summary: Delete subscription
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.delete(verifyToken, verifyAdmin, subscriptionController.deleteOne);
 
 module.exports = router;

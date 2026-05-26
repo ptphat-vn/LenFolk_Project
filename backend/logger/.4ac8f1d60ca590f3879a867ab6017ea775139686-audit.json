@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Python\\LenFolk_Project\\backend\\logger\\.4ac8f1d60ca590f3879a867ab6017ea775139686-audit.json",
+    "files": [
+        {
+            "date": 1779765099397,
+            "name": "C:\\Python\\LenFolk_Project\\backend\\logger\\error-2026-05-26.log",
+            "hash": "536b9f636e055563e534d03e483ef0224bfb00f7c509b08a9ccfd3c7677d6a0d"
+        }
+    ],
+    "hashType": "sha256"
+}

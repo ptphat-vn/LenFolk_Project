@@ -1,3 +1,10 @@
+/**
+ * @swagger
+ * tags:
+ *   name: TransactionRecords
+ *   description: TransactionRecords management
+ */
+
 const express = require('express');
 const router = express.Router();
 
@@ -10,13 +17,103 @@ router.use(verifyToken);
 
 router
   .route('/')
-  .get(transactionRecordController.getAll)
-  .post(validate(createTransactionRecordSchema), transactionRecordController.createOne);
+/**
+ * @swagger
+ * /transaction-records:
+ *   get:
+ *     tags: [TransactionRecords]
+ *     summary: Get transaction-record
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.get(transactionRecordController.getAll)
+/**
+ * @swagger
+ * /transaction-records:
+ *   post:
+ *     tags: [TransactionRecords]
+ *     summary: Post transaction-record
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.post(validate(createTransactionRecordSchema), transactionRecordController.createOne);
 
 router
   .route('/:id')
-  .get(transactionRecordController.getOne)
-  .patch(verifyAdmin, validate(updateTransactionRecordSchema), transactionRecordController.updateOne)
-  .delete(verifyAdmin, transactionRecordController.deleteOne);
+/**
+ * @swagger
+ * /transaction-records/{id}:
+ *   get:
+ *     tags: [TransactionRecords]
+ *     summary: Get transaction-record
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.get(transactionRecordController.getOne)
+/**
+ * @swagger
+ * /transaction-records/{id}:
+ *   patch:
+ *     tags: [TransactionRecords]
+ *     summary: Patch transaction-record
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.patch(verifyAdmin, validate(updateTransactionRecordSchema), transactionRecordController.updateOne)
+/**
+ * @swagger
+ * /transaction-records/{id}:
+ *   delete:
+ *     tags: [TransactionRecords]
+ *     summary: Delete transaction-record
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Success
+ */
+.delete(verifyAdmin, transactionRecordController.deleteOne);
 
 module.exports = router;
