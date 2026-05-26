@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\ASUS\\Desktop\\EXE201\\lenfolk_project\\backend\\logger\\.25c2ca96919f277d91249957df0625286de7e740-audit.json",
+    "files": [
+        {
+            "date": 1779727076831,
+            "name": "C:\\Users\\ASUS\\Desktop\\EXE201\\lenfolk_project\\backend\\logger\\application-2026-05-25.log",
+            "hash": "727caf675b02ff638108f5e35a9365b97b4af6200a66ab73d2a180f91c2faaed"
+        }
+    ],
+    "hashType": "sha256"
+}
