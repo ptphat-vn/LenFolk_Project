@@ -8,9 +8,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import { loginSchema, type LoginFormValues } from '@/schema/auth.schema';
 import { BrandPanel } from '@/components/auth/BrandPanel';
-import axiosInstance from '@/lib/axios';
 import { useAuthStore } from '@/stores/authStore';
 import { isAxiosError } from 'axios';
+import { authApi } from '@/lib/api/auth.api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,8 +20,6 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
@@ -35,18 +33,19 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      const response = await axiosInstance.post('/auth/login', {
-        email: data.email,
-        password: data.password,
-      });
-
-      const { accessToken, refreshToken, user } = response.data.data;
+      const response = await authApi.login(data);
+      const { accessToken, refreshToken, user } = response.data;
       if (accessToken) {
         setToken(accessToken, refreshToken);
         if (user?.role === 'admin') {
           router.push('/admin/dashboard');
-        } else {
-          router.push('/dashboard');
+        } else if (user?.role === 'instructor') {
+          router.push('/instructor/dashboard')
+        } else if (user?.role === 'moderator') {
+          router.push('/moderator/dashboard')
+        }
+        else {
+          router.push('/');
         }
       }
     } catch (error) {
