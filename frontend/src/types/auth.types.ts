@@ -1,3 +1,5 @@
+
+
 export interface RegisterForm {
   firstName: string;
   lastName: string;
@@ -9,6 +11,11 @@ export interface RegisterForm {
 }
 
 export interface LoginForm {
+  email: string;
+  password: string;
+}
+
+export interface LoginRequest {
   email: string;
   password: string;
 }
