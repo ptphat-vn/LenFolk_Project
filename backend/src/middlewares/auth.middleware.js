@@ -1,23 +1,19 @@
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const config = require('../config');
 const User = require('../models/User');
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = config.jwt.secret;
 
 const verifyToken = async (req, res, next) => {
   try {
-    const token = req.header('Authorization').replace('Bearer ', '');
-    if (!token) {
+    const authHeader = req.header('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: 'No token provided' });
     }
+    const token = authHeader.replace('Bearer ', '');
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
-    }
-    if (decoded.tokenVersion !== user.tokenVersion) {
-      return res
-        .status(401)
-        .json({ message: 'Session expired, please login again' });
     }
     req.user = user;
     next();
@@ -49,10 +45,17 @@ const verifyLearner = (req, res, next) => {
   }
   next();
 };
+const verifyInstructorOrAdmin = (req, res, next) => {
+  if (req.user.role !== 'instructor' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Instructor or Admin required.' });
+  }
+  next();
+};
 module.exports = {
   verifyToken,
   verifyAdmin,
   verifyInstructor,
+  verifyInstructorOrAdmin,
   verifyModerator,
   verifyLearner,
 };

@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 
 const subscriptionController = require('../controllers/subscription.controller');
+const purchaseController = require('../controllers/purchase.controller');
 const { verifyToken, verifyAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { createSubscriptionSchema, updateSubscriptionSchema } = require('../validations/subscription.validation');
@@ -118,5 +119,8 @@ router
  *         description: Success
  */
 .delete(verifyToken, verifyAdmin, subscriptionController.deleteOne);
+
+// POST /api/subscriptions/:id/purchase - Authenticated user: buy a subscription plan
+router.post('/:id/purchase', verifyToken, purchaseController.purchase);
 
 module.exports = router;

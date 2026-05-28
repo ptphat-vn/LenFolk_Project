@@ -1,9 +1,10 @@
 const mongoose = require('mongoose')
 const logger = require('./logger')
+const config = require('./index')
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI)
+    await mongoose.connect(config.mongoUri)
 
     logger.info('MongoDB connected')
   } catch (error) {

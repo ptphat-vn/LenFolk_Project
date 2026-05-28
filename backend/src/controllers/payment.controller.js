@@ -1,9 +1,11 @@
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
-const moment = require('moment'); // Need to install moment or use Date.now()
 const config = require('../config/zalopay');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/AppError');
+const User = require('../models/User');
+const TransactionRecord = require('../models/TransactionRecord');
+const { UserSubscription } = require('../models/Subscription');
 
 // We use crypto instead of moment to reduce dependencies if possible, but let's just use built-in JS Date.
 // Wait, I didn't install moment. I'll just use simple date formatting.
@@ -58,31 +60,54 @@ exports.callback = catchAsync(async (req, res, next) => {
     let reqMac = req.body.mac;
 
     let mac = CryptoJS.HmacSHA256(dataStr, config.key2).toString();
-    console.log("mac =", mac);
 
-    // check signature
+    // Kiểm tra chữ ký MAC
     if (reqMac !== mac) {
-      // callback is invalid
       result.return_code = -1;
-      result.return_message = "mac not equal";
+      result.return_message = 'mac not equal';
     } else {
-      // callback is valid
-      // payment succeeded
-      let dataJson = JSON.parse(dataStr, config.key2);
-      console.log("update order's status = success where app_trans_id =", dataJson["app_trans_id"]);
+      // Callback hợp lệ — thanh toán thành công
+      let dataJson = JSON.parse(dataStr);
+      const appTransId = dataJson['app_trans_id'];
 
-      // TODO: Update transaction record in database
-      // await TransactionRecord.findOneAndUpdate({ gatewayTxId: dataJson['app_trans_id'] }, { status: 'success' });
+      // 1. Tìm TransactionRecord theo gatewayTxId
+      const transaction = await TransactionRecord.findOne({ gatewayTxId: appTransId });
+
+      if (transaction) {
+        // 2. Cập nhật TransactionRecord → success
+        transaction.status = 'success';
+        transaction.paidAt = new Date();
+        transaction.gatewayResponse = dataJson;
+        await transaction.save();
+
+        // 3. Kích hoạt UserSubscription
+        const updatedUserSub = await UserSubscription.findByIdAndUpdate(
+          transaction.userSubscriptionId,
+          { status: 'active' },
+          { new: true }
+        );
+
+        // 4. Nâng role User từ 'guest' → 'learner' và cập nhật currentSubscription
+        if (updatedUserSub) {
+          await User.findByIdAndUpdate(
+            transaction.userId,
+            { 
+              role: 'learner',
+              currentSubscription: updatedUserSub.subscriptionId
+            },
+          );
+        }
+      }
 
       result.return_code = 1;
-      result.return_message = "success";
+      result.return_message = 'success';
     }
   } catch (ex) {
-    result.return_code = 0; // ZaloPay server will retry (up to 3 times)
+    result.return_code = 0; // ZaloPay server sẽ retry (tối đa 3 lần)
     result.return_message = ex.message;
   }
 
-  // notify to ZaloPay server
+  // Phản hồi về ZaloPay server
   res.json(result);
 });
 

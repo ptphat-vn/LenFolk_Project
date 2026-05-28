@@ -63,12 +63,23 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    currentSubscription: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Subscription',
+      default: null,
+    },
   },
   { timestamps: true },
 );
 
 userSchema.index({ role: 1 });
 userSchema.index({ deletedAt: 1 });
+
+// Soft-delete: tự động lọc các user đã bị xóa khỏi mọi query find
+userSchema.pre(/^find/, function (next) {
+  this.where({ deletedAt: null });
+  next();
+});
 
 userSchema.pre('save', async function () {
   if (!this.isModified('passwordHash')) return;
@@ -84,6 +95,12 @@ userSchema.methods.toJSON = function () {
   delete obj.passwordHash;
   delete obj.refreshToken;
   return obj;
+};
+
+// Soft-delete: đặt deletedAt thay vì xóa khỏi DB
+userSchema.methods.softDelete = async function () {
+  this.deletedAt = new Date();
+  await this.save({ validateBeforeSave: false });
 };
 
 module.exports = mongoose.model('User', userSchema);

@@ -81,7 +81,7 @@ const userSubscriptionSchema = new mongoose.Schema(
     },
     platform: {
       type: String,
-      enum: ['ios', 'android', 'stripe', 'google_play'],
+      enum: ['ios', 'android', 'stripe', 'google_play', 'zalopay'],
       required: true,
     },
   },
