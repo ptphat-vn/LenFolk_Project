@@ -13,6 +13,8 @@ const options = {
       contact: { name: 'LenFolk Team' },
     },
     servers: [
+      { url: '/api', description: 'Default Server (relative)' },
+      { url: 'https://lenfolk-project.onrender.com/api', description: 'Production Server' },
       { url: 'http://localhost:5000/api', description: 'Development Server' },
     ],
     components: {
