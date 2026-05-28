@@ -76,9 +76,8 @@ userSchema.index({ role: 1 });
 userSchema.index({ deletedAt: 1 });
 
 // Soft-delete: tự động lọc các user đã bị xóa khỏi mọi query find
-userSchema.pre(/^find/, function (next) {
+userSchema.pre(/^find/, function () {
   this.where({ deletedAt: null });
-  next();
 });
 
 userSchema.pre('save', async function () {
