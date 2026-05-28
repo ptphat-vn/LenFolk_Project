@@ -68,6 +68,7 @@ exports.login = catchAsync(async (req, res, next) => {
       message: 'Login successful',
       accessToken,
       refreshToken,
+      user
     },
   });
 });
