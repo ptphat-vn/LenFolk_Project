@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const courseController = require('../controllers/course.controller');
-const { verifyToken, verifyInstructor, verifyAdmin } = require('../middlewares/auth.middleware');
+const { verifyToken, verifyInstructorOrAdmin, verifyAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { createCourseSchema, updateCourseSchema } = require('../validations/course.validation');
 
@@ -11,7 +11,7 @@ const { createCourseSchema, updateCourseSchema } = require('../validations/cours
 router
   .route('/')
   .get(courseController.getAll)
-  .post(verifyToken, validate(createCourseSchema), courseController.createOne);
+  .post(verifyToken, verifyInstructorOrAdmin, validate(createCourseSchema), courseController.createOne);
 
 // GET    /api/courses/:id  - Public: get one course
 // PATCH  /api/courses/:id  - Instructor/Admin: update course
@@ -19,7 +19,7 @@ router
 router
   .route('/:id')
   .get(courseController.getOne)
-  .patch(verifyToken, validate(updateCourseSchema), courseController.updateOne)
+  .patch(verifyToken, verifyInstructorOrAdmin, validate(updateCourseSchema), courseController.updateOne)
   .delete(verifyToken, verifyAdmin, courseController.deleteOne);
 
 module.exports = router;
