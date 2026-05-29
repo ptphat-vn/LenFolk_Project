@@ -2,24 +2,47 @@ const express = require('express');
 const router = express.Router();
 
 const courseController = require('../controllers/course.controller');
-const { verifyToken, verifyInstructorOrAdmin, verifyAdmin } = require('../middlewares/auth.middleware');
+const {
+  verifyToken,
+  optionalAuth,
+  verifyInstructorOrAdmin,
+  verifyAdmin,
+} = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
-const { createCourseSchema, updateCourseSchema } = require('../validations/course.validation');
+const {
+  createCourseSchema,
+  updateCourseSchema,
+} = require('../validations/course.validation');
 
-// GET    /api/courses      - Public: list all published courses
-// POST   /api/courses      - Instructor/Admin: create course
+// GET    /api/courses  — Optional auth: kết quả lọc theo subscription của user
+// POST   /api/courses  — Admin: tạo tất cả loại | Instructor: chỉ tạo 'repertoire'
 router
   .route('/')
-  .get(courseController.getAll)
-  .post(verifyToken, verifyInstructorOrAdmin, validate(createCourseSchema), courseController.createOne);
+  
+  .get(optionalAuth, courseController.getAll)
+  
+  .post(
+    verifyToken,
+    verifyInstructorOrAdmin,
+    validate(createCourseSchema),
+    courseController.createOne,
+  );
 
-// GET    /api/courses/:id  - Public: get one course
-// PATCH  /api/courses/:id  - Instructor/Admin: update course
-// DELETE /api/courses/:id  - Admin: delete course
+// GET    /api/courses/:id  — Optional auth: kiểm tra quyền theo subscription
+// PATCH  /api/courses/:id  — Instructor/Admin: update (ownership check in controller)
+// DELETE /api/courses/:id  — Admin only
 router
   .route('/:id')
-  .get(courseController.getOne)
-  .patch(verifyToken, verifyInstructorOrAdmin, validate(updateCourseSchema), courseController.updateOne)
+  
+  .get(optionalAuth, courseController.getOne)
+  
+  .patch(
+    verifyToken,
+    verifyInstructorOrAdmin,
+    validate(updateCourseSchema),
+    courseController.updateOne,
+  )
+  
   .delete(verifyToken, verifyAdmin, courseController.deleteOne);
 
 module.exports = router;
