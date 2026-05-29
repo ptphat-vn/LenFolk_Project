@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const transactionRecordSchema = new mongoose.Schema(
   {
@@ -34,13 +34,13 @@ const transactionRecordSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'success', 'failed', 'refunded'],
+      enum: ['pending', 'reviewing', 'success', 'failed', 'refunded'],
       default: 'pending',
     },
     gatewayProvider: {
       type: String,
       default: null,
-      comment: 'e.g. stripe, momo, zalopay, apple, google',
+      comment: 'e.g. stripe, momo, apple, google',
     },
     gatewayResponse: {
       type: mongoose.Schema.Types.Mixed,
@@ -51,14 +51,33 @@ const transactionRecordSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // ── Manual QR payment fields ─────────────────────────────────────────────
+    proofImageUrl: {
+      type: String,
+      default: null,
+      comment: 'Cloudinary URL of the payment proof image uploaded by user',
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectReason: {
+      type: String,
+      default: null,
+    },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
-transactionRecordSchema.index({ userId: 1 })
-transactionRecordSchema.index({ userId: 1, status: 1 })
-transactionRecordSchema.index({ userSubscriptionId: 1 })
-transactionRecordSchema.index({ gatewayTxId: 1 })
-transactionRecordSchema.index({ createdAt: -1 })
+transactionRecordSchema.index({ userId: 1 });
+transactionRecordSchema.index({ userId: 1, status: 1 });
+transactionRecordSchema.index({ userSubscriptionId: 1 });
+transactionRecordSchema.index({ gatewayTxId: 1 });
+transactionRecordSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model('TransactionRecord', transactionRecordSchema)
+module.exports = mongoose.model('TransactionRecord', transactionRecordSchema);

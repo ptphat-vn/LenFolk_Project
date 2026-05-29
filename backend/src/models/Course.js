@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const courseSchema = new mongoose.Schema(
   {
@@ -19,6 +19,15 @@ const courseSchema = new mongoose.Schema(
     thumbnail: {
       type: String,
       default: null,
+    },
+    // Đánh dấu xem khóa học này có được miễn phí không
+    isFree: {
+      type: Boolean,
+      default: false,
+    },
+    courseType: {
+      type: String,
+      default: 'foundation', // Không còn ép buộc enum cứng
     },
     level: {
       type: String,
@@ -53,13 +62,14 @@ const courseSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
-courseSchema.index({ instructorId: 1 })
-courseSchema.index({ status: 1 })
-courseSchema.index({ tags: 1 })
-courseSchema.index({ isFeatured: 1 })
-courseSchema.index({ title: 'text', description: 'text' })
+courseSchema.index({ instructorId: 1 });
+courseSchema.index({ courseType: 1 });
+courseSchema.index({ status: 1 });
+courseSchema.index({ tags: 1 });
+courseSchema.index({ isFeatured: 1 });
+courseSchema.index({ title: 'text', description: 'text' });
 
-module.exports = mongoose.model('Course', courseSchema)
+module.exports = mongoose.model('Course', courseSchema);

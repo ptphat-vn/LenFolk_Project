@@ -11,6 +11,9 @@ exports.updateOne = catchAsync(async (req, res, next) => {
   if (req.file) {
     req.body.avatar = req.file.path;
   }
+  // Strip password fields: findByIdAndUpdate bypasses pre-save bcrypt hook
+  delete req.body.passwordHash;
+  delete req.body.password;
   return factory.updateOne(User)(req, res, next);
 });
 
