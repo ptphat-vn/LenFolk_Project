@@ -259,7 +259,7 @@ const options = {
             },
             status: {
               type: 'string',
-              enum: ['draft', 'published', 'archived'],
+              enum: ['draft', 'pending', 'published', 'archived'],
               example: 'published',
             },
             courseType: {
@@ -273,6 +273,14 @@ const options = {
               description:
                 '`true` = khóa học miễn phí, không cần subscription. `false` = yêu cầu subscription active.',
               example: false,
+            },
+            price: {
+              type: 'number',
+              example: 100000,
+            },
+            adminCommissionPercentage: {
+              type: 'number',
+              example: 30,
             },
             tags: {
               type: 'array',
@@ -319,7 +327,7 @@ const options = {
             },
             status: {
               type: 'string',
-              enum: ['draft', 'published', 'archived'],
+              enum: ['draft', 'pending', 'published', 'archived'],
               example: 'draft',
             },
             tags: {
@@ -1054,6 +1062,60 @@ const options = {
               example: 'Ngôn ngữ không phù hợp trong bình luận.',
             },
             note: { type: 'string', example: 'Lần cảnh báo đầu tiên.' },
+          },
+        },
+        // ── Coupon ──────────────────────────────────────────────────────
+        Coupon: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: 'coupon_id_123' },
+            code: { type: 'string', example: 'SUMMER2026' },
+            discountType: { type: 'string', enum: ['percent', 'fixed'], example: 'percent' },
+            discountValue: { type: 'number', example: 20 },
+            maxUses: { type: 'number', nullable: true, example: 100 },
+            usedCount: { type: 'number', example: 5 },
+            validFrom: { type: 'string', format: 'date-time' },
+            validTo: { type: 'string', format: 'date-time', nullable: true },
+            isActive: { type: 'boolean', example: true },
+            applicableTo: { type: 'string', enum: ['subscription', 'course', 'all'], example: 'all' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        // ── Wallet & Payouts ────────────────────────────────────────────
+        BankDetails: {
+          type: 'object',
+          properties: {
+            bankName: { type: 'string', example: 'Vietcombank' },
+            accountName: { type: 'string', example: 'NGUYEN VAN A' },
+            accountNumber: { type: 'string', example: '0123456789' },
+          },
+        },
+        Wallet: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string' },
+            instructorId: { type: 'string' },
+            balance: { type: 'number', example: 1500000 },
+            totalEarned: { type: 'number', example: 5000000 },
+            currency: { type: 'string', example: 'VND' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        PayoutRequest: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string' },
+            instructorId: { type: 'string' },
+            amount: { type: 'number', example: 500000 },
+            status: { type: 'string', enum: ['pending', 'approved', 'rejected'], example: 'pending' },
+            bankDetails: { $ref: '#/components/schemas/BankDetails' },
+            adminNote: { type: 'string', nullable: true },
+            processedBy: { type: 'string', nullable: true },
+            processedAt: { type: 'string', format: 'date-time', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
           },
         },
       },
@@ -4296,6 +4358,142 @@ const options = {
             },
           ],
           responses: { 204: { description: 'Đã xóa' } },
+        },
+      },
+      // ── Course Purchase ────────────────────────────────────────────────
+      '/courses/{id}/purchase': {
+        post: {
+          tags: ['Courses'],
+          summary: 'Mua lẻ một khóa học / tiết mục (Manual QR)',
+          description: 'Yêu cầu thanh toán để mua đứt khóa học, áp dụng mã giảm giá (nếu có).',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    couponCode: { type: 'string', example: 'SUMMER2026' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Tạo đơn hàng thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          message: { type: 'string' },
+                          transactionId: { type: 'string' },
+                          originalAmount: { type: 'number' },
+                          discountAmount: { type: 'number' },
+                          amountToPay: { type: 'number' },
+                          currency: { type: 'string' },
+                          courseName: { type: 'string' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      // ── Wallets & Payouts ──────────────────────────────────────────────
+      '/wallets/me': {
+        get: {
+          tags: ['Wallets'],
+          summary: 'Xem ví và lịch sử rút tiền',
+          security: [{ bearerAuth: [] }],
+          responses: {
+            200: {
+              description: 'Thành công',
+            },
+          },
+        },
+      },
+      '/wallets/bank-info': {
+        put: {
+          tags: ['Wallets'],
+          summary: 'Cập nhật thông tin ngân hàng',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/BankDetails' },
+              },
+            },
+          },
+          responses: { 200: { description: 'Cập nhật thành công' } },
+        },
+      },
+      '/wallets/payout': {
+        post: {
+          tags: ['Wallets'],
+          summary: 'Tạo yêu cầu rút tiền',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { amount: { type: 'number', example: 500000 } },
+                },
+              },
+            },
+          },
+          responses: { 201: { description: 'Tạo phiếu thành công' } },
+        },
+      },
+      '/wallets/admin/payouts': {
+        get: {
+          tags: ['Wallets'],
+          summary: 'Admin xem danh sách yêu cầu rút tiền',
+          security: [{ bearerAuth: [] }],
+          responses: { 200: { description: 'Thành công' } },
+        },
+      },
+      '/wallets/admin/payouts/{id}': {
+        patch: {
+          tags: ['Wallets'],
+          summary: 'Admin duyệt / từ chối rút tiền',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', enum: ['approved', 'rejected'] },
+                    adminNote: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: { 200: { description: 'Thành công' } },
         },
       },
     },

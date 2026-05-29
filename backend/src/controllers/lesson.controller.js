@@ -50,25 +50,32 @@ exports.getOne = catchAsync(async (req, res, next) => {
     if (!course) return next(new AppError('Parent course not found', 404));
 
     if (!course.isFree) {
-      // Tìm xem user có active subscription nào mở khóa course này không
-      const activeSubs = await UserSubscription.find({
-        userId: req.user._id,
-        status: 'active',
-        endDate: { $gt: new Date() },
-      }).populate({ path: 'subscriptionId', select: 'courseId' });
+      // 1. Kiểm tra enrolledCourses (mua đứt)
+      const User = require('../models/User');
+      const user = await User.findById(req.user._id).select('enrolledCourses');
+      const isEnrolled = user && user.enrolledCourses && user.enrolledCourses.includes(course._id);
 
-      const hasAccess = activeSubs.some(
-        (sub) =>
-          sub.subscriptionId?.courseId?.toString() === course._id.toString(),
-      );
+      if (!isEnrolled) {
+        // 2. Tìm xem user có active subscription nào mở khóa course này không
+        const activeSubs = await UserSubscription.find({
+          userId: req.user._id,
+          status: 'active',
+          endDate: { $gt: new Date() },
+        }).populate({ path: 'subscriptionId', select: 'courseId' });
 
-      if (!hasAccess) {
-        return next(
-          new AppError(
-            'This lesson belongs to a premium course. Please subscribe to access.',
-            403,
-          ),
+        const hasAccess = activeSubs.some(
+          (sub) =>
+            sub.subscriptionId?.courseId?.toString() === course._id.toString(),
         );
+
+        if (!hasAccess) {
+          return next(
+            new AppError(
+              'This lesson belongs to a premium course. Please subscribe to access.',
+              403,
+            ),
+          );
+        }
       }
     }
   }

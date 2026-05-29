@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const courseController = require('../controllers/course.controller');
+const purchaseController = require('../controllers/purchase.controller');
 const {
   verifyToken,
   optionalAuth,
@@ -44,5 +45,8 @@ router
   )
   
   .delete(verifyToken, verifyAdmin, courseController.deleteOne);
+
+// POST   /api/courses/:id/purchase - Lên đơn thanh toán mua lẻ khóa học
+router.post('/:id/purchase', verifyToken, purchaseController.requestCoursePayment);
 
 module.exports = router;
