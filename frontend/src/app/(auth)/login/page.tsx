@@ -40,19 +40,19 @@ export default function LoginPage() {
         if (user?.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (user?.role === 'instructor') {
-          router.push('/instructor/dashboard')
+          router.push('/instructor/dashboard');
         } else if (user?.role === 'moderator') {
-          router.push('/moderator/dashboard')
-        }
-        else {
+          router.push('/moderator/dashboard');
+        } else {
           router.push('/');
         }
       }
     } catch (error) {
       if (isAxiosError(error) && error.response) {
         const backendMessage = error.response.data?.message;
-        let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
-        
+        let errorMessage =
+          'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+
         if (typeof backendMessage === 'string') {
           errorMessage = backendMessage;
         } else if (backendMessage && typeof backendMessage === 'object') {
@@ -62,7 +62,7 @@ export default function LoginPage() {
             errorMessage = backendMessage.message;
           }
         }
-        
+
         setError('root', { message: errorMessage });
       } else {
         setError('root', {
@@ -96,20 +96,17 @@ export default function LoginPage() {
 
       <section className="w-full lg:w-[40%] bg-white flex flex-col justify-center items-center relative p-8 sm:p-12 md:p-16">
         <div className="w-full max-w-sm flex flex-col">
-
           {/* Mobile logo */}
           <div className="lf-s1 lg:hidden flex items-center justify-center gap-2 mb-8">
-            <span className="font-bold text-[#10120C] text-lg">
-              LenFolk
-            </span>
+            <span className="font-bold text-[#10120C] text-lg">LenFolk</span>
           </div>
 
           {/* Header */}
           <div className="lf-s2 mb-10 text-center lg:text-left">
-            <h1 className="text-[32px] leading-[40px] font-semibold text-[#10120C] mb-2">
+            <h1 className="text-[32px] leading-10font-semibold text-[#10120C] mb-2">
               Chào mừng quay lại
             </h1>
-            <p className="text-[16px] leading-[24px] text-[#8E9E6E]">
+            <p className="text-[16px] leading-6 text-[#8E9E6E]">
               Đăng nhập vào hệ thống LenFolk
             </p>
           </div>
@@ -135,8 +132,10 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 w-full">
-
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-6 w-full"
+          >
             {/* Server error */}
             {errors.root && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -204,16 +203,19 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs text-red-500">{errors.password.message}</p>
+                <p className="text-xs text-red-500">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
-           
             <button
               type="submit"
               disabled={isSubmitting}
               className="lf-s7 w-full h-12 cursor-pointer text-white text-[16px] font-semibold rounded-lg mt-2 transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:ring-[#8E9E6E] hover:opacity-90 disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, #404e26 0%, #879748 100%)' }}
+              style={{
+                background: 'linear-gradient(135deg, #404e26 0%, #879748 100%)',
+              }}
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center gap-2">

@@ -64,7 +64,7 @@ const NAV_GROUPS = [
         icon: BookOpen,
       },
       {
-        label: 'Quản lý khóa học',
+        label: 'Quản lý khoá học',
         href: '/admin/content/course-management',
         icon: ClipboardCheck,
       },
@@ -180,7 +180,7 @@ export default function AdminSidebar({
   return (
     <aside
       className={`fixed top-0 left-0 bottom-0 bg-white border-r border-gray-200 flex flex-col z-50 transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'w-[72px]' : 'w-60'
+        isCollapsed ? 'w-18' : 'w-60'
       }`}
     >
       {/* Toggle button */}

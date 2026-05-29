@@ -178,7 +178,7 @@ export default function AdminBadgesPage() {
                         </span>
                         {badge.description && (
                           <span
-                            className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
+                            className="text-xs text-gray-500 line-clamp-1 max-w-50"
                             title={badge.description}
                           >
                             {badge.description}

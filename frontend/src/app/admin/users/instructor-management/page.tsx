@@ -151,7 +151,7 @@ export default function AdminInstructorsPage() {
                         </span>
                         {inst.bio && (
                           <span
-                            className="text-xs text-gray-500 line-clamp-1 max-w-[200px]"
+                            className="text-xs text-gray-500 line-clamp-1 max-w-50"
                             title={inst.bio}
                           >
                             {inst.bio}

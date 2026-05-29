@@ -194,7 +194,7 @@ export default function RevenueReportsPage() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 max-w-[1400px]"
+      className="p-6 space-y-6 max-w-350"
       variants={container}
       initial="hidden"
       animate="show"

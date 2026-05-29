@@ -95,7 +95,7 @@ export default function LessonDetailPage() {
         <div className="col-span-2 space-y-4">
           {/* Hero card */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="h-40 bg-gradient-to-br from-[#1a3a2a] to-[#2d6a4f] flex items-center justify-center">
+            <div className="h-40 bg-linear-to-br from-[#1a3a2a] to-[#2d6a4f] flex items-center justify-center">
               <BookOpen className="w-14 h-14 text-white/30" />
             </div>
             <div className="px-6 py-5">
@@ -228,7 +228,7 @@ export default function LessonDetailPage() {
                 {[
                   {
                     icon: Layers,
-                    label: 'Khóa học',
+                    label: 'Khoá học',
                     value: course?.title ?? lesson.courseId,
                     color: 'text-[#2d6a4f]',
                     bg: 'bg-emerald-50',

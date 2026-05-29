@@ -10,7 +10,9 @@ interface AdminLayoutClientProps {
   children: React.ReactNode;
 }
 
-export default function AdminLayoutClient({ children }: AdminLayoutClientProps) {
+export default function AdminLayoutClient({
+  children,
+}: AdminLayoutClientProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -60,7 +62,7 @@ export default function AdminLayoutClient({ children }: AdminLayoutClientProps) 
       />
       <div
         className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'ml-[80px]' : 'ml-60'
+          isCollapsed ? 'ml-20' : 'ml-60'
         }`}
       >
         <AdminHeader user={user} />
