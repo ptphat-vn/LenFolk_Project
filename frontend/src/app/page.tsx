@@ -101,7 +101,7 @@ rounded-full transition-all duration-300 text-sm'>
             className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.15]"
           >
             Khơi dậy đam mê <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8E9E6E] to-[#10120C]">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-[#8E9E6E] to-[#10120C]">
               âm nhạc trong bạn
             </span>
           </motion.h1>

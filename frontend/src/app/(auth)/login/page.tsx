@@ -36,7 +36,7 @@ export default function LoginPage() {
       const response = await authApi.login(data);
       const { accessToken, refreshToken, user } = response.data;
       if (accessToken) {
-        setToken(accessToken, refreshToken);
+        setToken(accessToken, refreshToken, user);
         if (user?.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (user?.role === 'instructor') {
