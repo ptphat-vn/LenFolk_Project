@@ -1,9 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { adminApi } from '@/lib/api/admin';
-import { revenueApi } from '@/lib/api/revenue';
-import { lessonApi } from '@/lib/api/lesson';
 import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { motion, Variants } from 'framer-motion';
 import {
@@ -295,71 +292,15 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [dashboardRes, overviewRes, byPlanRes, chartRes, pendingRes] = await Promise.all([
-          adminApi.getDashboard(),
-          revenueApi.getOverview(),
-          revenueApi.getByPlan(),
-          revenueApi.getChart('month'),
-          lessonApi.getPendingLessons(),
-        ]);
-        
-        setStats([
-          { ...STATS[0], value: overviewRes.totalRevenue.toLocaleString('vi-VN') + ' ₫' },
-          { ...STATS[1], value: dashboardRes.users.total.toLocaleString('vi-VN') },
-          { ...STATS[2], value: dashboardRes.content.publishedLessons.toString() },
-          { ...STATS[3], value: pendingRes?.meta?.total?.toString() || '0' },
-        ]);
-
-        if (byPlanRes && byPlanRes.length > 0) {
-           setPackages(byPlanRes.map((p: any) => ({
-             name: p.planName,
-             subscribers: p.count,
-             total: dashboardRes.users.total,
-             bar: pkgStyle[p.planName] ? pkgStyle[p.planName].split(' ')[0] : 'bg-gray-300',
-             badge: pkgStyle[p.planName] ?? 'bg-gray-100 text-gray-600',
-             price: 'Active'
-           })));
-        }
-
-        if (chartRes && chartRes.length > 0) {
-          setChartData(chartRes.map((item: any) => {
-            const date = new Date(item._id);
-            return {
-              month: `T${date.getMonth() + 1}`,
-              revenue: item.revenue / 1000000
-            };
-          }));
-        }
-
-        if (pendingRes.data) {
-           setPendingReviews(pendingRes.data.map((l: any) => ({
-             id: l._id,
-             title: l.title,
-             author: "Hệ thống",
-             type: 'Bài học',
-             time: "Gần đây",
-             priority: 'medium'
-           })));
-        }
-
-        if (dashboardRes.recentSignups) {
-           setRecentUsers(dashboardRes.recentSignups.map((u: any) => ({
-             id: u._id,
-             name: u.fullName,
-             email: u.email,
-             pkg: 'Miễn phí', // Simplified for now since API doesn't return pkg directly here
-             joined: new Date(u.createdAt).toLocaleDateString('vi-VN')
-           })));
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+    // Mock chart data instead of API call
+    setChartData([
+      { month: 'T1', revenue: 12 },
+      { month: 'T2', revenue: 15 },
+      { month: 'T3', revenue: 18 },
+      { month: 'T4', revenue: 14 },
+      { month: 'T5', revenue: 48.5 },
+    ]);
+    setIsLoading(false);
   }, []);
 
   if (isLoading) {
