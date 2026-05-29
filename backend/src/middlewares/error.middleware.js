@@ -7,7 +7,14 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFieldsDB = (err) => {
-  const value = err.errmsg.match(/(["'])(\\?.)*?\1/)[0];
+  // MongoDB driver 4+: err.keyValue; older drivers: err.errmsg
+  let value;
+  if (err.keyValue) {
+    value = JSON.stringify(err.keyValue);
+  } else {
+    const match = (err.errmsg || '').match(/(["'])(\\?.)*?\1/);
+    value = match ? match[0] : 'unknown';
+  }
   const message = `Duplicate field value: ${value}. Please use another value!`;
   return new AppError(message, 400);
 };
@@ -46,7 +53,7 @@ const sendErrorProd = (err, res) => {
     // Programming or other unknown error: don't leak error details
     const logger = require('../config/logger');
     logger.error(`ERROR 💥: ${err.message}`, { stack: err.stack, ...err });
-    
+
     res.status(500).json({
       success: false,
       status: 'error',
@@ -70,7 +77,8 @@ module.exports = (err, req, res, next) => {
 
     if (error.name === 'CastError') error = handleCastErrorDB(error);
     if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
+    if (error.name === 'ValidationError')
+      error = handleValidationErrorDB(error);
     if (error.name === 'JsonWebTokenError') error = handleJWTError();
     if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
 

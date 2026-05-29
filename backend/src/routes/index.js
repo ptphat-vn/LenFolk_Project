@@ -23,21 +23,21 @@ router.use(
 );
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-router.use('/auth',                  require('./auth.route'));
-router.use('/users',                 require('./user.route'));
-router.use('/courses',               require('./course.route'));
-router.use('/lessons',               require('./lesson.route'));
-router.use('/instructor-profiles',   require('./instructor-profile.route'));
-router.use('/badges',                require('./badge.route'));
-router.use('/notifications',         require('./notification.route'));
-router.use('/progress',              require('./progress.route'));
-router.use('/practice-sessions',     require('./practice-session.route'));
-router.use('/streaks',               require('./streak.route'));
-router.use('/subscriptions',         require('./subscription.route'));
-router.use('/transaction-records',   require('./transaction-record.route'));
-router.use('/permissions',           require('./permission.route'));
-router.use('/audit-logs',            require('./audit-log.route'));
-router.use('/moderator-logs',        require('./moderator-log.route'));
-router.use('/payments',              require('./payment.route'));
+router.use('/auth', require('./auth.route'));
+router.use('/users', require('./user.route'));
+router.use('/courses', require('./course.route'));
+router.use('/lessons', require('./lesson.route'));
+router.use('/instructor-profiles', require('./instructor-profile.route'));
+router.use('/badges', require('./badge.route'));
+router.use('/notifications', require('./notification.route'));
+router.use('/progress', require('./progress.route'));
+router.use('/practice-sessions', require('./practice-session.route'));
+router.use('/streaks', require('./streak.route'));
+router.use('/subscriptions', require('./subscription.route'));
+router.use('/transaction-records', require('./transaction-record.route'));
+router.use('/permissions', require('./permission.route'));
+router.use('/audit-logs', require('./audit-log.route'));
+router.use('/moderator-logs', require('./moderator-log.route'));
+// /payments (ZaloPay) — removed; use POST /subscriptions/:id/request + /transaction-records/:id/{upload-proof|approve|reject}
 
 module.exports = router;

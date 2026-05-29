@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const subscriptionSchema = new mongoose.Schema(
   {
@@ -7,6 +7,12 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
       trim: true,
       unique: true,
+    },
+    // Gắn trực tiếp gói cước này với 1 khóa học cụ thể
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true,
     },
     description: {
       type: String,
@@ -40,13 +46,18 @@ const subscriptionSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    qrCodeUrl: {
+      type: String,
+      default: null,
+      comment: 'URL of the QR code image for manual bank transfer payment',
+    },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
-subscriptionSchema.index({ isActive: 1 })
+subscriptionSchema.index({ isActive: 1 });
 
-const Subscription = mongoose.model('Subscription', subscriptionSchema)
+const Subscription = mongoose.model('Subscription', subscriptionSchema);
 
 // ------------------------------------
 
@@ -64,8 +75,8 @@ const userSubscriptionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['trial', 'active', 'expired', 'cancelled'],
-      default: 'active',
+      enum: ['pending', 'trial', 'active', 'expired', 'cancelled'],
+      default: 'pending',
     },
     startDate: {
       type: Date,
@@ -81,17 +92,20 @@ const userSubscriptionSchema = new mongoose.Schema(
     },
     platform: {
       type: String,
-      enum: ['ios', 'android', 'stripe', 'google_play', 'zalopay'],
+      enum: ['ios', 'android', 'stripe', 'google_play', 'qr_manual'],
       required: true,
     },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
-userSubscriptionSchema.index({ userId: 1, status: 1 })
-userSubscriptionSchema.index({ userId: 1, endDate: 1 })
-userSubscriptionSchema.index({ endDate: 1, status: 1 })
+userSubscriptionSchema.index({ userId: 1, status: 1 });
+userSubscriptionSchema.index({ userId: 1, endDate: 1 });
+userSubscriptionSchema.index({ endDate: 1, status: 1 });
 
-const UserSubscription = mongoose.model('UserSubscription', userSubscriptionSchema)
+const UserSubscription = mongoose.model(
+  'UserSubscription',
+  userSubscriptionSchema,
+);
 
-module.exports = { Subscription, UserSubscription }
+module.exports = { Subscription, UserSubscription };
