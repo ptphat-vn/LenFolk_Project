@@ -25,6 +25,17 @@ const courseSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    price: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    adminCommissionPercentage: {
+      type: Number,
+      default: 30,
+      min: 0,
+      max: 100,
+    },
     courseType: {
       type: String,
       default: 'foundation', // Không còn ép buộc enum cứng
@@ -36,7 +47,7 @@ const courseSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'published', 'archived'],
+      enum: ['draft', 'pending', 'published', 'archived'],
       default: 'draft',
     },
     tags: {

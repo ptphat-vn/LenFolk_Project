@@ -68,6 +68,12 @@ const userSchema = new mongoose.Schema(
       ref: 'UserSubscription',
       default: null,
     },
+    enrolledCourses: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course',
+      },
+    ],
   },
   { timestamps: true },
 );

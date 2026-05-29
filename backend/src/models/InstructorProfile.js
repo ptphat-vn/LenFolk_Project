@@ -37,6 +37,11 @@ const instructorProfileSchema = new mongoose.Schema(
       min: 0,
       max: 5,
     },
+    bankDetails: {
+      bankName: { type: String, default: null },
+      accountName: { type: String, default: null },
+      accountNumber: { type: String, default: null },
+    },
   },
   { timestamps: true }
 )

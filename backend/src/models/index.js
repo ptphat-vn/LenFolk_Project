@@ -12,6 +12,9 @@ const TransactionRecord = require('./TransactionRecord')
 const Notification = require('./Notification')
 const ModeratorLog = require('./ModeratorLog')
 const AuditLog = require('./AuditLog')
+const Coupon = require('./Coupon')
+const Wallet = require('./Wallet')
+const PayoutRequest = require('./PayoutRequest')
 
 module.exports = {
   User,
@@ -31,4 +34,7 @@ module.exports = {
   Notification,
   ModeratorLog,
   AuditLog,
+  Coupon,
+  Wallet,
+  PayoutRequest,
 }

@@ -10,7 +10,17 @@ const transactionRecordSchema = new mongoose.Schema(
     userSubscriptionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'UserSubscription',
-      required: true,
+      required: false,
+    },
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: false,
+    },
+    transactionType: {
+      type: String,
+      enum: ['subscription', 'course'],
+      default: 'subscription',
     },
     amount: {
       type: Number,
@@ -50,6 +60,16 @@ const transactionRecordSchema = new mongoose.Schema(
     paidAt: {
       type: Date,
       default: null,
+    },
+    couponId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coupon',
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     // ── Manual QR payment fields ─────────────────────────────────────────────
     proofImageUrl: {

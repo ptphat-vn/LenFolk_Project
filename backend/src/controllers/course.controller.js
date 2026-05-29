@@ -10,7 +10,14 @@ const catchAsync = require('../utils/catchAsync');
  * Kiểm tra user có quyền truy cập khóa học cụ thể thông qua gói nâng cấp không.
  */
 async function hasCourseAccess(userId, courseId) {
-  // Tìm tất cả các gói đang active của user
+  // 1. Kiểm tra xem khóa học có nằm trong enrolledCourses (mua đứt) không
+  const User = require('../models/User');
+  const user = await User.findById(userId).select('enrolledCourses');
+  if (user && user.enrolledCourses && user.enrolledCourses.includes(courseId)) {
+    return true;
+  }
+
+  // 2. Tìm tất cả các gói subscription đang active của user
   const activeSubs = await UserSubscription.find({
     userId,
     status: 'active',
@@ -121,13 +128,18 @@ exports.updateOne = catchAsync(async (req, res, next) => {
   const course = await Course.findById(req.params.id);
   if (!course) return next(new AppError('No course found with that ID', 404));
 
-  if (
-    req.user.role === 'instructor' &&
-    !course.instructorId.equals(req.user._id)
-  ) {
-    return next(
-      new AppError('You do not have permission to update this course', 403),
-    );
+  if (req.user.role === 'instructor') {
+    if (!course.instructorId.equals(req.user._id)) {
+      return next(
+        new AppError('You do not have permission to update this course', 403),
+      );
+    }
+    // Chặn giảng viên tự ý publish khóa học
+    if (req.body.status === 'published') {
+      return next(
+        new AppError('Instructors cannot publish courses directly. Please set status to pending for admin review.', 403),
+      );
+    }
   }
 
   const updated = await Course.findByIdAndUpdate(req.params.id, req.body, {
