@@ -7,19 +7,27 @@ import {
   CheckCircle2, 
   XCircle, 
   Clock, 
-  Search,
   Wallet,
   Building,
-  CreditCard
+  CreditCard,
+  RefreshCw,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { FilterInput } from '@/common/filter/FilterInput';
+import { DataTable, Column } from '@/common/table/DataTable';
+import { Pagination } from '@/common/pagination/pagination';
+import { ActionButton } from '@/common/button/ActionButton';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export default function AdminPayoutsPage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
  const fetchPayouts = useCallback(async () => {
   try {
@@ -53,13 +61,17 @@ useEffect(() => {
   };
 
   const filteredPayouts = payouts.filter((p) => {
-    const searchLower = search.toLowerCase();
+    const searchLower = debouncedSearch.toLowerCase();
     return (
       p.instructorId.toLowerCase().includes(searchLower) ||
       p.bankDetails?.accountName.toLowerCase().includes(searchLower) ||
       p.bankDetails?.bankName.toLowerCase().includes(searchLower)
     );
   });
+
+  const paginated = filteredPayouts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => setPage(1), [debouncedSearch]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -87,135 +99,142 @@ useEffect(() => {
     }
   };
 
+  const columns: Column<PayoutRequest>[] = [
+    {
+      header: 'Mã yêu cầu',
+      render: (payout) => (
+        <span className="font-mono text-[12px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded">
+          {payout._id.substring(0, 8)}...
+        </span>
+      ),
+    },
+    {
+      header: 'Giảng viên (ID)',
+      render: (payout) => (
+        <span className="font-medium text-[13px] text-gray-900">{payout.instructorId}</span>
+      ),
+    },
+    {
+      header: 'Số tiền rút',
+      render: (payout) => (
+        <span className="font-bold text-[13px] text-[#2d6a4f]">
+          {formatCurrency(payout.amount)}
+        </span>
+      ),
+    },
+    {
+      header: 'Thông tin ngân hàng',
+      render: (payout) =>
+        payout.bankDetails ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5 text-[12px] font-medium text-gray-900">
+              <Building className="w-3.5 h-3.5 text-gray-400" />
+              {payout.bankDetails.bankName}
+            </div>
+            <div className="flex items-center gap-1.5 text-[12px] text-gray-500">
+              <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+              {payout.bankDetails.accountNumber}
+            </div>
+            <div className="text-[12px] text-gray-500 ml-5">
+              {payout.bankDetails.accountName}
+            </div>
+          </div>
+        ) : (
+          <span className="text-gray-400 italic text-[12px]">Không có thông tin</span>
+        ),
+    },
+    {
+      header: 'Trạng thái',
+      render: (payout) => getStatusBadge(payout.status),
+    },
+    {
+      header: 'Ngày tạo',
+      render: (payout) => (
+        <span className="text-[12px] text-gray-500">
+          {payout.createdAt ? new Date(payout.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+        </span>
+      ),
+    },
+    {
+      header: 'Thao tác',
+      className: 'text-right',
+      render: (payout) =>
+        payout.status === 'pending' ? (
+          <div className="flex items-center justify-end gap-1.5">
+            <button
+              onClick={() => handleReview(payout._id, 'approved')}
+              disabled={isProcessing === payout._id}
+              className="px-2.5 py-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors disabled:opacity-50"
+            >
+              Duyệt
+            </button>
+            <button
+              onClick={() => handleReview(payout._id, 'rejected')}
+              disabled={isProcessing === payout._id}
+              className="px-2.5 py-1.5 text-[11px] font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-md transition-colors disabled:opacity-50"
+            >
+              Từ chối
+            </button>
+          </div>
+        ) : (
+          <span className="text-[12px] text-gray-400 italic">—</span>
+        ),
+    },
+  ];
+
   return (
-    <div className="p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div className="p-6 space-y-5 w-full">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-[#2d6a4f]" />
+          <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-[#2d6a4f]" />
             Yêu cầu rút tiền
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-[13px] text-gray-500 mt-0.5">
             Quản lý các yêu cầu rút tiền từ ví của giảng viên
           </p>
         </div>
+        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchPayouts}>
+          Làm mới
+        </ActionButton>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center bg-gray-50/50">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo ID, Tên TK, Ngân hàng..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/20 focus:border-[#2d6a4f] transition-all"
+      {/* Filters */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center gap-3">
+        <FilterInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Tìm kiếm theo ID, Tên TK, Ngân hàng..."
+          className="flex-1 max-w-sm"
+        />
+        <span className="text-[12px] text-gray-400 ml-auto">
+          {filteredPayouts.length} yêu cầu
+        </span>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <DataTable
+          columns={columns}
+          data={paginated}
+          isLoading={loading}
+          emptyIcon={Wallet}
+          emptyMessage="Không có yêu cầu rút tiền nào"
+          keyExtractor={(p) => p._id}
+        />
+        
+        {!loading && filteredPayouts.length > PAGE_SIZE && (
+          <div className="px-5 py-1 border-t border-gray-100">
+            <Pagination
+              total={filteredPayouts.length}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              showPageSizeSelector={false}
             />
           </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                <th className="px-6 py-4">Mã yêu cầu</th>
-                <th className="px-6 py-4">Giảng viên (ID)</th>
-                <th className="px-6 py-4">Số tiền rút</th>
-                <th className="px-6 py-4">Thông tin ngân hàng</th>
-                <th className="px-6 py-4">Trạng thái</th>
-                <th className="px-6 py-4">Ngày tạo</th>
-                <th className="px-6 py-4 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-8 h-8 border-4 border-[#2d6a4f] border-t-transparent rounded-full animate-spin mb-4" />
-                      <p>Đang tải dữ liệu...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredPayouts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center">
-                      <Wallet className="w-12 h-12 text-gray-300 mb-3" />
-                      <p>Không có yêu cầu rút tiền nào</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredPayouts.map((payout) => (
-                  <tr key={payout._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs text-gray-500">{payout._id.substring(0, 8)}...</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-medium text-gray-900">{payout.instructorId}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-bold text-[#2d6a4f]">
-                        {formatCurrency(payout.amount)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {payout.bankDetails ? (
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-900">
-                            <Building className="w-3.5 h-3.5 text-gray-400" />
-                            {payout.bankDetails.bankName}
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                            <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                            {payout.bankDetails.accountNumber}
-                          </div>
-                          <div className="text-xs text-gray-500 ml-5">
-                            {payout.bankDetails.accountName}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 italic text-xs">Không có thông tin</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(payout.status)}
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {payout.createdAt ? new Date(payout.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {payout.status === 'pending' ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleReview(payout._id, 'approved')}
-                            disabled={isProcessing === payout._id}
-                            className="px-3 py-1.5 text-xs font-medium bg-[#1a3a2a] text-white hover:bg-[#2d6a4f] rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            Duyệt
-                          </button>
-                          <button
-                            onClick={() => handleReview(payout._id, 'rejected')}
-                            disabled={isProcessing === payout._id}
-                            className="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            Từ chối
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">Đã xử lý</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        )}
       </div>
     </div>
   );

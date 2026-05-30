@@ -70,7 +70,7 @@ export default function LessonDetailPage() {
   };
 
   return (
-    <div className="p-6 space-y-5 max-w-350">
+    <div className="p-6 space-y-5 w-full">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-[13px] text-gray-500">
         <Link

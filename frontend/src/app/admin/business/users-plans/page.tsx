@@ -18,6 +18,12 @@ import { userApi } from '@/lib/api/user.api';
 import { subscriptionApi } from '@/lib/api/subscription.api';
 import { User, Role } from '@/types/user.types';
 import { Subscription } from '@/types/subscription.types';
+import { FilterInput } from '@/common/filter/FilterInput';
+import { FilterSelect } from '@/common/filter/FilterSelect';
+import { DataTable, Column } from '@/common/table/DataTable';
+import { Pagination } from '@/common/pagination/pagination';
+import { ActionButton } from '@/common/button/ActionButton';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(d?: string | null) {
@@ -61,6 +67,7 @@ export default function UsersPlansPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all');
   const [subFilter, setSubFilter] = useState<'all' | 'subscribed' | 'free'>(
     'all',
@@ -105,9 +112,9 @@ export default function UsersPlansPage() {
     () =>
       users.filter((u) => {
         if (
-          search &&
-          !u.name.toLowerCase().includes(search.toLowerCase()) &&
-          !u.email.toLowerCase().includes(search.toLowerCase())
+          debouncedSearch &&
+          !u.name.toLowerCase().includes(debouncedSearch.toLowerCase()) &&
+          !u.email.toLowerCase().includes(debouncedSearch.toLowerCase())
         )
           return false;
         if (roleFilter !== 'all' && u.role !== roleFilter) return false;
@@ -120,11 +127,96 @@ export default function UsersPlansPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  useEffect(() => setPage(1), [search, roleFilter, subFilter]);
+  useEffect(() => setPage(1), [debouncedSearch, roleFilter, subFilter]);
+
+  const columns: Column<User>[] = [
+    {
+      header: 'Người dùng',
+      render: (u) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#2d6a4f] to-[#1a3a2a] text-white text-[12px] font-bold flex items-center justify-center shrink-0">
+            {u.name?.[0]?.toUpperCase() ?? 'U'}
+          </div>
+          <div>
+            <p className="text-[13px] font-medium text-gray-900">{u.name}</p>
+            <p className="text-[11px] text-gray-400">{u.email}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Vai trò',
+      render: (u) => {
+        const role = ROLE_STYLE[u.role] ?? {
+          label: u.role,
+          cls: 'bg-gray-100 text-gray-600',
+        };
+        return (
+          <span
+            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${role.cls}`}
+          >
+            {role.label}
+          </span>
+        );
+      },
+    },
+    {
+      header: 'Gói đăng ký',
+      render: (u) => {
+        const userSub = subscriptions.find((s) => s._id === u.currentSubscription);
+        return userSub ? (
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-[#2d6a4f]" />
+            <span className="text-[13px] font-medium text-gray-800">
+              {userSub.name}
+            </span>
+          </div>
+        ) : (
+          <span className="text-[12px] text-gray-400">Chưa đăng ký</span>
+        );
+      },
+    },
+    {
+      header: 'Trạng thái',
+      render: (u) => {
+        const isActive = u.isActive !== false;
+        return (
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-red-400'}`}
+            />
+            {isActive ? 'Hoạt động' : 'Đã khóa'}
+          </span>
+        );
+      },
+    },
+    {
+      header: 'Tham gia',
+      render: (u) => (
+        <span className="text-[12px] text-gray-400">{formatDate(u.createdAt)}</span>
+      ),
+    },
+    {
+      header: '',
+      className: 'text-right',
+      render: (u) => (
+        <div className="flex items-center justify-end">
+          <button
+            onClick={() => setSelectedUser(u)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <motion.div
-      className="p-6 space-y-6 max-w-350"
+      className="p-6 space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
@@ -135,16 +227,13 @@ export default function UsersPlansPage() {
           <h1 className="text-xl font-bold text-gray-900">
             Người dùng & Gói đăng ký
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-[13px] text-gray-500 mt-0.5">
             Xem học viên và gói đang sử dụng
           </p>
         </div>
-        <button
-          onClick={fetchAll}
-          className="flex items-center gap-2 h-9 px-4 rounded-lg border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Làm mới
-        </button>
+        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchAll}>
+          Làm mới
+        </ActionButton>
       </motion.div>
 
       {/* Stats */}
@@ -201,213 +290,65 @@ export default function UsersPlansPage() {
         ))}
       </motion.div>
 
-      {/* Table */}
+      {/* Table Section */}
       <motion.div
         variants={item}
         className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
       >
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
-          <div className="relative flex-1 min-w-50">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm tên, email..."
-              className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-gray-50"
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as Role | 'all')}
-              className="h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
-            >
-              <option value="all">Tất cả vai trò</option>
-              {(
-                [
-                  'learner',
-                  'instructor',
-                  'admin',
-                  'moderator',
-                  'guest',
-                ] as Role[]
-              ).map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_STYLE[r].label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <select
+          <FilterInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Tìm tên, email..."
+            className="flex-1 min-w-48"
+          />
+          <FilterSelect
+            value={roleFilter}
+            onChange={(v) => setRoleFilter(v as Role | 'all')}
+            options={(
+              ['learner', 'instructor', 'admin', 'moderator', 'guest'] as Role[]
+            ).map((r) => ({
+              value: r,
+              label: ROLE_STYLE[r].label,
+            }))}
+            placeholder="Tất cả vai trò"
+            className="w-40"
+          />
+          <FilterSelect
             value={subFilter}
-            onChange={(e) => setSubFilter(e.target.value as typeof subFilter)}
-            className="h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
-          >
-            <option value="all">Tất cả</option>
-            <option value="subscribed">Có gói đăng ký</option>
-            <option value="free">Chưa đăng ký</option>
-          </select>
+            onChange={(v) => setSubFilter(v as 'all' | 'subscribed' | 'free')}
+            options={[
+              { value: 'subscribed', label: 'Có gói đăng ký' },
+              { value: 'free', label: 'Chưa đăng ký' },
+            ]}
+            placeholder="Tất cả"
+            className="w-40"
+          />
           <span className="text-[12px] text-gray-400 ml-auto">
             {filtered.length} người dùng
           </span>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {[
-                  'Người dùng',
-                  'Vai trò',
-                  'Gói đăng ký',
-                  'Trạng thái',
-                  'Tham gia',
-                  '',
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-5 py-3"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    {Array.from({ length: 6 }).map((_, j) => (
-                      <td key={j} className="px-5 py-3.5">
-                        <div className="h-4 bg-gray-100 rounded w-24" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-16 text-gray-400">
-                    <Users className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-[14px]">Không tìm thấy người dùng</p>
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((u) => {
-                  const role = ROLE_STYLE[u.role] ?? {
-                    label: u.role,
-                    cls: 'bg-gray-100 text-gray-600',
-                  };
-                  const userSub = subscriptions.find(
-                    (s) => s._id === u.currentSubscription,
-                  );
-                  const isActive = u.isActive !== false;
-                  return (
-                    <tr
-                      key={u._id}
-                      className="hover:bg-gray-50/60 transition-colors"
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#2d6a4f] to-[#1a3a2a] text-white text-[12px] font-bold flex items-center justify-center shrink-0">
-                            {u.name?.[0]?.toUpperCase() ?? 'U'}
-                          </div>
-                          <div>
-                            <p className="text-[13px] font-medium text-gray-900">
-                              {u.name}
-                            </p>
-                            <p className="text-[11px] text-gray-400">
-                              {u.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${role.cls}`}
-                        >
-                          {role.label}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {userSub ? (
-                          <div className="flex items-center gap-1.5">
-                            <Zap className="w-3.5 h-3.5 text-[#2d6a4f]" />
-                            <span className="text-[13px] font-medium text-gray-800">
-                              {userSub.name}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[12px] text-gray-400">
-                            Chưa đăng ký
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-red-400'}`}
-                          />
-                          {isActive ? 'Hoạt động' : 'Đã khóa'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-[12px] text-gray-400">
-                        {formatDate(u.createdAt)}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <button
-                          onClick={() => setSelectedUser(u)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={paginated}
+          isLoading={isLoading}
+          emptyIcon={Users}
+          emptyMessage="Không tìm thấy người dùng"
+          keyExtractor={(u) => u._id}
+        />
 
         {/* Pagination */}
         {!isLoading && filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100">
-            <span className="text-[12px] text-gray-400">
-              Trang {page}/{totalPages} · {filtered.length} người dùng
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const p = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 text-[12px] font-medium rounded-lg border transition-colors ${p === page ? 'bg-[#1a3a2a] text-white border-transparent' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="px-5 py-1 border-t border-gray-100">
+            <Pagination
+              total={filtered.length}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              showPageSizeSelector={false}
+            />
           </div>
         )}
       </motion.div>

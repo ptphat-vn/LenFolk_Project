@@ -25,6 +25,12 @@ import {
 import { CouponStatus } from '@/components/admin/promotions/CouponStatus';
 import { CouponFormModal } from '@/components/admin/promotions/CouponFormModal';
 import { CouponDeleteConfirmModal } from '@/components/admin/promotions/CouponDeleteConfirmModal';
+import { FilterInput } from '@/common/filter/FilterInput';
+import { FilterSelect } from '@/common/filter/FilterSelect';
+import { DataTable, Column } from '@/common/table/DataTable';
+import { Pagination } from '@/common/pagination/pagination';
+import { ActionButton } from '@/common/button/ActionButton';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(d?: string | null) {
@@ -38,9 +44,6 @@ function formatDate(d?: string | null) {
 function isExpired(validTo?: string | null) {
   if (!validTo) return false;
   return new Date(validTo) < new Date();
-}
-function isNotStarted(validFrom: string) {
-  return new Date(validFrom) > new Date();
 }
 
 const APPLICABLE_LABEL: Record<CouponApplicableTo, string> = {
@@ -70,6 +73,7 @@ export default function PromotionsPage() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'active' | 'inactive' | 'expired'
   >('all');
@@ -111,7 +115,7 @@ export default function PromotionsPage() {
   const filtered = useMemo(
     () =>
       coupons.filter((c) => {
-        if (search && !c.code.toLowerCase().includes(search.toLowerCase()))
+        if (debouncedSearch && !c.code.toLowerCase().includes(debouncedSearch.toLowerCase()))
           return false;
         if (statusFilter === 'active' && (!c.isActive || isExpired(c.validTo)))
           return false;
@@ -119,7 +123,7 @@ export default function PromotionsPage() {
         if (statusFilter === 'expired' && !isExpired(c.validTo)) return false;
         return true;
       }),
-    [coupons, search, statusFilter],
+    [coupons, debouncedSearch, statusFilter],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -127,7 +131,7 @@ export default function PromotionsPage() {
   useEffect(() => {
     const timeout = setTimeout(() => setPage(1), 0);
     return () => clearTimeout(timeout);
-  }, [search, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   const handleSave = async (data: CreateCouponInput, id?: string) => {
     if (id) {
@@ -165,9 +169,116 @@ export default function PromotionsPage() {
     }
   };
 
+  const columns: Column<Coupon>[] = [
+    {
+      header: 'Mã coupon',
+      render: (coupon) => (
+        <span className="font-mono text-[13px] font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+          {coupon.code}
+        </span>
+      ),
+    },
+    {
+      header: 'Giảm giá',
+      render: (coupon) => (
+        <span
+          className={`text-[13px] font-bold ${coupon.discountType === 'percent' ? 'text-[#2d6a4f]' : 'text-blue-600'}`}
+        >
+          {coupon.discountType === 'percent'
+            ? `-${coupon.discountValue}%`
+            : `-${coupon.discountValue.toLocaleString('vi-VN')} ₫`}
+        </span>
+      ),
+    },
+    {
+      header: 'Áp dụng',
+      render: (coupon) => (
+        <span className="text-[12px] text-gray-600">
+          {APPLICABLE_LABEL[coupon.applicableTo]}
+        </span>
+      ),
+    },
+    {
+      header: 'Lượt dùng',
+      render: (coupon) => (
+        <>
+          <div className="text-[13px] text-gray-900">
+            {coupon.usedCount}
+            {coupon.maxUses ? (
+              <span className="text-gray-400"> / {coupon.maxUses}</span>
+            ) : (
+              <span className="text-gray-400"> / ∞</span>
+            )}
+          </div>
+          {coupon.maxUses && (
+            <div className="mt-1 h-1 bg-gray-100 rounded-full w-16 overflow-hidden">
+              <div
+                className="h-full bg-[#2d6a4f] rounded-full"
+                style={{
+                  width: `${Math.min(100, (coupon.usedCount / coupon.maxUses) * 100)}%`,
+                }}
+              />
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      header: 'Hiệu lực',
+      render: (coupon) => (
+        <span className="text-[12px] text-gray-500">
+          <span>{formatDate(coupon.validFrom)}</span>
+          {coupon.validTo && (
+            <span className="text-gray-300">
+              {' '}
+              → {formatDate(coupon.validTo)}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      header: 'Trạng thái',
+      render: (coupon) => <CouponStatus coupon={coupon} />,
+    },
+    {
+      header: 'Hành động',
+      className: 'text-right',
+      render: (coupon) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => {
+              setEditTarget(coupon);
+              setFormOpen(true);
+            }}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => handleToggle(coupon)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
+          >
+            {coupon.isActive ? (
+              <ToggleLeft className="w-3.5 h-3.5" />
+            ) : (
+              <ToggleRight className="w-3.5 h-3.5" />
+            )}
+          </button>
+          <button
+            onClick={() => setDeleteTarget(coupon)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <motion.div
-      className="p-6 space-y-6 max-w-350"
+      className="p-6 space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
@@ -183,21 +294,18 @@ export default function PromotionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={fetchCoupons}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Làm mới
-          </button>
-          <button
+          <ActionButton icon={RefreshCw} variant="outline" onClick={fetchCoupons}>
+            Làm mới
+          </ActionButton>
+          <ActionButton
+            icon={Plus}
             onClick={() => {
               setEditTarget(null);
               setFormOpen(true);
             }}
-            className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white text-[13px] font-medium transition-colors shadow-sm"
           >
-            <Plus className="w-4 h-4" /> Tạo mã mới
-          </button>
+            Tạo mã mới
+          </ActionButton>
         </div>
       </motion.div>
 
@@ -255,193 +363,47 @@ export default function PromotionsPage() {
       >
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
-          <div className="relative flex-1 min-w-50">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo mã coupon..."
-              className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-gray-50"
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as typeof statusFilter)
-              }
-              className="h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
-            >
-              <option value="all">Tất cả</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="inactive">Đã tắt</option>
-              <option value="expired">Hết hạn</option>
-            </select>
-          </div>
+          <FilterInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Tìm theo mã coupon..."
+            className="flex-1 min-w-48"
+          />
+          <FilterSelect
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as 'all' | 'active' | 'inactive' | 'expired')}
+            options={[
+              { value: 'active', label: 'Đang hoạt động' },
+              { value: 'inactive', label: 'Đã tắt' },
+              { value: 'expired', label: 'Hết hạn' },
+            ]}
+            placeholder="Tất cả trạng thái"
+            className="w-40"
+          />
           <span className="text-[12px] text-gray-400 ml-auto">
             {filtered.length} mã
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {[
-                  'Mã coupon',
-                  'Giảm giá',
-                  'Áp dụng',
-                  'Lượt dùng',
-                  'Hiệu lực',
-                  'Trạng thái',
-                  '',
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-5 py-3"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-5 py-3.5">
-                        <div className="h-4 bg-gray-100 rounded w-20" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-14 text-gray-400">
-                    <Tag className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                    <p className="text-[14px]">Không có mã coupon nào</p>
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((coupon) => (
-                  <tr
-                    key={coupon._id}
-                    className="hover:bg-gray-50/60 transition-colors"
-                  >
-                    <td className="px-5 py-3.5">
-                      <span className="font-mono text-[13px] font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
-                        {coupon.code}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`text-[13px] font-bold ${coupon.discountType === 'percent' ? 'text-[#2d6a4f]' : 'text-blue-600'}`}
-                      >
-                        {coupon.discountType === 'percent'
-                          ? `-${coupon.discountValue}%`
-                          : `-${coupon.discountValue.toLocaleString('vi-VN')} ₫`}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-[12px] text-gray-600">
-                        {APPLICABLE_LABEL[coupon.applicableTo]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="text-[13px] text-gray-900">
-                        {coupon.usedCount}
-                        {coupon.maxUses ? (
-                          <span className="text-gray-400">
-                            {' '}
-                            / {coupon.maxUses}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400"> / ∞</span>
-                        )}
-                      </div>
-                      {coupon.maxUses && (
-                        <div className="mt-1 h-1 bg-gray-100 rounded-full w-16 overflow-hidden">
-                          <div
-                            className="h-full bg-[#2d6a4f] rounded-full"
-                            style={{
-                              width: `${Math.min(100, (coupon.usedCount / coupon.maxUses) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-[12px] text-gray-500">
-                      <span>{formatDate(coupon.validFrom)}</span>
-                      {coupon.validTo && (
-                        <span className="text-gray-300">
-                          {' '}
-                          → {formatDate(coupon.validTo)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <CouponStatus coupon={coupon} />
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            setEditTarget(coupon);
-                            setFormOpen(true);
-                          }}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleToggle(coupon)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
-                        >
-                          {coupon.isActive ? (
-                            <ToggleLeft className="w-3.5 h-3.5" />
-                          ) : (
-                            <ToggleRight className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setDeleteTarget(coupon)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={paginated}
+          isLoading={isLoading}
+          emptyIcon={Tag}
+          emptyMessage="Không có mã coupon nào"
+          keyExtractor={(c) => c._id}
+        />
 
         {/* Pagination */}
         {!isLoading && filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100">
-            <span className="text-[12px] text-gray-400">
-              Trang {page}/{totalPages} · {filtered.length} mã
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="px-5 py-1 border-t border-gray-100">
+            <Pagination
+              total={filtered.length}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              showPageSizeSelector={false}
+            />
           </div>
         )}
       </motion.div>

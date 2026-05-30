@@ -113,7 +113,7 @@ export default function SupportPage() {
   const activeTicket = MOCK_TICKETS.find((t) => t.id === activeTicketId);
 
   return (
-    <div className="p-6 md:p-8 max-w-350 mx-auto">
+    <div className="p-6 md:p-8 w-full mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-[#0f172a] mb-2">
           Hỗ Trợ Khách Hàng

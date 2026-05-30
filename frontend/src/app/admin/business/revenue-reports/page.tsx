@@ -13,13 +13,14 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { paymentApi } from '@/lib/api/payment.api';
 import { TransactionRecord, TransactionStatus } from '@/types/payment.types';
 import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
+import { FilterSelect } from '@/common/filter/FilterSelect';
+import { DataTable, Column } from '@/common/table/DataTable';
+import { Pagination } from '@/common/pagination/pagination';
+import { ActionButton } from '@/common/button/ActionButton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatCurrency(n: number) {
@@ -192,9 +193,62 @@ export default function RevenueReportsPage() {
 
   const isGrowthPositive = stats.growthRate >= 0;
 
+  const columns: Column<TransactionRecord>[] = [
+    {
+      header: 'Mã giao dịch',
+      render: (tx) => (
+        <span className="font-mono text-[12px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+          #{tx._id.slice(-8).toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      header: 'Phương thức',
+      render: (tx) => (
+        <span className="text-[13px] text-gray-700">{tx.paymentMethod ?? '—'}</span>
+      ),
+    },
+    {
+      header: 'Cổng thanh toán',
+      render: (tx) => (
+        <span className="text-[13px] text-gray-500">{tx.gatewayProvider ?? '—'}</span>
+      ),
+    },
+    {
+      header: 'Số tiền',
+      render: (tx) => (
+        <span className="text-[13px] font-bold text-gray-900">
+          {formatCurrency(tx.amount ?? 0)}
+        </span>
+      ),
+    },
+    {
+      header: 'Trạng thái',
+      render: (tx) => {
+        const cfg = STATUS_CONFIG[tx.status] ?? STATUS_CONFIG.pending;
+        const StatusIcon = cfg.icon;
+        return (
+          <span
+            className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}
+          >
+            <StatusIcon className="w-3 h-3" /> {cfg.label}
+          </span>
+        );
+      },
+    },
+    {
+      header: 'Thời gian',
+      render: (tx) => (
+        <span className="text-[12px] text-gray-400">
+          {formatDateTime(tx.paidAt || tx.createdAt)}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <motion.div
-      className="p-6 space-y-6 max-w-350"
+      className="p-6 space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
@@ -205,16 +259,13 @@ export default function RevenueReportsPage() {
           <h1 className="text-xl font-bold text-gray-900">
             Doanh thu & Báo cáo
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-[13px] text-gray-500 mt-0.5">
             Phân tích doanh thu và lịch sử giao dịch
           </p>
         </div>
-        <button
-          onClick={fetchTxs}
-          className="flex items-center gap-2 h-9 px-4 rounded-lg border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Làm mới
-        </button>
+        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchTxs}>
+          Làm mới
+        </ActionButton>
       </motion.div>
 
       {/* Summary Cards */}
@@ -349,128 +400,40 @@ export default function RevenueReportsPage() {
           <h2 className="text-[14px] font-semibold text-gray-900">
             Lịch sử giao dịch
           </h2>
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as typeof statusFilter)
-              }
-              className="h-8 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
-            >
-              <option value="all">Tất cả</option>
-              <option value="success">Hoàn tất</option>
-              <option value="reviewing">Đang xét</option>
-              <option value="pending">Chờ xử lý</option>
-              <option value="failed">Từ chối</option>
-              <option value="refunded">Hoàn tiền</option>
-            </select>
-          </div>
+          <FilterSelect
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as typeof statusFilter)}
+            options={[
+              { value: 'success', label: 'Hoàn tất' },
+              { value: 'reviewing', label: 'Đang xét' },
+              { value: 'pending', label: 'Chờ xử lý' },
+              { value: 'failed', label: 'Từ chối' },
+              { value: 'refunded', label: 'Hoàn tiền' },
+            ]}
+            placeholder="Tất cả trạng thái"
+            className="w-40"
+          />
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                {[
-                  'Mã giao dịch',
-                  'Phương thức',
-                  'Cổng thanh toán',
-                  'Số tiền',
-                  'Trạng thái',
-                  'Thời gian',
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-5 py-3"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {isLoading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      {Array.from({ length: 6 }).map((_, j) => (
-                        <td key={j} className="px-5 py-3.5">
-                          <div className="h-4 bg-gray-100 rounded w-24" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                : paginated.map((tx) => {
-                    const cfg =
-                      STATUS_CONFIG[tx.status] ?? STATUS_CONFIG.pending;
-                    const StatusIcon = cfg.icon;
-                    return (
-                      <tr
-                        key={tx._id}
-                        className="hover:bg-gray-50/60 transition-colors"
-                      >
-                        <td className="px-5 py-3.5">
-                          <span className="font-mono text-[12px] text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
-                            #{tx._id.slice(-8).toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-[13px] text-gray-700">
-                          {tx.paymentMethod ?? '—'}
-                        </td>
-                        <td className="px-5 py-3.5 text-[13px] text-gray-500">
-                          {tx.gatewayProvider ?? '—'}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-[13px] font-bold text-gray-900">
-                            {formatCurrency(tx.amount ?? 0)}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}
-                          >
-                            <StatusIcon className="w-3 h-3" /> {cfg.label}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-[12px] text-gray-400">
-                          {formatDateTime(tx.paidAt || tx.createdAt)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              {!isLoading && paginated.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-gray-400">
-                    <p className="text-[14px]">Không có giao dịch nào</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={paginated}
+          isLoading={isLoading}
+          emptyIcon={CreditCard}
+          emptyMessage="Không có giao dịch nào"
+          keyExtractor={(t) => t._id}
+        />
 
         {/* Pagination */}
         {!isLoading && filtered.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between px-5 py-3.5 border-t border-gray-100">
-            <span className="text-[12px] text-gray-400">
-              Trang {page}/{totalPages} · {filtered.length} giao dịch
-            </span>
-            <div className="flex gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="px-5 py-1 border-t border-gray-100">
+            <Pagination
+              total={filtered.length}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              showPageSizeSelector={false}
+            />
           </div>
         )}
       </motion.div>

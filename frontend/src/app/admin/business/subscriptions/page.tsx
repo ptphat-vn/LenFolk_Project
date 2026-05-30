@@ -14,27 +14,13 @@ import {
 } from '@/types/subscription.types';
 import { courseApi } from '@/lib/api/course.api';
 import { Course } from '@/types/course.types';
+import { ActionButton } from '@/common/button/ActionButton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatCurrency(n: number) {
   if (n === 0) return 'Miễn phí';
   return n.toLocaleString('vi-VN') + ' ₫';
 }
-function formatDate(d?: string) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-const CYCLE_LABEL: Record<BillingCycle, string> = {
-  monthly: 'Hàng tháng',
-  quarterly: 'Hàng quý',
-  yearly: 'Hàng năm',
-};
-const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'yearly'];
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -133,7 +119,7 @@ export default function SubscriptionsPage() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 max-w-350"
+      className="p-6 space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
@@ -147,21 +133,18 @@ export default function SubscriptionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={fetchAll}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 text-[13px] text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Làm mới
-          </button>
-          <button
+          <ActionButton icon={RefreshCw} variant="outline" onClick={fetchAll}>
+            Làm mới
+          </ActionButton>
+          <ActionButton
+            icon={Plus}
             onClick={() => {
               setEditTarget(null);
               setFormOpen(true);
             }}
-            className="flex items-center gap-2 h-9 px-4 rounded-lg bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white text-[13px] font-medium transition-colors shadow-sm"
           >
-            <Plus className="w-4 h-4" /> Tạo gói mới
-          </button>
+            Tạo gói mới
+          </ActionButton>
         </div>
       </motion.div>
 
