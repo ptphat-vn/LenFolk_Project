@@ -25,11 +25,8 @@ const courseSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    price: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+    // Giá khóa học được lấy từ gói Subscription liên kết — không tự nhập ở đây.
+    // Dùng Subscription.findOne({ itemType: 'course', courseId: _id }) để lấy giá.
     adminCommissionPercentage: {
       type: Number,
       default: 30,

@@ -53,7 +53,10 @@ exports.getOne = catchAsync(async (req, res, next) => {
       // 1. Kiểm tra enrolledCourses (mua đứt)
       const User = require('../models/User');
       const user = await User.findById(req.user._id).select('enrolledCourses');
-      const isEnrolled = user && user.enrolledCourses && user.enrolledCourses.includes(course._id);
+      const isEnrolled =
+        user &&
+        user.enrolledCourses &&
+        user.enrolledCourses.includes(course._id);
 
       if (!isEnrolled) {
         // 2. Tìm xem user có active subscription nào mở khóa course này không
@@ -107,7 +110,13 @@ exports.createOne = catchAsync(async (req, res, next) => {
     $inc: { totalLessons: 1 },
   });
 
-  res.status(201).json({ success: true, data: lesson });
+  res
+    .status(201)
+    .json({
+      success: true,
+      message: 'Lesson created successfully',
+      data: lesson,
+    });
 });
 
 exports.updateOne = factory.updateOne(Lesson);
@@ -122,5 +131,11 @@ exports.deleteOne = catchAsync(async (req, res, next) => {
     $inc: { totalLessons: -1 },
   });
 
-  res.status(204).json({ success: true, data: null });
+  res
+    .status(200)
+    .json({
+      success: true,
+      message: 'Lesson deleted successfully',
+      data: null,
+    });
 });

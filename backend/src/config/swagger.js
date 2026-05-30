@@ -272,10 +272,6 @@ const options = {
                 '`true` = khóa học miễn phí, không cần subscription. `false` = yêu cầu subscription active.',
               example: false,
             },
-            price: {
-              type: 'number',
-              example: 100000,
-            },
             adminCommissionPercentage: {
               type: 'number',
               example: 30,
@@ -733,10 +729,26 @@ const options = {
               example:
                 'Mở khóa toàn bộ khóa học và AI feedback không giới hạn.',
             },
+            itemType: {
+              type: 'string',
+              enum: ['course', 'performance'],
+              example: 'course',
+              description:
+                '`course` = gói mở khóa khóa học. `performance` = gói mở khóa tiết mục.',
+            },
             courseId: {
               type: 'string',
+              nullable: true,
               example: '60d5ecb5d74b8c3b44b8b4d4',
-              description: 'Khóa học được mở khóa khi mua gói này.',
+              description:
+                'Khóa học được mở khóa khi `itemType === course`. Null nếu là performance.',
+            },
+            performanceId: {
+              type: 'string',
+              nullable: true,
+              example: null,
+              description:
+                'Tiết mục được mở khóa khi `itemType === performance`. Null nếu là course.',
             },
             price: { type: 'number', example: 199000 },
             currency: { type: 'string', enum: ['VND', 'USD'], example: 'VND' },
@@ -767,14 +779,28 @@ const options = {
         },
         CreateSubscriptionInput: {
           type: 'object',
-          required: ['name', 'courseId', 'price', 'billingCycle'],
+          required: ['name', 'itemType', 'price', 'billingCycle'],
+          description:
+            '`courseId` bắt buộc khi `itemType === course`. `performanceId` bắt buộc khi `itemType === performance`.',
           properties: {
             name: { type: 'string', example: 'LenFolk Pro - Yearly' },
+            itemType: {
+              type: 'string',
+              enum: ['course', 'performance'],
+              example: 'course',
+              description: 'Loại nội dung được mở khóa bởi gói này.',
+            },
             courseId: {
               type: 'string',
               example: '60d5ecb5d74b8c3b44b8b4d4',
               description:
-                'ID khóa học sẽ được mở khóa. Khóa học phải tồn tại và không được là `isFree: true`.',
+                'ID khóa học. Bắt buộc khi `itemType === course`. Khóa học phải tồn tại và không được là `isFree: true`.',
+            },
+            performanceId: {
+              type: 'string',
+              example: '71f5ecb5d74b8c3b44b8bccc',
+              description:
+                'ID tiết mục. Bắt buộc khi `itemType === performance`. Tiết mục phải tồn tại và không được là `isFree: true`.',
             },
             description: {
               type: 'string',
@@ -877,6 +903,26 @@ const options = {
               type: 'string',
               example: '67b5ecb5d74b8c3b44b8b888',
             },
+            transactionType: {
+              type: 'string',
+              enum: ['subscription', 'course', 'performance'],
+              example: 'course',
+              description:
+                'Loại giao dịch: mua gói subscription, mua lẻ khóa học, hay mua lẻ tiết mục.',
+            },
+            courseId: {
+              type: 'string',
+              nullable: true,
+              example: '60d5ecb5d74b8c3b44b8b4d4',
+              description:
+                'Khóa học liên quan (nếu là giao dịch course/subscription cho course).',
+            },
+            performanceId: {
+              type: 'string',
+              nullable: true,
+              example: null,
+              description: 'Tiết mục liên quan (nếu là giao dịch performance).',
+            },
             amount: { type: 'number', example: 199000 },
             currency: { type: 'string', enum: ['VND', 'USD'], example: 'VND' },
             paymentMethod: { type: 'string', example: 'qr_manual' },
@@ -918,6 +964,140 @@ const options = {
             },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+
+        // ── Performance ─────────────────────────────────────────────────
+        Performance: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            instructorId: {
+              type: 'string',
+              example: '60d5dbf5d74b8c3b44b8b4c3',
+            },
+            title: { type: 'string', example: 'Violin Sonata Mùa Thu' },
+            description: {
+              type: 'string',
+              example: 'Bản nhạc violin độc tấu thể hiện sắc thu phương Đông.',
+            },
+            thumbnail: {
+              type: 'string',
+              example: 'https://cdn.lenfolk.vn/performances/violin_autumn.jpg',
+            },
+            videoUrl: {
+              type: 'string',
+              nullable: true,
+              example: 'https://video.lenfolk.vn/perf_001.mp4',
+            },
+            isFree: {
+              type: 'boolean',
+              description:
+                '`true` = xem miễn phí, `false` = cần mua gói subscription tiết mục.',
+              example: false,
+            },
+            genre: { type: 'string', example: 'Classical' },
+            duration: {
+              type: 'integer',
+              description: 'Thời lượng (giây)',
+              example: 420,
+            },
+            adminCommissionPercentage: {
+              type: 'number',
+              example: 30,
+              description: 'Phần trăm hoa hồng admin, mặc định 30.',
+            },
+            status: {
+              type: 'string',
+              enum: ['draft', 'pending', 'published', 'archived'],
+              example: 'published',
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['violin', 'classical', 'solo'],
+            },
+            isFeatured: { type: 'boolean', example: false },
+            publishedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              example: '2024-06-01T08:00:00.000Z',
+            },
+            subscriptionPrice: {
+              type: 'number',
+              nullable: true,
+              example: 149000,
+              description:
+                'Giá lấy từ Subscription plan liên kết. Chỉ có trong response getOne khi tiết mục không free.',
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        CreatePerformanceInput: {
+          type: 'object',
+          required: ['title'],
+          description:
+            '`instructorId` được inject tự động từ JWT token — không cần gửi lên.',
+          properties: {
+            title: { type: 'string', example: 'Piano Nocturne Đêm Hà Nội' },
+            description: {
+              type: 'string',
+              example: 'Độc tấu piano ngẫu hứng lấy cảm hứng từ đêm Hà Nội.',
+            },
+            thumbnail: {
+              type: 'string',
+              example: 'https://cdn.lenfolk.vn/performances/piano_night.jpg',
+            },
+            videoUrl: {
+              type: 'string',
+              example: 'https://video.lenfolk.vn/perf_002.mp4',
+            },
+            isFree: { type: 'boolean', example: false },
+            genre: { type: 'string', example: 'Jazz' },
+            duration: { type: 'integer', minimum: 0, example: 300 },
+            status: {
+              type: 'string',
+              enum: ['draft', 'pending', 'published', 'archived'],
+              example: 'draft',
+            },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['piano', 'jazz', 'nocturne'],
+            },
+            isFeatured: { type: 'boolean', example: false },
+            publishedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+        UpdatePerformanceInput: {
+          type: 'object',
+          description:
+            'Tất cả trường là optional. Instructor chỉ sửa tiết mục của mình.',
+          properties: {
+            title: {
+              type: 'string',
+              example: 'Piano Nocturne Đêm Hà Nội (v2)',
+            },
+            description: { type: 'string' },
+            thumbnail: { type: 'string' },
+            videoUrl: { type: 'string' },
+            isFree: { type: 'boolean' },
+            genre: { type: 'string' },
+            duration: { type: 'integer', minimum: 0 },
+            status: {
+              type: 'string',
+              enum: ['draft', 'pending', 'published', 'archived'],
+            },
+            tags: { type: 'array', items: { type: 'string' } },
+            isFeatured: { type: 'boolean' },
+            adminCommissionPercentage: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+            },
+            publishedAt: { type: 'string', format: 'date-time' },
           },
         },
 
@@ -1068,14 +1248,22 @@ const options = {
           properties: {
             _id: { type: 'string', example: 'coupon_id_123' },
             code: { type: 'string', example: 'SUMMER2026' },
-            discountType: { type: 'string', enum: ['percent', 'fixed'], example: 'percent' },
+            discountType: {
+              type: 'string',
+              enum: ['percent', 'fixed'],
+              example: 'percent',
+            },
             discountValue: { type: 'number', example: 20 },
             maxUses: { type: 'number', nullable: true, example: 100 },
             usedCount: { type: 'number', example: 5 },
             validFrom: { type: 'string', format: 'date-time' },
             validTo: { type: 'string', format: 'date-time', nullable: true },
             isActive: { type: 'boolean', example: true },
-            applicableTo: { type: 'string', enum: ['subscription', 'course', 'all'], example: 'all' },
+            applicableTo: {
+              type: 'string',
+              enum: ['subscription', 'course', 'all'],
+              example: 'all',
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
@@ -1107,11 +1295,19 @@ const options = {
             _id: { type: 'string' },
             instructorId: { type: 'string' },
             amount: { type: 'number', example: 500000 },
-            status: { type: 'string', enum: ['pending', 'approved', 'rejected'], example: 'pending' },
+            status: {
+              type: 'string',
+              enum: ['pending', 'approved', 'rejected'],
+              example: 'pending',
+            },
             bankDetails: { $ref: '#/components/schemas/BankDetails' },
             adminNote: { type: 'string', nullable: true },
             processedBy: { type: 'string', nullable: true },
-            processedAt: { type: 'string', format: 'date-time', nullable: true },
+            processedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' },
           },
@@ -1151,6 +1347,11 @@ const options = {
         description: '🎯 Phiên luyện tập — Yêu cầu đăng nhập',
       },
       { name: 'Streaks', description: '🔥 Streak học tập — Yêu cầu đăng nhập' },
+      {
+        name: 'Performances',
+        description:
+          '🎭 Tiết mục — Public xem, Instructor/Admin tạo/sửa, User mua qua QR manual',
+      },
       {
         name: 'Subscriptions',
         description:
@@ -3434,13 +3635,16 @@ const options = {
           tags: ['Subscriptions'],
           summary: '💳 Yêu cầu mua gói — Cần đăng nhập',
           description:
-            'User gửi yêu cầu mua gói subscription.\n\nBackend:\n' +
-            '1. Kiểm tra `course.isFree` — 400 nếu khóa học miễn phí\n' +
-            '2. Kiểm tra duplicate active subscription cho courseId đó — 400 nếu đã có\n' +
+            'User gửi yêu cầu mua gói subscription.\n\n' +
+            'Gói có thể là `itemType: course` (khóa học) hoặc `itemType: performance` (tiết mục).\n\n' +
+            'Backend:\n' +
+            '1. Kiểm tra `itemType` của plan: nếu `course` kiểm tra `course.isFree`, nếu `performance` kiểm tra `performance.isFree` — 400 nếu miễn phí\n' +
+            '2. Kiểm tra duplicate active subscription cho nội dung đó — 400 nếu đã có\n' +
             '3. Tạo `UserSubscription` (status: **pending**)\n' +
             '4. Tạo `TransactionRecord` (status: pending)\n' +
             '5. Trả về `qrCodeUrl` để user quét chuyển khoản\n\n' +
-            '**Sau khi admin approve proof ảnh:** `UserSubscription.status → active`, `User.role → learner`, `User.currentSubscription → UserSubscription._id`.',
+            '**Sau khi admin approve proof ảnh:** `UserSubscription.status → active`, `User.role → learner`, `User.currentSubscription → UserSubscription._id`.\n\n' +
+            '> ℹ️ Để mua tiết mục, dùng `POST /performances/:id/purchase` thay vì endpoint này.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -3507,6 +3711,386 @@ const options = {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
                   example: { message: 'Subscription plan not found' },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // ─── PERFORMANCES ───────────────────────────────────────────────────────
+      '/performances': {
+        get: {
+          tags: ['Performances'],
+          summary: 'Danh sách tiết mục — Public',
+          description:
+            'Mặc định chỉ trả về `status: published`. Admin và Instructor (có token) có thể lọc theo `status` bất kỳ.',
+          parameters: [
+            {
+              name: 'page',
+              in: 'query',
+              schema: { type: 'integer', default: 1 },
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', default: 100 },
+            },
+            {
+              name: 'status',
+              in: 'query',
+              schema: {
+                type: 'string',
+                enum: ['draft', 'pending', 'published', 'archived'],
+              },
+              description: 'Chỉ hiệu lực khi gọi với token Admin/Instructor.',
+            },
+            {
+              name: 'genre',
+              in: 'query',
+              schema: { type: 'string' },
+              example: 'Classical',
+            },
+            { name: 'isFeatured', in: 'query', schema: { type: 'boolean' } },
+          ],
+          responses: {
+            200: {
+              description: 'Danh sách tiết mục',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/PaginationMeta' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/Performance' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ['Performances'],
+          summary: 'Tạo tiết mục mới — Instructor hoặc Admin',
+          description:
+            '`instructorId` được inject từ JWT token — không cần gửi lên.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/CreatePerformanceInput' },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Tiết mục được tạo',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/Performance' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Validation thất bại',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            403: {
+              description: 'Chỉ Instructor hoặc Admin',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/performances/{id}': {
+        get: {
+          tags: ['Performances'],
+          summary: 'Chi tiết tiết mục — Public',
+          description:
+            'Nếu `isFree: false`, user phải có `UserSubscription` active với `itemType === performance` khớp `performanceId`. Nếu đã mua, response có thêm `subscriptionPrice`.',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Chi tiết tiết mục',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/Performance' },
+                    },
+                  },
+                },
+              },
+            },
+            403: {
+              description: 'Tiết mục trả phí — chưa mua',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    message: 'This performance requires an active subscription',
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Không tìm thấy',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+        patch: {
+          tags: ['Performances'],
+          summary: 'Cập nhật tiết mục — Instructor hoặc Admin',
+          description:
+            'Instructor chỉ được sửa tiết mục của chính mình (`instructorId === req.user._id`). Admin không bị giới hạn.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UpdatePerformanceInput' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Tiết mục được cập nhật',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/Performance' },
+                    },
+                  },
+                },
+              },
+            },
+            403: {
+              description: 'Instructor cố sửa tiết mục của người khác',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: {
+                    message:
+                      'You do not have permission to update this performance',
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Không tìm thấy',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+        delete: {
+          tags: ['Performances'],
+          summary: 'Xóa tiết mục — Admin only',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            },
+          ],
+          responses: {
+            204: { description: 'Đã xóa' },
+            403: {
+              description: 'Không có quyền Admin',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            404: {
+              description: 'Không tìm thấy',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/performances/{id}/purchase': {
+        post: {
+          tags: ['Performances'],
+          summary: '💳 Mua tiết mục (Manual QR) — Cần đăng nhập',
+          description:
+            'User gửi yêu cầu mua tiết mục.\n\nBackend:\n' +
+            '1. Tìm `Subscription plan` với `itemType: performance` có `performanceId` khớp\n' +
+            '2. Kiểm tra `performance.isFree` — 400 nếu miễn phí\n' +
+            '3. Kiểm tra duplicate active subscription cho tiết mục này — 400 nếu đã có\n' +
+            '4. Tạo `UserSubscription` (status: **pending**)\n' +
+            '5. Tạo `TransactionRecord` (status: pending, transactionType: performance)\n' +
+            '6. Trả về `qrCodeUrl` để user quét chuyển khoản\n\n' +
+            '**Sau khi admin approve:** `UserSubscription.status → active`, `User.role → learner`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              description: 'ID của Performance',
+              schema: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    couponCode: { type: 'string', example: 'SUMMER2026' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description:
+                'Yêu cầu tạo thành công — trả qrCodeUrl để chuyển khoản',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: {
+                        type: 'object',
+                        properties: {
+                          message: {
+                            type: 'string',
+                            example: 'Yêu cầu mua tiết mục đã được tạo.',
+                          },
+                          transactionId: {
+                            type: 'string',
+                            example: '67a5ecb5d74b8c3b44b8b777',
+                          },
+                          userSubscriptionId: {
+                            type: 'string',
+                            example: '67b5ecb5d74b8c3b44b8b888',
+                          },
+                          qrCodeUrl: {
+                            type: 'string',
+                            nullable: true,
+                            example: 'https://cdn.lenfolk.vn/qr/perf_001.png',
+                          },
+                          amount: { type: 'number', example: 149000 },
+                          currency: { type: 'string', example: 'VND' },
+                          performanceName: {
+                            type: 'string',
+                            example: 'Violin Sonata Mùa Thu',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description:
+                'Tiết mục miễn phí, đã có subscription active, hoặc plan không tìm thấy',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  examples: {
+                    free: {
+                      summary: 'Tiết mục miễn phí',
+                      value: {
+                        message:
+                          'This performance is free. No subscription needed.',
+                      },
+                    },
+                    duplicate: {
+                      summary: 'Đã có active sub',
+                      value: {
+                        message:
+                          'You already have an active subscription for this performance',
+                      },
+                    },
+                    noPlan: {
+                      summary: 'Không có plan',
+                      value: {
+                        message:
+                          'No active subscription plan found for this performance',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: 'Chưa đăng nhập',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            404: {
+              description: 'Tiết mục không tìm thấy',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
                 },
               },
             },
@@ -4362,8 +4946,11 @@ const options = {
       '/courses/{id}/purchase': {
         post: {
           tags: ['Courses'],
-          summary: 'Mua lẻ một khóa học / tiết mục (Manual QR)',
-          description: 'Yêu cầu thanh toán để mua đứt khóa học, áp dụng mã giảm giá (nếu có).',
+          summary: 'Mua lẻ khóa học (Manual QR) — Cần đăng nhập',
+          description:
+            'Yêu cầu thanh toán để mua khóa học.\n\n' +
+            'Giá được lấy từ `Subscription.findOne({ itemType: "course", courseId, isActive: true })` — **không có trường `price` trên Course**.\n\n' +
+            'Áp dụng mã giảm giá (nếu có). Trả về `qrCodeUrl` từ Subscription plan.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -4388,7 +4975,7 @@ const options = {
           },
           responses: {
             201: {
-              description: 'Tạo đơn hàng thành công',
+              description: 'Tạo yêu cầu mua thành công',
               content: {
                 'application/json': {
                   schema: {
@@ -4400,6 +4987,12 @@ const options = {
                         properties: {
                           message: { type: 'string' },
                           transactionId: { type: 'string' },
+                          userSubscriptionId: { type: 'string' },
+                          qrCodeUrl: {
+                            type: 'string',
+                            nullable: true,
+                            example: 'https://cdn.lenfolk.vn/qr/sub_001.png',
+                          },
                           originalAmount: { type: 'number' },
                           discountAmount: { type: 'number' },
                           amountToPay: { type: 'number' },
@@ -4476,7 +5069,14 @@ const options = {
           tags: ['Wallets'],
           summary: 'Admin duyệt / từ chối rút tiền',
           security: [{ bearerAuth: [] }],
-          parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+            },
+          ],
           requestBody: {
             required: true,
             content: {
