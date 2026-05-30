@@ -1,139 +1,188 @@
-import { X, Calendar, CheckSquare, Trophy, Star, Book } from 'lucide-react';
-import { UserPlanData } from './UsersPlansTable';
+'use client';
 
-interface UserDetailDrawerProps {
-  user: UserPlanData | null;
-  isOpen: boolean;
-  onClose: () => void;
+import { motion } from 'framer-motion';
+import { X, Mail, Phone, Calendar, Zap } from 'lucide-react';
+import { User, Role } from '@/types/user.types';
+import { Subscription } from '@/types/subscription.types';
+
+const ROLE_STYLE: Record<Role, { label: string; cls: string }> = {
+  admin: { label: 'Admin', cls: 'bg-[#1a3a2a] text-white' },
+  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
+  moderator: { label: 'Moderator', cls: 'bg-amber-100 text-amber-700' },
+  learner: { label: 'Học viên', cls: 'bg-blue-100 text-blue-700' },
+  guest: { label: 'Khách', cls: 'bg-gray-100 text-gray-500' },
+};
+
+function formatDate(d?: string) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
 }
 
-export function UserDetailDrawer({ user, isOpen, onClose }: UserDetailDrawerProps) {
-  if (!user && !isOpen) return null;
+export function UserDetailDrawer({
+  user,
+  isOpen,
+  onClose,
+  subscriptions,
+}: {
+  user: User | null;
+  isOpen: boolean;
+  onClose: () => void;
+  subscriptions: Subscription[];
+}) {
+  if (!isOpen || !user) return null;
+
+  const userSub = subscriptions.find((s) => s._id === user.currentSubscription);
+  const role = ROLE_STYLE[user.role] ?? {
+    label: user.role,
+    cls: 'bg-gray-100 text-gray-600',
+  };
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className={`fixed inset-0 bg-black/20 z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      <div
+        className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
         onClick={onClose}
       />
-      
-      {/* Drawer */}
-      <div 
-        className={`fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      <motion.div
+        initial={{ x: '100%', opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: '100%', opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 overflow-y-auto"
       >
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
-            <h2 className="text-lg font-semibold text-gray-900">Chi Tiết Người Dùng</h2>
-            <button 
-              onClick={onClose}
-              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors border border-gray-200 text-gray-500"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+          <h2 className="text-[14px] font-bold text-gray-900">
+            Chi tiết người dùng
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Avatar & Name */}
+          <div className="flex flex-col items-center gap-3 py-4">
+            <div className="w-16 h-16 rounded-full bg-linear-to-br from-[#2d6a4f] to-[#1a3a2a] text-white text-2xl font-bold flex items-center justify-center shadow-lg">
+              {user.name?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className="text-center">
+              <h3 className="text-[16px] font-bold text-gray-900">
+                {user.name}
+              </h3>
+              <span
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${role.cls}`}
+              >
+                {role.label}
+              </span>
+            </div>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
-            {user && (
-              <>
-                {/* Profile Card */}
-                <div className="bg-gray-50 rounded-xl p-5 mb-6 border border-gray-100">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white text-lg font-semibold ${user.avatarBg}`}>
-                      {user.initials}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
-                      <p className="text-sm text-gray-500 mb-2">{user.email}</p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                        {user.plan}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+          {/* Info */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                  Email
+                </p>
+                <p className="text-[13px] text-gray-700 break-all">
+                  {user.email}
+                </p>
+              </div>
+            </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Ngày tham gia
-                    </div>
-                    <p className="font-medium text-gray-900">{user.joinDate}</p>
-                  </div>
-                  <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                      <CheckSquare className="w-3.5 h-3.5" />
-                      Bài học hoàn thành
-                    </div>
-                    <p className="font-medium text-gray-900">{user.lessons}</p>
-                  </div>
-                  <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                      <Trophy className="w-3.5 h-3.5" />
-                      Điểm AI trung bình
-                    </div>
-                    <p className="font-medium text-green-600">8.5 <span className="text-gray-400">/ 10</span></p>
-                  </div>
-                  <div className="bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                      <Star className="w-3.5 h-3.5" />
-                      Cấp độ
-                    </div>
-                    <div className="flex space-x-0.5">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <span key={i} className={`text-sm ${i <= user.level ? 'text-amber-400' : 'text-gray-200'}`}>
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress */}
-                <div className="mb-8">
-                  <div className="flex justify-between items-end mb-2">
-                    <h4 className="font-semibold text-gray-900">Tiến độ học tập</h4>
-                    <span className="text-xs text-gray-500">{user.lessons} / 34 bài</span>
-                  </div>
-                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-green-500 rounded-full transition-all duration-500"
-                      style={{ width: `${(user.lessons / 34) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Purchased Items */}
+            {user.phoneNumber && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                <Phone className="w-4 h-4 text-gray-400 shrink-0" />
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Book className="w-4 h-4 text-gray-500" />
-                    Tiết mục đã mua
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Độc tấu Làng Tôi</p>
-                        <p className="text-xs text-gray-400 mt-0.5">2025-07-15</p>
-                      </div>
-                      <p className="text-sm font-medium text-gray-900">1.200.000₫</p>
-                    </div>
-                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Thu ca - Artist Version</p>
-                        <p className="text-xs text-gray-400 mt-0.5">2025-07-18</p>
-                      </div>
-                      <p className="text-sm font-medium text-gray-900">899.000₫</p>
-                    </div>
-                  </div>
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                    Điện thoại
+                  </p>
+                  <p className="text-[13px] text-gray-700">
+                    {user.phoneNumber}
+                  </p>
                 </div>
-              </>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+              <div>
+                <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">
+                  Ngày tham gia
+                </p>
+                <p className="text-[13px] text-gray-700">
+                  {formatDate(user.createdAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Subscription */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+              Gói đăng ký
+            </p>
+            {userSub ? (
+              <div className="bg-linear-to-br from-[#1a3a2a] to-[#2d6a4f] rounded-xl p-4 text-white">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-4 h-4" />
+                  <p className="text-[14px] font-bold">{userSub.name}</p>
+                </div>
+                <p className="text-[12px] text-white/70">
+                  {userSub.description || 'Không có mô tả'}
+                </p>
+                <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
+                  <p className="text-[13px] font-bold">
+                    {userSub.price === 0
+                      ? 'Miễn phí'
+                      : `${userSub.price.toLocaleString('vi-VN')} ₫`}
+                  </p>
+                  <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded-full">
+                    {userSub.billingCycle === 'monthly'
+                      ? 'Hàng tháng'
+                      : userSub.billingCycle === 'quarterly'
+                        ? 'Hàng quý'
+                        : 'Hàng năm'}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-xl text-gray-400">
+                <Zap className="w-4 h-4" />
+                <p className="text-[13px]">Chưa đăng ký gói nào</p>
+              </div>
             )}
           </div>
+
+          {/* Status */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+              Trạng thái tài khoản
+            </p>
+            <div
+              className={`flex items-center gap-2 p-3 rounded-xl border ${user.isActive !== false ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${user.isActive !== false ? 'bg-emerald-500' : 'bg-red-400'}`}
+              />
+              <p
+                className={`text-[13px] font-medium ${user.isActive !== false ? 'text-emerald-700' : 'text-red-600'}`}
+              >
+                {user.isActive !== false ? 'Đang hoạt động' : 'Đã bị khóa'}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

@@ -116,7 +116,9 @@ exports.getOne = catchAsync(async (req, res, next) => {
 exports.createOne = catchAsync(async (req, res, next) => {
   // instructorId luôn inject từ token
   const doc = await Course.create({ ...req.body, instructorId: req.user._id });
-  res.status(201).json({ success: true, data: doc });
+  res
+    .status(201)
+    .json({ success: true, message: 'Course created successfully', data: doc });
 });
 
 /**
@@ -137,7 +139,10 @@ exports.updateOne = catchAsync(async (req, res, next) => {
     // Chặn giảng viên tự ý publish khóa học
     if (req.body.status === 'published') {
       return next(
-        new AppError('Instructors cannot publish courses directly. Please set status to pending for admin review.', 403),
+        new AppError(
+          'Instructors cannot publish courses directly. Please set status to pending for admin review.',
+          403,
+        ),
       );
     }
   }
@@ -146,7 +151,13 @@ exports.updateOne = catchAsync(async (req, res, next) => {
     new: true,
     runValidators: true,
   });
-  res.status(200).json({ success: true, data: updated });
+  res
+    .status(200)
+    .json({
+      success: true,
+      message: 'Course updated successfully',
+      data: updated,
+    });
 });
 
 exports.deleteOne = factory.deleteOne(Course);
