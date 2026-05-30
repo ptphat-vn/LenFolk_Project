@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
 export default function ResetPasswordScreen() {

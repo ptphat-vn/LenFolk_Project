@@ -2,11 +2,8 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Dimensions, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/authStore";
-
-const { width } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const router = useRouter();

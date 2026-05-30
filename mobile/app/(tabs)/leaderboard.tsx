@@ -2,9 +2,7 @@ import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
-import { Ionicons, Feather, FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
-
-const { width } = Dimensions.get("window");
+import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function ProgressScreen() {
   const stats = [
