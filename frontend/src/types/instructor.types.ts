@@ -1,8 +1,7 @@
-// Auto-generated from Swagger
-
+/** Schema InstructorProfile trả về từ API */
 export interface InstructorProfile {
-  _id?: string;
-  userId?: string;
+  _id: string;
+  userId: string;
   bio?: string;
   expertise?: string;
   websiteUrl?: string;
@@ -13,6 +12,7 @@ export interface InstructorProfile {
   updatedAt?: string;
 }
 
+/** Body dùng để tạo / cập nhật hồ sơ giảng viên */
 export interface CreateInstructorProfileInput {
   userId: string;
   bio?: string;
@@ -20,3 +20,7 @@ export interface CreateInstructorProfileInput {
   websiteUrl?: string;
 }
 
+/** Query params cho GET /instructor-profiles */
+export interface GetInstructorProfilesQuery {
+  userId?: string;
+}

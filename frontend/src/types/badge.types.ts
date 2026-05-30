@@ -1,25 +1,26 @@
-// Auto-generated from Swagger
+export type BadgeType = 'streak' | 'completion' | 'practice' | 'achievement';
 
+/** Schema Badge trả về từ API */
 export interface Badge {
-  _id?: string;
-  name?: string;
-  icon?: string;
+  _id: string;
+  name: string;
+  icon: string;
   description?: string;
-  type?: string;
-  conditionKey?: string;
-  conditionValue?: number;
+  type: BadgeType;
+  conditionKey: string;
+  conditionValue: number;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
+/** Body dùng để tạo / cập nhật badge (Admin only) */
 export interface CreateBadgeInput {
   name: string;
   icon: string;
   description?: string;
-  type: string;
+  type: BadgeType;
   conditionKey: string;
-  conditionValue: number;
+  conditionValue: number;  // tối thiểu 0
   isActive?: boolean;
 }
-

@@ -17,9 +17,14 @@ const transactionRecordSchema = new mongoose.Schema(
       ref: 'Course',
       required: false,
     },
+    performanceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Performance',
+      required: false,
+    },
     transactionType: {
       type: String,
-      enum: ['subscription', 'course'],
+      enum: ['subscription', 'course', 'performance'],
       default: 'subscription',
     },
     amount: {

@@ -8,6 +8,7 @@ exports.createCourseSchema = z.object({
     description: z.string().optional(),
     thumbnail: z.string().optional(),
     isFree: z.boolean().optional(),
+    // Giá được lấy từ gói Subscription liên kết — không nhập trực tiếp
     courseType: z.string().optional(),
     level: z.enum(['beginner', 'intermediate', 'advanced']),
     status: z.enum(['draft', 'published', 'archived']).optional(),

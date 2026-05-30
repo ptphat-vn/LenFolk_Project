@@ -1,36 +1,52 @@
+export type Role = 'admin' | 'instructor' | 'moderator' | 'learner' | 'guest';
+
+export type Gender = 'male' | 'female' | 'other';
+
+/** Schema User trả về từ API */
 export interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
+  gender?: Gender;
+  dateOfBirth?: string;    // ISO date-time string
+  avatar?: string | null;
+  phoneNumber?: string | null;
   role: Role;
-  avatar?: string;
-  gender?: string;
-  dateOfBirth?: Date;
-  phoneNumber?: string;
-  currentSubscription?: string;
+  currentSubscription?: string | null; // ID của UserSubscription hiện tại
   isActive?: boolean;
   isVerified?: boolean;
-  lastLoginAt?: Date;
-  deletedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  lastLoginAt?: string | null;
+  deletedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
-export type Role = 'admin' | 'learner' | 'instructor' | "guest" | "moderator";
 
-export interface createUserRequest {
-  name: string,
-  email: string,
-  passwordHash: string,
-  gender: string,
-  dateOfBirth: string,
-  role: Role,
-  phoneNumber: string
-}
-export interface updateUserRequest {
+/** Body dùng để Admin tạo user mới (POST /users) */
+export interface CreateUserInput {
   name: string;
-  gender: string;
-  role: Role;
-  phoneNumber: string;
-  avatar: string;
-  isActive: boolean;
+  email: string;
+  passwordHash: string;  // plain text — server sẽ hash
+  gender?: Gender;
+  dateOfBirth?: string;  // ISO date-time
+  role?: Role;
+  phoneNumber?: string;
+}
+
+/** Body dùng để Admin cập nhật user (PATCH /users/:id) — multipart/form-data */
+export interface UpdateUserInput {
+  name?: string;
+  gender?: Gender;
+  dateOfBirth?: string;
+  role?: Role;
+  phoneNumber?: string;
+  isActive?: boolean;
+  avatar?: File;  // file upload (binary)
+}
+
+/** Query params cho GET /users */
+export interface GetUsersQuery {
+  page?: number;
+  limit?: number;
+  sort?: string;  // ví dụ: "-createdAt"
+  role?: Role;
 }
