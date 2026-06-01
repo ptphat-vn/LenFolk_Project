@@ -8,8 +8,8 @@ export const mockCourses = [
   },
   {
     id: 'pre',
-    name: 'Gói STANDARD',
-    price: '600.000đ / tháng',
+    name: 'Gói REPERTOIRE',
+    price: '499.000đ / tác phẩm',
     desc: 'Lựa chọn phổ biến cho người mới bắt đầu học sáo trúc nghiêm túc.',
     features: ['Toàn bộ track cơ bản & trung cấp', 'AI đánh giá thời gian thực', 'Lộ trình cá nhân hóa', 'Không giới hạn bài học', 'Chứng chỉ hoàn thành'],
   }

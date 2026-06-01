@@ -64,7 +64,7 @@ export const Contact = () => {
 
           {/* Right Column (Form) */}
           <div className="lg:w-3/5">
-            <div className="bg-[#f8f9f6] p-8 md:p-12 rounded-[32px] border border-gray-100/50 shadow-sm">
+            <div className="bg-[#e2e8d5] p-8 md:p-12 rounded-[32px] border border-gray-100/50 shadow-sm">
               {submitted ? (
                 <div className="h-[400px] flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-500">
                   <div className="w-20 h-20 rounded-full bg-[#8e9e6e]/10 flex items-center justify-center text-[#8e9e6e] mb-6">
