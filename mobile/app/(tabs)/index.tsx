@@ -1,10 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, Dimensions } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
-import { Ionicons, FontAwesome5, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-
-const { width } = Dimensions.get("window");
+import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   return (

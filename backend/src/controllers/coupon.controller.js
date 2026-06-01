@@ -14,6 +14,7 @@ exports.createOne = catchAsync(async (req, res, next) => {
   const doc = await Coupon.create(req.body);
   res.status(201).json({
     success: true,
+    message: 'Coupon created successfully',
     data: doc,
   });
 });

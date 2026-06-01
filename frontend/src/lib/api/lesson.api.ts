@@ -1,26 +1,35 @@
-import { APIResponse, BasePaginationQuery } from "@/types/response.type";
-import axiosInstance from "../axios";
-import { Lesson, CreateLessonInput } from "@/types/lesson.types";
+import axiosInstance from '../axios';
+import { APIResponse } from '@/types/response.type';
+import { Lesson, CreateLessonInput, GetLessonsQuery } from '@/types/lesson.types';
 
 export const lessonApi = {
-  getAll: async (query?: BasePaginationQuery) => {
-    const res = await axiosInstance.get<APIResponse<Lesson>>(`/lessons`, { params: query });
+  /** GET /lessons — Lấy danh sách bài học (cần đăng nhập) */
+  getAll: async (query?: GetLessonsQuery) => {
+    const res = await axiosInstance.get<APIResponse<Lesson[]>>('/lessons', { params: query });
     return res.data;
   },
+
+  /** POST /lessons — Tạo bài học mới (Instructor hoặc Admin) */
   create: async (body: CreateLessonInput) => {
-    const res = await axiosInstance.post<APIResponse<Lesson>>(`/lessons`, body);
+    const res = await axiosInstance.post<APIResponse<Lesson>>('/lessons', body);
     return res.data;
   },
+
+  /** GET /lessons/:id — Lấy chi tiết bài học (cần đăng nhập, kiểm tra subscription nếu isFree: false) */
   getById: async (id: string) => {
     const res = await axiosInstance.get<APIResponse<Lesson>>(`/lessons/${id}`);
     return res.data;
   },
-  update: async (id: string, body: CreateLessonInput) => {
+
+  /** PATCH /lessons/:id — Cập nhật bài học (Instructor hoặc Admin) */
+  update: async (id: string, body: Partial<CreateLessonInput>) => {
     const res = await axiosInstance.patch<APIResponse<Lesson>>(`/lessons/${id}`, body);
     return res.data;
   },
+
+  /** DELETE /lessons/:id — Xóa bài học (Admin only, tự giảm Course.totalLessons) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<APIResponse<Lesson>>(`/lessons/${id}`);
+    const res = await axiosInstance.delete<void>(`/lessons/${id}`);
     return res.data;
   },
 };

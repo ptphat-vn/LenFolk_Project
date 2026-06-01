@@ -8,11 +8,23 @@ const subscriptionSchema = new mongoose.Schema(
       trim: true,
       unique: true,
     },
-    // Gắn trực tiếp gói cước này với 1 khóa học cụ thể
+    // Phân loại gói: gán cho khóa học hay tiết mục
+    itemType: {
+      type: String,
+      enum: ['course', 'performance'],
+      required: true,
+    },
+    // Gán gói cho 1 khóa học (khi itemType = 'course')
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course',
-      required: true,
+      default: null,
+    },
+    // Gán gói cho 1 tiết mục (khi itemType = 'performance')
+    performanceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Performance',
+      default: null,
     },
     description: {
       type: String,
@@ -56,6 +68,21 @@ const subscriptionSchema = new mongoose.Schema(
 );
 
 subscriptionSchema.index({ isActive: 1 });
+subscriptionSchema.index({ courseId: 1 });
+subscriptionSchema.index({ performanceId: 1 });
+
+// Đảm bảo chỉ đúng một trong courseId/performanceId được cung cấp tương ứng itemType
+subscriptionSchema.pre('save', function (next) {
+  if (this.itemType === 'course' && !this.courseId) {
+    return next(new Error('courseId is required when itemType is "course"'));
+  }
+  if (this.itemType === 'performance' && !this.performanceId) {
+    return next(
+      new Error('performanceId is required when itemType is "performance"'),
+    );
+  }
+  next();
+});
 
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
 

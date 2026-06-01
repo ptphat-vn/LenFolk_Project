@@ -7,20 +7,29 @@ import { usePathname } from 'next/navigation';
 const BREADCRUMB_MAP: Record<string, string> = {
   admin: 'Quản trị viên',
   dashboard: 'Bảng điều khiển',
+  users: 'Người dùng',
+  'user-management': 'Quản lý người dùng',
+  instructors: 'Quản lý Giảng viên',
+  'instructor-management': 'Quản lý Giảng viên',
   content: 'Nội dung',
   business: 'Kinh doanh',
   support: 'Hỗ trợ khách hàng',
-  'leaderboard': 'Bảng xếp hạng',
+  leaderboard: 'Bảng xếp hạng',
   'lesson-management': 'Quản lý bài học',
   'learning-path': 'Lộ trình học',
-  'content-approval': 'Duyệt nội dung',
-  'promotions': 'Mã giảm giá',
-  'users-plans': 'Quản lý gói của học viên',
+  'course-management': 'Quản lý khóa học',
+  'revenue-reports': 'Doanh thu & Báo cáo',
+  subscriptions: 'Gói đăng ký',
+  transactions: 'Giao dịch',
+  promotions: 'Mã giảm giá',
+  'users-plans': 'Người dùng & Gói',
 };
 
 export default function AdminHeader({ user }: { user: User }) {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);
+
+  const avatarInitial = user.name?.[0]?.toUpperCase() ?? 'A';
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-40 shrink-0">
@@ -32,7 +41,11 @@ export default function AdminHeader({ user }: { user: User }) {
             <span key={seg} className="flex items-center gap-1">
               {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
               <span
-                className={`text-[13px] ${isLast ? 'text-gray-900 font-semibold' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`text-[13px] ${
+                  isLast
+                    ? 'text-gray-900 font-semibold'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
               >
                 {BREADCRUMB_MAP[seg] ?? seg}
               </span>
@@ -63,10 +76,10 @@ export default function AdminHeader({ user }: { user: User }) {
         </button>
 
         <button
-          title={user.email}
-          className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center cursor-pointer ml-1 shrink-0 hover:bg-blue-700 transition-colors"
+          title={`${user.name} (${user.email})`}
+          className="w-9 h-9 rounded-full bg-[#1a3a2a] text-white font-bold text-sm flex items-center justify-center cursor-pointer ml-1 shrink-0 hover:bg-[#2d6a4f] transition-colors"
         >
-          {user.name[0].toUpperCase()}
+          {avatarInitial}
         </button>
       </div>
     </header>

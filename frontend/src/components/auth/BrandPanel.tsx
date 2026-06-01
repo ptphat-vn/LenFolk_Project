@@ -35,7 +35,6 @@ export function BrandPanel() {
       <div className="absolute inset-0 bg-[#fcfbf8]/10" />
 
       <div className="relative z-10 flex flex-col items-center max-w-md text-center p-12">
-
         <div className="w-64 h-64 mb-8 relative brand-logo">
           <Image
             src="/images/logo_green.png"
@@ -52,7 +51,7 @@ export function BrandPanel() {
           <br />
           Manage Smarter
         </h1>
-        <p className="brand-tag text-[16px] leading-[24px] text-[#3e4b24] opacity-90 tracking-widest uppercase">
+        <p className="brand-tag text-[16px] leading-6 text-[#3e4b24] opacity-90 tracking-widest uppercase">
           LenFolk Admin Console
         </p>
 

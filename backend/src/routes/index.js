@@ -26,6 +26,7 @@ router.use(
 router.use('/auth', require('./auth.route'));
 router.use('/users', require('./user.route'));
 router.use('/courses', require('./course.route'));
+router.use('/performances', require('./performance.route'));
 router.use('/lessons', require('./lesson.route'));
 router.use('/instructor-profiles', require('./instructor-profile.route'));
 router.use('/badges', require('./badge.route'));

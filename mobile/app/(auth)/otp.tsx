@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function OtpScreen() {
