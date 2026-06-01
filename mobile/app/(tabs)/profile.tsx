@@ -3,9 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Switch, Image, Dimensions } f
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
-import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-
-const { width } = Dimensions.get("window");
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function ProfileTabScreen() {
   const router = useRouter();

@@ -4,8 +4,6 @@ import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
-const { width } = Dimensions.get("window");
-
 export default function GameScreen() {
   const games = [
     {

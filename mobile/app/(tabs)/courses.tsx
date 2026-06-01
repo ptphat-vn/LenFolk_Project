@@ -5,8 +5,6 @@ import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
-const { width } = Dimensions.get("window");
-
 const allLessons = [
   {
     id: 1,

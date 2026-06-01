@@ -1,14 +1,59 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Image, Dimensions, ScrollView } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, TouchableOpacity, Image, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import gsap from "gsap";
 
 const { width } = Dimensions.get("window");
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const [slide, setSlide] = useState(0);
+  const splashMotion = useRef({ y: 28, scale: 0.9, opacity: 0 });
+  const [mascotStyle, setMascotStyle] = useState({
+    transform: [{ translateY: 28 }, { scale: 0.9 }],
+    opacity: 0,
+  });
+
+  useEffect(() => {
+    if (slide !== 0) return;
+
+    const syncStyle = () => {
+      setMascotStyle({
+        transform: [
+          { translateY: splashMotion.current.y },
+          { scale: splashMotion.current.scale },
+        ],
+        opacity: splashMotion.current.opacity,
+      });
+    };
+
+    const timeline = gsap.timeline();
+
+    timeline.to(splashMotion.current, {
+      y: 0,
+      scale: 1,
+      opacity: 1,
+      duration: 0.95,
+      ease: "power3.out",
+      onUpdate: syncStyle,
+    });
+
+    timeline.to(splashMotion.current, {
+      y: -14,
+      duration: 1.8,
+      ease: "sine.inOut",
+      yoyo: true,
+      repeat: -1,
+      onUpdate: syncStyle,
+    });
+
+    return () => {
+      timeline.kill();
+      gsap.killTweensOf(splashMotion.current);
+    };
+  }, [slide]);
 
   const nextSlide = () => {
     if (slide < 4) {
@@ -41,7 +86,10 @@ export default function OnboardingScreen() {
 
             <Image
               source={require("../../assets/images/mascot 3d.png")}
-              style={{ width: width * 0.85, height: width * 0.85, resizeMode: "contain" }}
+              style={[
+                { width: width * 0.85, height: width * 0.85, resizeMode: "contain" },
+                mascotStyle,
+              ]}
             />
           </View>
 

@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingVi
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
-import { Ionicons, Feather, FontAwesome, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/authStore";
 
 export default function CompleteProfileScreen() {
