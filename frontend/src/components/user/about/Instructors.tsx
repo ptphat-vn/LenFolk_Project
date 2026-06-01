@@ -17,13 +17,22 @@ export const Instructors = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 max-w-5xl mx-auto gap-8 justify-center items-center">
           {[
-            { name: 'Cô An', title: 'Giảng viên sáo trúc', icon: <Music />, bio: 'Hơn 15 năm kinh nghiệm giảng dạy. Chuyên gia cố vấn nội dung giáo trình.' },
-            { name: 'Thầy Lâm', title: 'Nghệ nhân biểu diễn', icon: <Mic />, bio: 'Nghệ sĩ biểu diễn chuyên nghiệp với nhiều giải thưởng âm nhạc trong nước.' },
-            { name: 'Thầy Vương', title: 'Thạc sĩ Nhạc viện TP.HCM', icon: <GraduationCap />, bio: 'Chuyên gia nghiên cứu âm nhạc cổ truyền và phát triển phương pháp giảng dạy.' },
+            {
+              name: 'Ths. Nguyễn Khánh An',
+              title: 'Giảng viên sáo trúc',
+              icon: <Music />,
+              bio: 'Với 10 năm kinh nghiệm giảng dạy. Chuyên gia cố vấn nội dung giáo trình.'
+            },
+            {
+              name: 'Ts. Nguyễn Huy Vương',
+              title: 'Chuyên gia nghiên cứu âm nhạc cổ truyền',
+              icon: <GraduationCap />,
+              bio: 'Chuyên gia nghiên cứu âm nhạc cổ truyền và cố vấn nội dung giáo trình.'
+            },
           ].map((instructor, i) => (
-            <motion.div 
+            <motion.div
               key={i}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -32,9 +41,9 @@ export const Instructors = () => {
               className="bg-white border border-gray-100 p-8 rounded-[32px] shadow-lg shadow-black/5 text-center group hover:-translate-y-2 transition-transform"
             >
               <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-tr from-[#d6ddc6] to-[#f4e0ac] flex items-center justify-center mb-6 text-[#8e9e6e] relative overflow-hidden">
-                 {/* Avatar placeholder */}
-                 <div className="absolute inset-0 bg-white/20 backdrop-blur-sm"></div>
-                 <div className="relative z-10">{instructor.icon}</div>
+                {/* Avatar placeholder */}
+                <div className="absolute inset-0 bg-white/20 backdrop-blur-sm"></div>
+                <div className="relative z-10">{instructor.icon}</div>
               </div>
               <h3 className="text-2xl font-bold mb-2">{instructor.name}</h3>
               <p className="text-sage-dark font-medium mb-4">{instructor.title}</p>

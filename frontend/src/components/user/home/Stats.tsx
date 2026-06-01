@@ -3,10 +3,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const stats = [
-  { value: '120+', label: 'Giờ nội dung' },
-  { value: '140+', label: 'Màn hình' },
-  { value: '100+', label: 'Components' },
-  { value: '03', label: 'Chuyên gia hàng đầu' },
+  { value: '120+', label: 'Lượt theo dõi' },
+  { value: '34+', label: 'Lượt đăng ký' },
+  { value: '30+', label: 'Bài học' },
+  { value: '02', label: 'Chuyên gia ' },
 ];
 
 export const Stats = () => {

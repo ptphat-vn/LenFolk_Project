@@ -36,14 +36,13 @@ export const Navbar = () => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white/85 backdrop-blur-md border-b border-gray-200 shadow-sm py-4' : 'bg-transparent py-6'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/85 backdrop-blur-md border-b border-gray-200 shadow-sm py-2' : 'bg-transparent py-3'
+          }`}
       >
         <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
-          <Link href="/user" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center font-bold text-lg">L</div>
-            <span className="font-bold text-xl tracking-wider text-black">LENFOLK</span>
+           <Link href="/user" className="flex items-center gap-2 group">
+            <img src="/images/logo_black.png" alt="Lenfolk Logo" className="h-[50px] w-auto object-contain" />
+            <img src="/images/name_black.png" alt="Lenfolk" className="h-[34px] w-auto object-contain ml-[-20px]" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -62,13 +61,12 @@ export const Navbar = () => {
             })}
           </div>
 
-          <div className={`hidden md:flex items-center gap-4 ${pathname === '/user' ? 'visible' : 'invisible'}`}>
+          <div className="hidden md:flex items-center gap-4">
             <Link
-              href="/user/courses"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-[#8e9e6e] to-[#e6d596] text-white hover:shadow-xl transition-all duration-300 font-medium hover:scale-105 active:scale-95 shadow-lg group"
+              href="/login"
+              className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-[#8e9e6e] to-[#e6d596] text-white hover:shadow-xl transition-all duration-300 font-medium hover:scale-105 active:scale-95 shadow-lg"
             >
-              Bắt đầu
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              Đăng nhập
             </Link>
           </div>
 
@@ -88,7 +86,10 @@ export const Navbar = () => {
             className="fixed inset-0 z-[60] bg-white flex flex-col"
           >
             <div className="flex items-center justify-between p-6">
-              <span className="font-bold text-xl tracking-wider text-black">LENFOLK</span>
+              <div className="flex items-center gap-2">
+                <img src="/images/logo_black.png" alt="Lenfolk Logo" className="h-8 w-auto object-contain" />
+                <img src="/images/name_black.png" alt="Lenfolk" className="h-5 w-auto object-contain" />
+              </div>
               <button onClick={() => setIsMobileMenuOpen(false)} className="text-black">
                 <X size={24} />
               </button>
@@ -103,17 +104,14 @@ export const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              {pathname === '/user' && (
-                <div className="flex flex-col gap-4 mt-8 w-64">
-                  <Link
-                    href="/user/courses"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#8e9e6e] to-[#e6d596] text-white font-medium w-full shadow-lg group"
-                  >
-                    Bắt đầu
-                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              )}
+              <div className="flex flex-col gap-4 mt-8 w-64">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[#8e9e6e] to-[#e6d596] text-white font-medium w-full shadow-lg"
+                >
+                  Đăng nhập
+                </Link>
+              </div>
             </div>
           </motion.div>
         )}

@@ -43,11 +43,10 @@ export const Testimonials = () => {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.2, duration: 0.5 }}
-              className={`flex-none w-[85vw] sm:w-[400px] snap-center p-8 rounded-[32px] ${
-                index === 1 
-                  ? 'bg-sage-dark text-white shadow-xl shadow-sage-dark/20 scale-105' 
+              className={`flex-none w-[85vw] sm:w-[400px] snap-center p-8 rounded-[32px] ${index === 1
+                  ? 'bg-sage-dark text-white shadow-xl shadow-sage-dark/20 scale-105'
                   : 'bg-gray-50 border border-gray-100 text-black'
-              }`}
+                }`}
             >
               <Quote size={40} className={`mb-6 opacity-30 ${index === 1 ? 'text-white' : 'text-sage-dark'}`} />
               <p className={`text-lg mb-8 leading-relaxed italic font-serif ${index === 1 ? 'text-white/90' : 'text-gray-600'}`}>

@@ -4,23 +4,41 @@ import { motion } from 'framer-motion';
 
 export const Mission = () => {
   return (
-    <section className="py-24 bg-white text-center">
-      <div className="container mx-auto px-6 max-w-4xl">
-        <motion.blockquote 
+    <section className="relative pt-50 pb-24 bg-white overflow-hidden">
+      {/* Background Pattern (Split to left and right) */}
+      <div className="absolute inset-y-0 left-0 w-1/2 md:w-[40%] bg-[url('/images/flute_capital_bg.png')] bg-cover bg-right opacity-50 z-0"></div>
+      <div className="absolute inset-y-0 right-0 w-1/2 md:w-[40%] bg-[url('/images/flute_capital_bg.png')] bg-cover bg-right opacity-50 z-0 scale-x-[-1]"></div>
+
+      {/* Edge fading to blend seamlessly into the center */}
+      <div className="absolute inset-y-0 left-0 w-1/2 md:w-[40%] bg-gradient-to-r from-transparent to-white/90 z-0"></div>
+      <div className="absolute inset-y-0 right-0 w-1/2 md:w-[40%] bg-gradient-to-l from-transparent to-white/90 z-0"></div>
+
+      {/* Vertical yellow gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#F4E0AC] via-[#F4E0AC]/10 to-white/90 z-0 pointer-events-none"></div>
+
+      {/* 1. Headline & Mission */}
+      <div className="container mx-auto px-6 max-w-6xl text-center relative z-10">
+        <motion.blockquote
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="text-3xl md:text-5xl font-serif italic text-black leading-tight mb-12"
+          style={{ fontFamily: "'Be Vietnam Pro', sans-serif" }}
+          className="text-6xl md:text-5xl font-bold text-black leading-[1.3] mb-7 drop-shadow-[0_4px_10px_rgba(255,255,255,1)]"
         >
-          "Dùng AI xóa bỏ rào cản địa lý và kinh tế — mang tinh hoa sáo trúc đến giới trẻ Việt Nam."
+          Vượt mọi rào cản địa lý đưa tinh hoa Sáo Trúc <br className="hidden md:block" />
+          đến gần hơn với thế hệ trẻ Việt Nam
         </motion.blockquote>
-        <p className="text-lg text-gray-600 mb-16 max-w-2xl mx-auto">
-          Chúng tôi tin rằng mọi người đều có quyền tiếp cận với nền giáo dục âm nhạc chất lượng cao. Bằng cách kết hợp công nghệ AI tiên tiến, LENFOLK đang xây dựng một nền tảng học tập mở cho tất cả mọi người.
+
+        <p className="text-lg md:text-xl text-black/50 font-normal mb-16 max-w-5xl mx-auto leading-relaxed drop-shadow-[0_2px_10px_rgba(255,255,255,1)]">
+          Khởi nguồn từ tình yêu văn hóa Việt, LENFOLK mang đến không gian học sáo trúc không giới hạn<br className="hidden md:block" />
+          Nơi công nghệ AI tiên tiến vươn mình trở thành người thầy tận tâm, kiên nhẫn đồng hành <br className="hidden md:block" />
+          cùng bạn trên hành trình chinh phục từng cung bậc âm thanh của tiếng Sáo.
+
         </p>
-        
-        <div className="flex flex-wrap justify-center gap-6">
-          {['Xóa rào cản địa lý', 'Bảo tồn văn hóa', 'Công nghệ AI tiên tiến'].map((stat, i) => (
-            <span key={i} className="px-6 py-3 rounded-full bg-sage-light/20 text-sage-dark font-medium border border-sage-light/50">
+
+        <div className="flex flex-wrap justify-center gap-6 mb-24">
+          {['Học sáo không giới hạn', 'Gìn giữ hồn cốt Việt', 'Đột phá cùng công nghệ AI'].map((stat, i) => (
+            <span key={i} className="px-8 py-4 rounded-full bg-gradient-to-tr from-white/30 via-white/80 to-white/20 backdrop-blur-md border border-sage-dark text-sage-dark font-bold shadow-[0_0_25px_rgba(0,0,0,0.15)] transition-all cursor-default">
               {stat}
             </span>
           ))}
