@@ -10,7 +10,7 @@ interface ActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
 }
 
 export function ActionButton({ icon: Icon, variant = 'primary', children, className = '', ...props }: ActionButtonProps) {
-  const baseClass = "flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-medium transition-colors shadow-sm";
+  const baseClass = "flex items-center gap-2 h-9 px-4 rounded-lg text-[13px] font-medium transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
   let variantClass = "";
   
   if (variant === 'primary') {

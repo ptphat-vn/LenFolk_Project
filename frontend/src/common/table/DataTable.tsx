@@ -16,6 +16,8 @@ interface DataTableProps<T> {
   emptyIcon?: LucideIcon;
   emptyMessage?: string;
   keyExtractor: (item: T) => string;
+  onRowClick?: (item: T) => void;
+  minRows?: number;
 }
 
 export function DataTable<T>({ 
@@ -24,10 +26,12 @@ export function DataTable<T>({
   isLoading, 
   emptyIcon: EmptyIcon, 
   emptyMessage = "Không có dữ liệu",
-  keyExtractor
+  keyExtractor,
+  onRowClick,
+  minRows = 10
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto min-h-[400px]">
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-100">
@@ -54,21 +58,39 @@ export function DataTable<T>({
             ))
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="text-center py-16 text-gray-400">
-                {EmptyIcon && <EmptyIcon className="w-10 h-10 mx-auto mb-3 opacity-20" />}
+              <td colSpan={columns.length} className="text-center py-32 text-gray-400">
+                {EmptyIcon && <EmptyIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />}
                 <p className="text-[14px]">{emptyMessage}</p>
               </td>
             </tr>
           ) : (
-            data.map((item, index) => (
-              <tr key={keyExtractor(item)} className="hover:bg-gray-50/60 transition-colors">
-                {columns.map((col, idx) => (
-                  <td key={idx} className={`px-5 py-3.5 ${col.className || ''}`}>
-                    {col.render(item, index)}
-                  </td>
-                ))}
-              </tr>
-            ))
+            <>
+              {data.map((item, index) => (
+                <tr 
+                  key={keyExtractor(item)} 
+                  className={`hover:bg-gray-50/60 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                >
+                  {columns.map((col, idx) => (
+                    <td key={idx} className={`px-5 py-3.5 ${col.className || ''}`}>
+                      {col.render(item, index)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {/* Padding empty rows to maintain fixed height */}
+              {data.length > 0 && data.length < minRows && (
+                Array.from({ length: minRows - data.length }).map((_, i) => (
+                  <tr key={`empty-row-${i}`} className="pointer-events-none">
+                    {columns.map((_, idx) => (
+                      <td key={idx} className="px-5 py-3.5">
+                        <div className="opacity-0 select-none">&nbsp;</div>
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </>
           )}
         </tbody>
       </table>

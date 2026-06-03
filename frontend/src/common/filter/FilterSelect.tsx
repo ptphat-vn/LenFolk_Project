@@ -8,6 +8,7 @@ interface FilterSelectProps {
   options: { label: string; value: string }[];
   className?: string;
   icon?: boolean;
+  placeholder?: string;
 }
 
 export function FilterSelect({ value, onChange, options, className = "", icon = false }: FilterSelectProps) {
@@ -17,7 +18,7 @@ export function FilterSelect({ value, onChange, options, className = "", icon = 
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 px-3 w-full rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+        className="h-9 px-3 w-full rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white cursor-pointer"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

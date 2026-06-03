@@ -9,6 +9,7 @@ import {
   BillingCycle,
 } from '@/types/subscription.types';
 import { Course } from '@/types/course.types';
+import { Performance } from '@/types/performance.types';
 
 const CYCLE_LABEL: Record<BillingCycle, string> = {
   monthly: 'Hàng tháng',
@@ -29,13 +30,16 @@ export function SubscriptionFormModal({
   onSave: (data: CreateSubscriptionInput, id?: string) => Promise<void>;
   editSub: Subscription | null;
   courses: Course[];
+  performances: Performance[];
 }) {
   const isEdit = !!editSub;
   const [form, setForm] = useState<
     Partial<CreateSubscriptionInput & { isActive: boolean }>
   >({
     name: '',
+    itemType: 'course',
     courseId: '',
+    performanceId: '',
     description: '',
     price: 0,
     currency: 'VND',
@@ -53,7 +57,9 @@ export function SubscriptionFormModal({
       if (editSub) {
         setForm({
           name: editSub.name,
+          itemType: editSub.itemType ?? 'course',
           courseId: editSub.courseId ?? '',
+          performanceId: editSub.performanceId ?? '',
           description: editSub.description ?? '',
           price: editSub.price,
           currency: editSub.currency ?? 'VND',
@@ -65,7 +71,9 @@ export function SubscriptionFormModal({
       } else {
         setForm({
           name: '',
+          itemType: 'course',
           courseId: '',
+          performanceId: '',
           description: '',
           price: 0,
           currency: 'VND',
@@ -91,7 +99,8 @@ export function SubscriptionFormModal({
         .filter(Boolean);
       const body: CreateSubscriptionInput = {
         name: form.name!,
-        courseId: form.courseId!,
+        itemType: form.itemType,
+        ...(form.itemType === 'course' ? { courseId: form.courseId } : { performanceId: form.performanceId }),
         description: form.description,
         price: Number(form.price),
         currency: form.currency,
@@ -141,25 +150,62 @@ export function SubscriptionFormModal({
             />
           </div>
 
-          <div>
-            <label className="block text-[12px] font-medium text-gray-700 mb-1">
-              Khoá học liên kết *
-            </label>
-            <select
-              value={form.courseId ?? ''}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, courseId: e.target.value }))
-              }
-              required
-              className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
-            >
-              <option value="">-- Chọn khoá học --</option>
-              {courses.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12px] font-medium text-gray-700 mb-1">
+                Loại liên kết *
+              </label>
+              <select
+                value={form.itemType ?? 'course'}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, itemType: e.target.value as 'course' | 'performance', courseId: '', performanceId: '' }))
+                }
+                required
+                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+              >
+                <option value="course">Khóa học</option>
+                <option value="performance">Tiết mục biểu diễn</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[12px] font-medium text-gray-700 mb-1">
+                {form.itemType === 'course' ? 'Khóa học *' : 'Tiết mục *'}
+              </label>
+              {form.itemType === 'course' ? (
+                <select
+                  value={form.courseId ?? ''}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, courseId: e.target.value }))
+                  }
+                  required
+                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                >
+                  <option value="">-- Chọn khóa học --</option>
+                  {courses.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value={form.performanceId ?? ''}
+                  onChange={(e) =>
+                    setForm((p) => ({ ...p, performanceId: e.target.value }))
+                  }
+                  required
+                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                >
+                  <option value="">-- Chọn tiết mục --</option>
+                  {performances.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           <div>

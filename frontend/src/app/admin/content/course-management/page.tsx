@@ -37,7 +37,10 @@ import {
   Star,
   Trash2,
   TrendingUp,
+  Loader2,
+  Eye,
 } from 'lucide-react';
+import Link from 'next/link';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
@@ -248,18 +251,30 @@ export default function CourseManagementPage() {
       className: 'text-right',
       render: (course) => (
         <div className="flex items-center justify-end gap-1.5">
+          <Link
+            href={`/admin/content/course-management/${course._id}`}
+            className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
+            title="Xem chi tiết"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </Link>
           <button
             onClick={() => handleEdit(course)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+            title="Chỉnh sửa"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => handleDelete(course._id)}
             disabled={isDeleting === course._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            {isDeleting === course._id ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
           </button>
         </div>
       ),
@@ -643,8 +658,9 @@ function CourseFormDialog({
             <Button
               type="submit"
               disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white"
+              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSaving ? 'Đang lưu...' : course ? 'Cập nhật' : 'Tạo khóa học'}
             </Button>
           </DialogFooter>

@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   description: 'LenFolk',
 };
 
+import { Toaster } from '@/components/ui/sonner';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,6 +25,7 @@ export default function RootLayout({
     <html lang="en" className={`${roboto.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-(--font-roboto)">
         {children}
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

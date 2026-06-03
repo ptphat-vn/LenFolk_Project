@@ -14,6 +14,8 @@ import {
 } from '@/types/subscription.types';
 import { courseApi } from '@/lib/api/course.api';
 import { Course } from '@/types/course.types';
+import { performanceApi } from '@/lib/api/performance.api';
+import { Performance } from '@/types/performance.types';
 import { ActionButton } from '@/common/button/ActionButton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -40,6 +42,7 @@ const item: Variants = {
 export default function SubscriptionsPage() {
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [performances, setPerformances] = useState<Performance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -50,9 +53,10 @@ export default function SubscriptionsPage() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [subsRes, coursesRes] = await Promise.allSettled([
+      const [subsRes, coursesRes, perfsRes] = await Promise.allSettled([
         subscriptionApi.getAll(),
         courseApi.getAll({ limit: 200 }),
+        performanceApi.getAll({ limit: 200 }),
       ]);
       if (subsRes.status === 'fulfilled' && Array.isArray(subsRes.value.data))
         setSubs(subsRes.value.data);
@@ -61,6 +65,11 @@ export default function SubscriptionsPage() {
         Array.isArray(coursesRes.value.data)
       )
         setCourses(coursesRes.value.data);
+      if (
+        perfsRes.status === 'fulfilled' &&
+        Array.isArray(perfsRes.value.data)
+      )
+        setPerformances(perfsRes.value.data);
     } catch (e) {
       console.error('[Subscriptions] fetch error:', e);
     } finally {
@@ -249,6 +258,7 @@ export default function SubscriptionsPage() {
         onSave={handleSave}
         editSub={editTarget}
         courses={courses}
+        performances={performances}
       />
       {deleteTarget && (
         <SubscriptionDeleteConfirmModal

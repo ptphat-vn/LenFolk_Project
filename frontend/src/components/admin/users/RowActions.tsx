@@ -7,8 +7,10 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
+  Eye,
 } from 'lucide-react';
 import { User } from '@/types/user.types';
+import Link from 'next/link';
 
 export function RowActions({
   user,
@@ -35,6 +37,12 @@ export function RowActions({
       </button>
       {open && (
         <div className="absolute right-0 top-9 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[150px]">
+          <Link
+            href={`/admin/users/user-management/${user._id}`}
+            className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" /> Xem chi tiết
+          </Link>
           <button
             onClick={() => {
               setOpen(false);
