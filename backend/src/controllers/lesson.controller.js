@@ -1,141 +1,153 @@
-const factory = require('../utils/handlerFactory');
 const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
 const { UserSubscription } = require('../models/Subscription');
-const AppError = require('../utils/AppError');
-const catchAsync = require('../utils/catchAsync');
 
 // Only show published lessons; admin/instructor can see all
-exports.getAll = catchAsync(async (req, res, next) => {
-  const queryObj = { ...req.query };
-  const excludedFields = ['page', 'sort', 'limit', 'fields'];
-  excludedFields.forEach((el) => delete queryObj[el]);
+exports.getAll = async (req, res, next) => {
+  try {
+    const queryObj = { ...req.query };
+    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    excludedFields.forEach((el) => delete queryObj[el]);
 
-  const isAdminOrInstructor =
-    req.user && (req.user.role === 'admin' || req.user.role === 'instructor');
-  if (!isAdminOrInstructor) {
-    queryObj.status = 'published';
+    const isAdminOrInstructor =
+      req.user && (req.user.role === 'admin' || req.user.role === 'instructor');
+    if (!isAdminOrInstructor) {
+      queryObj.status = 'published';
+    }
+
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
+
+    const page = req.query.page * 1 || 1;
+    const limit = req.query.limit * 1 || 100;
+    const skip = (page - 1) * limit;
+
+    const docs = await Lesson.find(JSON.parse(queryStr))
+      .sort(req.query.sort ? req.query.sort.split(',').join(' ') : 'order')
+      .skip(skip)
+      .limit(limit)
+      .select('-__v');
+
+    res.status(200).json({ success: true, results: docs.length, data: docs });
+  } catch (err) {
+    next(err);
   }
-
-  let queryStr = JSON.stringify(queryObj);
-  queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
-
-  const page = req.query.page * 1 || 1;
-  const limit = req.query.limit * 1 || 100;
-  const skip = (page - 1) * limit;
-
-  const docs = await Lesson.find(JSON.parse(queryStr))
-    .sort(req.query.sort ? req.query.sort.split(',').join(' ') : 'order')
-    .skip(skip)
-    .limit(limit)
-    .select('-__v');
-
-  res.status(200).json({ success: true, results: docs.length, data: docs });
-});
+};
 
 // AC-01: Kiểm tra quyền truy cập bài học
 // - isFree === true  → tất cả user đều truy cập được
 // - isFree === false → cần có UserSubscription hợp lệ trỏ tới course này
 // Admin / Instructor luôn được phép (không cần sub)
-exports.getOne = catchAsync(async (req, res, next) => {
-  const lesson = await Lesson.findById(req.params.id).select('-__v');
-  if (!lesson) return next(new AppError('No lesson found with that ID', 404));
+exports.getOne = async (req, res, next) => {
+  try {
+    const lesson = await Lesson.findById(req.params.id).select('-__v');
+    if (!lesson) return res.status(404).json({ success: false, message: 'No lesson found with that ID' });
 
-  // Privileged roles bypass subscription check
-  const isPrivileged =
-    req.user.role === 'admin' || req.user.role === 'instructor';
+    // Privileged roles bypass subscription check
+    const isPrivileged =
+      req.user.role === 'admin' || req.user.role === 'instructor';
 
-  if (!isPrivileged) {
-    const course = await Course.findById(lesson.courseId).select('isFree');
-    if (!course) return next(new AppError('Parent course not found', 404));
+    if (!isPrivileged) {
+      const course = await Course.findById(lesson.courseId).select('isFree');
+      if (!course) return res.status(404).json({ success: false, message: 'Parent course not found' });
 
-    if (!course.isFree) {
-      // 1. Kiểm tra enrolledCourses (mua đứt)
-      const User = require('../models/User');
-      const user = await User.findById(req.user._id).select('enrolledCourses');
-      const isEnrolled =
-        user &&
-        user.enrolledCourses &&
-        user.enrolledCourses.includes(course._id);
+      if (!course.isFree) {
+        // 1. Kiểm tra enrolledCourses (mua đứt)
+        const User = require('../models/User');
 
-      if (!isEnrolled) {
-        // 2. Tìm xem user có active subscription nào mở khóa course này không
-        const activeSubs = await UserSubscription.find({
-          userId: req.user._id,
-          status: 'active',
-          endDate: { $gt: new Date() },
-        }).populate({ path: 'subscriptionId', select: 'courseId' });
+        const user = await User.findById(req.user._id).select('enrolledCourses');
+        const isEnrolled =
+          user &&
+          user.enrolledCourses &&
+          user.enrolledCourses.includes(course._id);
 
-        const hasAccess = activeSubs.some(
-          (sub) =>
-            sub.subscriptionId?.courseId?.toString() === course._id.toString(),
-        );
+        if (!isEnrolled) {
+          // 2. Tìm xem user có active subscription nào mở khóa course này không
+          const activeSubs = await UserSubscription.find({
+            userId: req.user._id,
+            status: 'active',
+            endDate: { $gt: new Date() },
+          }).populate({ path: 'subscriptionId', select: 'courseId' });
 
-        if (!hasAccess) {
-          return next(
-            new AppError(
-              'This lesson belongs to a premium course. Please subscribe to access.',
-              403,
-            ),
+          const hasAccess = activeSubs.some(
+            (sub) =>
+              sub.subscriptionId?.courseId?.toString() === course._id.toString(),
           );
+
+          if (!hasAccess) {
+            return res.status(403).json({ success: false, message: 'This lesson belongs to a premium course. Please subscribe to access.' });
+          }
         }
       }
     }
-  }
 
-  res.status(200).json({ success: true, data: lesson });
-});
+    res.status(200).json({ success: true, data: lesson });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // Verify instructor owns the course before creating a lesson; update totalLessons
-exports.createOne = catchAsync(async (req, res, next) => {
-  const course = await Course.findById(req.body.courseId);
-  if (!course) return next(new AppError('No course found with that ID', 404));
+exports.createOne = async (req, res, next) => {
+  try {
+    const course = await Course.findById(req.body.courseId);
+    if (!course) return res.status(404).json({ success: false, message: 'No course found with that ID' });
 
-  if (
-    req.user.role === 'instructor' &&
-    !course.instructorId.equals(req.user._id)
-  ) {
-    return next(
-      new AppError(
-        'You do not have permission to add lessons to this course',
-        403,
-      ),
-    );
-  }
+    if (
+      req.user.role === 'instructor' &&
+      !course.instructorId.equals(req.user._id)
+    ) {
+      return res.status(403).json({ success: false, message: 'You do not have permission to add lessons to this course' });
+    }
 
-  const lesson = await Lesson.create(req.body);
+    const lesson = await Lesson.create(req.body);
 
-  // Keep totalLessons counter in sync
-  await Course.findByIdAndUpdate(req.body.courseId, {
-    $inc: { totalLessons: 1 },
-  });
-
-  res
-    .status(201)
-    .json({
-      success: true,
-      message: 'Lesson created successfully',
-      data: lesson,
+    // Keep totalLessons counter in sync
+    await Course.findByIdAndUpdate(req.body.courseId, {
+      $inc: { totalLessons: 1 },
     });
-});
 
-exports.updateOne = factory.updateOne(Lesson);
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: 'Tạo bài học thành công',
+        data: lesson,
+      });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateOne = async (req, res, next) => {
+  try {
+    const doc = await Lesson.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    res.status(200).json({ success: true, message: 'Cập nhật bài học thành công', data: doc });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // Decrement totalLessons on delete
-exports.deleteOne = catchAsync(async (req, res, next) => {
-  const lesson = await Lesson.findById(req.params.id);
-  if (!lesson) return next(new AppError('No lesson found with that ID', 404));
+exports.deleteOne = async (req, res, next) => {
+  try {
+    const lesson = await Lesson.findById(req.params.id);
+    if (!lesson) return res.status(404).json({ success: false, message: 'No lesson found with that ID' });
 
-  await Lesson.findByIdAndDelete(req.params.id);
-  await Course.findByIdAndUpdate(lesson.courseId, {
-    $inc: { totalLessons: -1 },
-  });
-
-  res
-    .status(200)
-    .json({
-      success: true,
-      message: 'Lesson deleted successfully',
-      data: null,
+    await Lesson.findByIdAndDelete(req.params.id);
+    await Course.findByIdAndUpdate(lesson.courseId, {
+      $inc: { totalLessons: -1 },
     });
-});
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: 'Xóa bài học thành công',
+        data: null,
+      });
+  } catch (err) {
+    next(err);
+  }
+};

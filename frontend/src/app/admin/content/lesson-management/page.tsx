@@ -33,9 +33,7 @@ import {
   Trash2,
   TrendingUp,
   Video,
-  FileText,
-  AlertCircle,
-  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
@@ -43,6 +41,17 @@ import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { lessonSchema, zodFieldErrors } from '@/schema/form.schema';
+
+type LessonFormField =
+  | 'courseId'
+  | 'title'
+  | 'description'
+  | 'videoUrl'
+  | 'audioUrl'
+  | 'order'
+  | 'duration';
+type LessonFormErrors = Partial<Record<LessonFormField, string>>;
 
 export default function LessonManagementPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -236,16 +245,20 @@ export default function LessonManagementPage() {
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={() => handleEdit(lesson)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => handleDelete(lesson._id)}
             disabled={isDeleting === lesson._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            {isDeleting === lesson._id ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
           </button>
         </div>
       ),
@@ -436,6 +449,7 @@ function LessonFormDialog({
     isFree: false,
     techniques: [],
   });
+  const [fieldErrors, setFieldErrors] = useState<LessonFormErrors>({});
 
   useEffect(() => {
     if (lesson) {
@@ -451,6 +465,7 @@ function LessonFormDialog({
         isFree: lesson.isFree,
         techniques: lesson.techniques ?? [],
       });
+      setFieldErrors({});
     } else {
       setForm({
         courseId: '',
@@ -464,21 +479,43 @@ function LessonFormDialog({
         isFree: false,
         techniques: [],
       });
+      setFieldErrors({});
     }
   }, [lesson, open]);
 
   const set = <K extends keyof CreateLessonInput>(
     k: K,
     v: CreateLessonInput[K],
-  ) => setForm((prev) => ({ ...prev, [k]: v }));
+  ) => {
+    setForm((prev) => ({ ...prev, [k]: v }));
+    if (k in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [k]: undefined }));
+    }
+  };
+
+  const renderFieldError = (field: LessonFormField) =>
+    fieldErrors[field] ? (
+      <p className="text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     if (!form.title.trim() || !form.courseId) {
-      toast.error('Vui lòng điền tiêu đề và chọn khóa học');
+      setFieldErrors({
+        ...(!form.title.trim() ? { title: 'Vui lòng nhập tên bài học' } : {}),
+        ...(!form.courseId ? { courseId: 'Vui lòng chọn khóa học' } : {}),
+      });
       return;
     }
-    onSave(form);
+    const parsed = lessonSchema.safeParse(form);
+    if (!parsed.success) {
+      setFieldErrors(zodFieldErrors<LessonFormField>(parsed.error));
+      return;
+    }
+    onSave(parsed.data);
   };
 
   return (
@@ -489,7 +526,7 @@ function LessonFormDialog({
             {lesson ? 'Chỉnh sửa bài học' : 'Thêm bài học mới'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label>Tên bài học *</Label>
@@ -498,6 +535,7 @@ function LessonFormDialog({
                 onChange={(e) => set('title', e.target.value)}
                 placeholder="Nhập tên bài học"
               />
+              {renderFieldError('title')}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Khóa học *</Label>
@@ -516,6 +554,7 @@ function LessonFormDialog({
                   ))}
                 </SelectContent>
               </Select>
+              {renderFieldError('courseId')}
             </div>
             <div className="space-y-1.5">
               <Label>Thứ tự</Label>
@@ -525,6 +564,7 @@ function LessonFormDialog({
                 value={form.order}
                 onChange={(e) => set('order', Number(e.target.value))}
               />
+              {renderFieldError('order')}
             </div>
             <div className="space-y-1.5">
               <Label>Thời lượng (giây)</Label>
@@ -540,6 +580,7 @@ function LessonFormDialog({
                 }
                 placeholder="Không bắt buộc"
               />
+              {renderFieldError('duration')}
             </div>
             <div className="space-y-1.5">
               <Label>Trạng thái</Label>
@@ -587,6 +628,7 @@ function LessonFormDialog({
                 onChange={(e) => set('videoUrl', e.target.value)}
                 placeholder="https://..."
               />
+              {renderFieldError('videoUrl')}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>URL audio</Label>
@@ -595,6 +637,7 @@ function LessonFormDialog({
                 onChange={(e) => set('audioUrl', e.target.value)}
                 placeholder="https://..."
               />
+              {renderFieldError('audioUrl')}
             </div>
           </div>
           <DialogFooter>
@@ -608,8 +651,9 @@ function LessonFormDialog({
             <Button
               type="submit"
               disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white"
+              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSaving ? 'Đang lưu...' : lesson ? 'Cập nhật' : 'Tạo bài học'}
             </Button>
           </DialogFooter>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { InstructorProfile } from '@/types/instructor.types';
+import { InstructorProfile, CreateInstructorProfileInput } from '@/types/instructor.types';
 import { instructorApi } from '@/lib/api/instructor.api';
 import {
   UserCheck,
@@ -11,10 +11,16 @@ import {
   BookOpen,
   Trash2,
   Globe,
+  Loader2,
+  Eye,
 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { DataTable, Column } from '@/common/table/DataTable';
+import { ActionButton } from '@/common/button/ActionButton';
+import { Plus, Pencil } from 'lucide-react';
+import { InstructorFormModal } from '@/components/admin/users/InstructorFormModal';
 
 export default function AdminInstructorsPage() {
   const [instructors, setInstructors] = useState<InstructorProfile[]>([]);
@@ -22,6 +28,9 @@ export default function AdminInstructorsPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  
+  const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<InstructorProfile | null>(null);
 
   async function fetchInstructors() {
     try {
@@ -39,6 +48,23 @@ export default function AdminInstructorsPage() {
   useEffect(() => {
     fetchInstructors();
   }, []);
+
+  const handleSave = async (data: CreateInstructorProfileInput, id?: string) => {
+    try {
+      if (id) {
+        await instructorApi.update(id, data);
+        toast.success('Đã cập nhật hồ sơ giảng viên');
+      } else {
+        await instructorApi.create(data);
+        toast.success('Đã tạo hồ sơ giảng viên');
+      }
+      fetchInstructors();
+    } catch (error) {
+      console.error('Failed to save instructor', error);
+      toast.error('Lỗi khi lưu hồ sơ');
+      throw error; // Let modal handle loading state
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (
@@ -87,7 +113,7 @@ export default function AdminInstructorsPage() {
           </span>
           {inst.bio && (
             <span
-              className="text-xs text-gray-500 line-clamp-1 max-w-50"
+              className="text-xs text-gray-500 line-clamp-1 max-w-50 cursor-pointer hover:text-[#2d6a4f]"
               title={inst.bio}
             >
               {inst.bio}
@@ -148,14 +174,35 @@ export default function AdminInstructorsPage() {
       header: 'Thao tác',
       className: 'text-right',
       render: (inst) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-1.5">
+          <Link
+            href={`/admin/users/instructor-management/${inst._id}`}
+            className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
+            title="Xem chi tiết"
+          >
+            <Eye className="w-4 h-4" />
+          </Link>
+          <button
+            onClick={() => {
+              setEditTarget(inst);
+              setFormOpen(true);
+            }}
+            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+            title="Chỉnh sửa hồ sơ"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
           <button
             onClick={() => handleDelete(inst._id)}
             disabled={isDeleting === inst._id}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             title="Xóa hồ sơ"
           >
-            <Trash2 className="w-4 h-4" />
+            {isDeleting === inst._id ? (
+              <Loader2 className="w-4 h-4 animate-spin text-red-500" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
           </button>
         </div>
       ),
@@ -174,6 +221,15 @@ export default function AdminInstructorsPage() {
             Xem và quản lý hồ sơ của các giảng viên trên hệ thống
           </p>
         </div>
+        <ActionButton
+          icon={Plus}
+          onClick={() => {
+            setEditTarget(null);
+            setFormOpen(true);
+          }}
+        >
+          Thêm hồ sơ
+        </ActionButton>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -197,6 +253,13 @@ export default function AdminInstructorsPage() {
           keyExtractor={(inst) => inst._id}
         />
       </div>
+
+      <InstructorFormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        onSave={handleSave}
+        editInstructor={editTarget}
+      />
     </div>
   );
 }

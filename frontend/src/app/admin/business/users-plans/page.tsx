@@ -205,7 +205,7 @@ export default function UsersPlansPage() {
         <div className="flex items-center justify-end">
           <button
             onClick={() => setSelectedUser(u)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
           >
             <Eye className="w-4 h-4" />
           </button>
@@ -337,6 +337,7 @@ export default function UsersPlansPage() {
           emptyIcon={Users}
           emptyMessage="Không tìm thấy người dùng"
           keyExtractor={(u) => u._id}
+          onRowClick={(u) => setSelectedUser(u)}
         />
 
         {/* Pagination */}

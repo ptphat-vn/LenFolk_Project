@@ -22,6 +22,7 @@ import {
   Bell,
   Shield,
   ScrollText,
+  Music,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -67,6 +68,11 @@ const NAV_GROUPS = [
         label: 'Quản lý khoá học',
         href: '/admin/content/course-management',
         icon: ClipboardCheck,
+      },
+      {
+        label: 'Quản lý tiết mục',
+        href: '/admin/content/repertoire-management',
+        icon: Music,
       },
     ],
   },

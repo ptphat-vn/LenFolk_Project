@@ -1,16 +1,45 @@
-const factory = require('../utils/handlerFactory');
 const Notification = require('../models/Notification');
-const catchAsync = require('../utils/catchAsync');
+
+
+
+
+
 
 // Only return notifications belonging to the current user
-exports.getAll = catchAsync(async (req, res, next) => {
-  const docs = await Notification.find({ userId: req.user._id }).sort(
-    '-createdAt',
-  );
+exports.getAll = async (req, res, next) => {
+  try {
+  const docs = await Notification.find({ userId: req.user._id }).sort('-createdAt');
   res.status(200).json({ success: true, results: docs.length, data: docs });
-});
+  } catch (err) { next(err); }
+};
 
-exports.getOne = factory.getOne(Notification);
-exports.createOne = factory.createOne(Notification);
-exports.updateOne = factory.updateOne(Notification);
-exports.deleteOne = factory.deleteOne(Notification);
+exports.getOne = async (req, res, next) => {
+  try {
+  const doc = await Notification.findById(req.params.id);
+  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  res.status(200).json({ success: true, data: doc });
+  } catch (err) { next(err); }
+};
+
+exports.createOne = async (req, res, next) => {
+  try {
+  const doc = await Notification.create(req.body);
+  res.status(201).json({ success: true, message: 'Tạo mới thành công', data: doc });
+  } catch (err) { next(err); }
+};
+
+exports.updateOne = async (req, res, next) => {
+  try {
+  const doc = await Notification.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });
+  } catch (err) { next(err); }
+};
+
+exports.deleteOne = async (req, res, next) => {
+  try {
+  const doc = await Notification.findByIdAndDelete(req.params.id);
+  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  res.status(200).json({ success: true, message: 'Xóa thành công', data: null });
+  } catch (err) { next(err); }
+};

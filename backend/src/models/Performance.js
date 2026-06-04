@@ -51,11 +51,16 @@ const performanceSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+    // draft đã bị loại bỏ — instructor tạo mới sẽ ở pending, chờ admin duyệt
     status: {
       type: String,
-      enum: ['draft', 'pending', 'published', 'archived'],
-      default: 'draft',
+      enum: ['pending', 'published', 'archived'],
+      default: 'pending',
     },
+    // LƯU Ý: Giá (price) & chu kỳ (billingCycle) KHÔNG lưu trên Performance.
+    // Instructor nhập price/billingCycle khi tạo → BE tự tạo một Subscription
+    // liên kết (itemType='performance', performanceId). Subscription là nguồn
+    // giá chính thức — đọc giá qua Subscription.findOne({ performanceId }).
     tags: {
       type: [String],
       default: [],

@@ -10,7 +10,7 @@ export const courseApi = {
     return res.data;
   },
 
-  /** POST /courses — Tạo khóa học mới (Instructor hoặc Admin) */
+  /** POST /courses — Tạo khóa học mới (Admin only) */
   create: async (body: CreateCourseInput) => {
     const res = await axiosInstance.post<APIResponse<Course>>('/courses', body);
     return res.data;
@@ -22,7 +22,7 @@ export const courseApi = {
     return res.data;
   },
 
-  /** PATCH /courses/:id — Cập nhật khóa học (Instructor hoặc Admin) */
+  /** PATCH /courses/:id — Cập nhật khóa học (Admin only) */
   update: async (id: string, body: Partial<CreateCourseInput>) => {
     const res = await axiosInstance.patch<APIResponse<Course>>(`/courses/${id}`, body);
     return res.data;

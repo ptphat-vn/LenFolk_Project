@@ -134,6 +134,7 @@ export default function LoginPage() {
           {/* Form */}
           <form
             onSubmit={handleSubmit(onSubmit)}
+            noValidate
             className="flex flex-col gap-6 w-full"
           >
             {/* Server error */}

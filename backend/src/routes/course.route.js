@@ -16,7 +16,7 @@ const {
 } = require('../validations/course.validation');
 
 // GET    /api/courses  — Optional auth: kết quả lọc theo subscription của user
-// POST   /api/courses  — Admin: tạo tất cả loại | Instructor: chỉ tạo 'repertoire'
+// POST   /api/courses  — Admin only
 router
   .route('/')
   
@@ -24,13 +24,13 @@ router
   
   .post(
     verifyToken,
-    verifyInstructorOrAdmin,
+    verifyAdmin,
     validate(createCourseSchema),
     courseController.createOne,
   );
 
 // GET    /api/courses/:id  — Optional auth: kiểm tra quyền theo subscription
-// PATCH  /api/courses/:id  — Instructor/Admin: update (ownership check in controller)
+// PATCH  /api/courses/:id  — Admin only: update
 // DELETE /api/courses/:id  — Admin only
 router
   .route('/:id')
@@ -39,7 +39,7 @@ router
   
   .patch(
     verifyToken,
-    verifyInstructorOrAdmin,
+    verifyAdmin,
     validate(updateCourseSchema),
     courseController.updateOne,
   )

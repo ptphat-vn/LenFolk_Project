@@ -117,7 +117,7 @@ export default function AdminNotificationsPage() {
               <h2 className="text-lg font-semibold text-gray-900">Gửi thông báo mới</h2>
             </div>
 
-            <form onSubmit={handleSend} className="space-y-4">
+            <form onSubmit={handleSend} noValidate className="space-y-4">
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
                   <User className="w-4 h-4 text-gray-400" />
@@ -184,7 +184,7 @@ export default function AdminNotificationsPage() {
               <button
                 type="submit"
                 disabled={isSending}
-                className="w-full bg-[#2d6a4f] hover:bg-[#1a3a2a] text-white py-2.5 rounded-lg font-medium text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-[#2d6a4f] hover:bg-[#1a3a2a] text-white py-2.5 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
               >
                 {isSending ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -254,7 +254,7 @@ export default function AdminNotificationsPage() {
                         {!notif.isRead && (
                           <button
                             onClick={() => handleMarkAsRead(notif._id)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors cursor-pointer"
                             title="Đánh dấu đã đọc"
                           >
                             <CheckCircle2 className="w-4 h-4" />
@@ -263,7 +263,7 @@ export default function AdminNotificationsPage() {
                         <button
                           onClick={() => handleDelete(notif._id)}
                           disabled={isDeleting === notif._id}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Xóa thông báo"
                         >
                           <Trash2 className="w-4 h-4" />

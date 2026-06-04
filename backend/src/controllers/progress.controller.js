@@ -1,58 +1,69 @@
-const factory = require('../utils/handlerFactory');
 const Progress = require('../models/Progress');
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/AppError');
 
 // PS-01: Only return progress records belonging to the current user
-exports.getAll = catchAsync(async (req, res, next) => {
-  const docs = await Progress.find({ userId: req.user._id }).sort(
-    '-lastAccessedAt',
-  );
-  res.status(200).json({ success: true, results: docs.length, data: docs });
-});
+exports.getAll = async (req, res, next) => {
+  try {
+    const docs = await Progress.find({ userId: req.user._id }).sort(
+      '-lastAccessedAt',
+    );
+    res.status(200).json({ success: true, results: docs.length, data: docs });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // Inject userId from token, prevent spoofing via body
-exports.createOne = catchAsync(async (req, res, next) => {
-  const doc = await Progress.create({ ...req.body, userId: req.user._id });
-  res.status(201).json({ success: true, data: doc });
-});
-
-exports.getOne = catchAsync(async (req, res, next) => {
-  const doc = await Progress.findById(req.params.id);
-  if (!doc) return next(new AppError('No document found with that ID', 404));
-  if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-    return next(
-      new AppError('You do not have permission to access this record', 403),
-    );
+exports.createOne = async (req, res, next) => {
+  try {
+    const doc = await Progress.create({ ...req.body, userId: req.user._id });
+    res.status(201).json({ success: true, data: doc });
+  } catch (err) {
+    next(err);
   }
-  res.status(200).json({ success: true, data: doc });
-});
+};
 
-exports.updateOne = catchAsync(async (req, res, next) => {
-  const doc = await Progress.findById(req.params.id);
-  if (!doc) return next(new AppError('No document found with that ID', 404));
-  if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-    return next(
-      new AppError('You do not have permission to update this record', 403),
-    );
+exports.getOne = async (req, res, next) => {
+  try {
+    const doc = await Progress.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to access this record' });
+    }
+    res.status(200).json({ success: true, data: doc });
+  } catch (err) {
+    next(err);
   }
-  // Prevent userId/courseId/lessonId spoofing on update
-  delete req.body.userId;
-  const updated = await Progress.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-  res.status(200).json({ success: true, data: updated });
-});
+};
 
-exports.deleteOne = catchAsync(async (req, res, next) => {
-  const doc = await Progress.findById(req.params.id);
-  if (!doc) return next(new AppError('No document found with that ID', 404));
-  if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-    return next(
-      new AppError('You do not have permission to delete this record', 403),
-    );
+exports.updateOne = async (req, res, next) => {
+  try {
+    const doc = await Progress.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to update this record' });
+    }
+    // Prevent userId/courseId/lessonId spoofing on update
+    delete req.body.userId;
+    const updated = await Progress.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    res.status(200).json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
   }
-  await Progress.findByIdAndDelete(req.params.id);
-  res.status(204).json({ success: true, data: null });
-});
+};
+
+exports.deleteOne = async (req, res, next) => {
+  try {
+    const doc = await Progress.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'You do not have permission to delete this record' });
+    }
+    await Progress.findByIdAndDelete(req.params.id);
+    res.status(204).json({ success: true, data: null });
+  } catch (err) {
+    next(err);
+  }
+};
