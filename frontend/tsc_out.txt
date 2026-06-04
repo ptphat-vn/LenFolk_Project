@@ -1,9 +1,0 @@
-﻿src/app/admin/business/promotions/page.tsx(158,25): error TS2339: Property 'message' does not exist on type 'void'.
-src/app/admin/business/subscriptions/page.tsx(115,25): error TS2339: Property 'message' does not exist on type 'void'.
-src/app/admin/content/course-management/[id]/page.tsx(88,69): error TS2339: Property 'orderIndex' does not exist on type 'Lesson'.
-src/app/admin/content/course-management/[id]/page.tsx(95,16): error TS2339: Property 'lessonType' does not exist on type 'Lesson'.
-src/app/admin/content/course-management/[id]/page.tsx(105,14): error TS2339: Property 'lessonType' does not exist on type 'Lesson'.
-src/app/admin/content/course-management/[id]/page.tsx(222,42): error TS2339: Property 'orderIndex' does not exist on type 'Lesson'.
-src/app/admin/content/course-management/[id]/page.tsx(222,57): error TS2339: Property 'orderIndex' does not exist on type 'Lesson'.
-src/app/admin/users/user-management/page.tsx(162,25): error TS2339: Property 'message' does not exist on type 'void'.
-
