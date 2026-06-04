@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
 
 export default function ForgotChoiceScreen() {

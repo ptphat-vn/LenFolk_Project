@@ -129,11 +129,17 @@
 }
 
 /* ─── Brand Theme ──────────────────────────────────────────────────────────── */
-@theme {
+@theme inline {
   --color-bamboo: #2d5016;
   --color-bamboo-light: #4a7c28;
   --color-gold: #d4a017;
   --color-gold-light: #e8c040;
   --color-mist: #f3f6ef;
+  
+  --color-sage-dark: #8e9e6e;
+  --color-sage-light: #d6ddc6;
+  --color-cream: #f4e0ac;
+  --color-black: #10120c;
+
   --font-display: Georgia, 'Times New Roman', serif;
 }

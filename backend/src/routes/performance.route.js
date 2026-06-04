@@ -13,15 +13,15 @@ const validate = require('../middlewares/validate.middleware');
 const {
   createPerformanceSchema,
   updatePerformanceSchema,
+  approvePerformanceSchema,
+  rejectPerformanceSchema,
 } = require('../validations/performance.validation');
 
 // GET  /api/performances  — Optional auth: kết quả lọc theo quyền truy cập
-// POST /api/performances  — Admin/Instructor: tạo tiết mục mới
+// POST /api/performances  — Admin/Instructor: tạo tiết mục mới (instructor luôn pending)
 router
   .route('/')
-
   .get(optionalAuth, performanceController.getAll)
-
   .post(
     verifyToken,
     verifyInstructorOrAdmin,
@@ -34,17 +34,32 @@ router
 // DELETE /api/performances/:id  — Admin only
 router
   .route('/:id')
-
   .get(optionalAuth, performanceController.getOne)
-
   .patch(
     verifyToken,
     verifyInstructorOrAdmin,
     validate(updatePerformanceSchema),
     performanceController.updateOne,
   )
-
   .delete(verifyToken, verifyAdmin, performanceController.deleteOne);
+
+// PATCH /api/performances/:id/approve — Admin duyệt tiết mục (pending → published)
+router.patch(
+  '/:id/approve',
+  verifyToken,
+  verifyAdmin,
+  validate(approvePerformanceSchema),
+  performanceController.approveOne,
+);
+
+// PATCH /api/performances/:id/reject — Admin từ chối tiết mục (pending → archived)
+router.patch(
+  '/:id/reject',
+  verifyToken,
+  verifyAdmin,
+  validate(rejectPerformanceSchema),
+  performanceController.rejectOne,
+);
 
 // POST /api/performances/:id/purchase — Lên đơn thanh toán mua tiết mục
 router.post(

@@ -1,221 +1,327 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Permission } from '@/types/permission.types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, Variants } from 'framer-motion';
+import { Permission, CreatePermissionInput } from '@/types/permission.types';
 import { permissionApi } from '@/lib/api/permission.api';
-import { Shield, Search, Plus, Trash2, Edit2, FileText } from 'lucide-react';
+import {
+  Shield,
+  Plus,
+  Trash2,
+  Pencil,
+  FileText,
+  RefreshCw,
+  Loader2,
+  Lock,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { FilterInput } from '@/common/filter/FilterInput';
+import { FilterSelect } from '@/common/filter/FilterSelect';
+import { DataTable, Column } from '@/common/table/DataTable';
+import { ActionButton } from '@/common/button/ActionButton';
+import { useDebounce } from '@/hooks/useDebounce';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Pagination } from '@/common/pagination/pagination';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const ACTION_COLORS: Record<string, string> = {
+  read:   'bg-blue-50 text-blue-700',
+  create: 'bg-emerald-50 text-emerald-700',
+  update: 'bg-amber-50 text-amber-700',
+  delete: 'bg-red-50 text-red-600',
+  manage: 'bg-purple-50 text-purple-700',
+};
+
+const COMMON_ACTIONS = ['read', 'create', 'update', 'delete', 'manage'];
+const PAGE_SIZE = 10;
+
+const container: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+};
+const item: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26 } },
+};
+
+const DEFAULT_FORM: CreatePermissionInput = {
+  action: 'read',
+  resource: '',
+  description: '',
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminPermissionsPage() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(search, 500);
+  const [actionFilter, setActionFilter] = useState('all');
+  const [page, setPage] = useState(1);
 
-  async function fetchPermissions() {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Permission | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [form, setForm] = useState<CreatePermissionInput>(DEFAULT_FORM);
+
+  const fetchPermissions = useCallback(async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const res = await permissionApi.getAll();
       setPermissions(res.data || []);
-    } catch (error) {
-      console.error('Failed to fetch permissions', error);
+    } catch {
       toast.error('Lỗi khi tải danh sách quyền hạn');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }
-
-  useEffect(() => {
-    fetchPermissions();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (
-      !confirm(
-        'Bạn có chắc chắn muốn xóa quyền này? Các vai trò sử dụng quyền này có thể bị ảnh hưởng.',
-      )
-    )
-      return;
+  useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
 
+  const stats = useMemo(() => {
+    const byAction = Object.fromEntries(COMMON_ACTIONS.map((a) => [a, permissions.filter((p) => p.action === a).length]));
+    return { total: permissions.length, byAction };
+  }, [permissions]);
+
+  const filtered = useMemo(() =>
+    permissions.filter((p) => {
+      const q = debouncedSearch.toLowerCase();
+      if (q && !p.resource.toLowerCase().includes(q) && !p.action.toLowerCase().includes(q) && !(p.description ?? '').toLowerCase().includes(q)) return false;
+      if (actionFilter !== 'all' && p.action !== actionFilter) return false;
+      return true;
+    }),
+    [permissions, debouncedSearch, actionFilter]
+  );
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  useEffect(() => setPage(1), [debouncedSearch, actionFilter]);
+
+  // ── CRUD ────────────────────────────────────────────────────────────────────
+  const openCreate = () => {
+    setEditTarget(null);
+    setForm(DEFAULT_FORM);
+    setFormOpen(true);
+  };
+
+  const openEdit = (perm: Permission) => {
+    setEditTarget(perm);
+    setForm({ action: perm.action, resource: perm.resource, description: perm.description ?? '' });
+    setFormOpen(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.resource.trim() || !form.action.trim()) {
+      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+    try {
+      setIsSaving(true);
+      if (editTarget) {
+        await permissionApi.update(editTarget._id, form);
+        toast.success('Đã cập nhật quyền hạn');
+      } else {
+        await permissionApi.create(form);
+        toast.success('Đã tạo quyền hạn mới');
+      }
+      setFormOpen(false);
+      fetchPermissions();
+    } catch {
+      toast.error('Lỗi khi lưu quyền hạn');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Bạn có chắc muốn xóa quyền này? Các vai trò sử dụng quyền này có thể bị ảnh hưởng.')) return;
     try {
       setIsDeleting(id);
       await permissionApi.delete(id);
       toast.success('Đã xóa quyền hệ thống');
-      fetchPermissions();
-    } catch (error) {
-      console.error('Failed to delete permission', error);
+      setPermissions((prev) => prev.filter((p) => p._id !== id));
+    } catch {
       toast.error('Lỗi khi xóa quyền');
     } finally {
       setIsDeleting(null);
     }
   };
 
-  const filteredPermissions = permissions.filter((p) => {
-    const searchLower = search.toLowerCase();
-    return (
-      p.action.toLowerCase().includes(searchLower) ||
-      p.resource.toLowerCase().includes(searchLower) ||
-      (p.description || '').toLowerCase().includes(searchLower)
-    );
-  });
-
-  const getActionColor = (action: string) => {
-    switch (action.toLowerCase()) {
-      case 'read':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'create':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'update':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'delete':
-        return 'bg-red-50 text-red-700 border-red-200';
-      case 'manage':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
+  // ── Columns ─────────────────────────────────────────────────────────────────
+  const columns: Column<Permission>[] = [
+    {
+      header: 'Tài nguyên',
+      render: (p) => (
+        <div className="flex items-center gap-2">
+          <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          <span className="text-[13px] font-semibold text-gray-900">{p.resource}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Hành động',
+      render: (p) => (
+        <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-full ${ACTION_COLORS[p.action] ?? 'bg-gray-100 text-gray-600'}`}>
+          {p.action}
+        </span>
+      ),
+    },
+    {
+      header: 'Mô tả',
+      render: (p) => (
+        <span className="text-[13px] text-gray-500">{p.description || <span className="italic text-gray-300">Không có mô tả</span>}</span>
+      ),
+    },
+    {
+      header: 'Ngày tạo',
+      render: (p) => (
+        <span className="text-[12px] text-gray-400">
+          {p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : '—'}
+        </span>
+      ),
+    },
+    {
+      header: '',
+      className: 'text-right',
+      render: (p) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            onClick={() => openEdit(p)}
+            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => handleDelete(p._id)}
+            disabled={isDeleting === p._id}
+            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isDeleting === p._id ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <motion.div className="p-6 space-y-6 w-full" variants={container} initial="hidden" animate="show">
+      {/* Header */}
+      <motion.div variants={item} className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Shield className="w-6 h-6 text-[#2d6a4f]" />
-            Phân quyền & Vai trò
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Quản lý danh sách các quyền hạn (Permissions) trên hệ thống
-          </p>
+          <h1 className="text-xl font-bold text-gray-900">Phân quyền & Vai trò</h1>
+          <p className="text-[13px] text-gray-500 mt-0.5">Quản lý danh sách các quyền hạn trên hệ thống</p>
         </div>
-        <button
-          onClick={() =>
-            toast.info('Chức năng thêm quyền đang được phát triển')
-          }
-          className="bg-[#2d6a4f] hover:bg-[#1a3a2a] text-white px-4 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
-        >
-          <Plus className="w-4 h-4" />
-          Tạo quyền mới
-        </button>
-      </div>
+        <div className="flex items-center gap-2">
+          <ActionButton icon={RefreshCw} variant="outline" onClick={fetchPermissions}>Làm mới</ActionButton>
+          <ActionButton icon={Plus} onClick={openCreate}>Tạo quyền mới</ActionButton>
+        </div>
+      </motion.div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center bg-gray-50/50">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm hành động, tài nguyên..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/20 focus:border-[#2d6a4f] transition-all"
-            />
+      {/* Stats */}
+      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          { label: 'Tổng quyền', value: stats.total, color: 'bg-gray-50 text-gray-600' },
+          { label: 'Read', value: stats.byAction.read, color: 'bg-blue-50 text-blue-700' },
+          { label: 'Create', value: stats.byAction.create, color: 'bg-emerald-50 text-emerald-700' },
+          { label: 'Update', value: stats.byAction.update, color: 'bg-amber-50 text-amber-700' },
+          { label: 'Delete', value: stats.byAction.delete, color: 'bg-red-50 text-red-600' },
+        ].map((c) => (
+          <div key={c.label} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${c.color}`}>
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900">{c.value}</p>
+                <p className="text-[11px] text-gray-500">{c.label}</p>
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
+      </motion.div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs uppercase tracking-wider text-gray-500 font-semibold">
-                <th className="px-6 py-4">Tài nguyên (Resource)</th>
-                <th className="px-6 py-4">Hành động (Action)</th>
-                <th className="px-6 py-4">Mô tả</th>
-                <th className="px-6 py-4">Ngày tạo</th>
-                <th className="px-6 py-4 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 text-sm">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="w-8 h-8 border-4 border-[#2d6a4f] border-t-transparent rounded-full animate-spin mb-4" />
-                      <p>Đang tải dữ liệu...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredPermissions.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-gray-500"
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <Shield className="w-12 h-12 text-gray-300 mb-3" />
-                      <p>Không có quyền hệ thống nào</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredPermissions.map((permission) => (
-                  <tr
-                    key={permission._id}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        <span className="font-semibold text-gray-900">
-                          {permission.resource}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getActionColor(permission.action)}`}
-                      >
-                        {permission.action}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-gray-600">
-                        {permission.description || (
-                          <span className="italic text-gray-400">
-                            Không có mô tả
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-500">
-                      {permission.createdAt
-                        ? new Date(permission.createdAt).toLocaleDateString(
-                            'vi-VN',
-                          )
-                        : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() =>
-                            toast.info('Chức năng sửa đang được phát triển')
-                          }
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Chỉnh sửa"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(permission._id)}
-                          disabled={isDeleting === permission._id}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Xóa quyền"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* Table */}
+      <motion.div variants={item} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
+          <FilterInput value={search} onChange={setSearch} placeholder="Tìm kiếm tài nguyên, hành động..." className="flex-1 min-w-48" />
+          <FilterSelect
+            value={actionFilter}
+            onChange={setActionFilter}
+            options={COMMON_ACTIONS.map((a) => ({ value: a, label: a.toUpperCase() }))}
+            placeholder="Tất cả hành động"
+            className="w-44"
+          />
+          <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} quyền</span>
         </div>
-      </div>
-    </div>
+        <DataTable
+          columns={columns}
+          data={paginated}
+          isLoading={isLoading}
+          emptyIcon={Shield}
+          emptyMessage="Chưa có quyền hạn nào"
+          keyExtractor={(p) => p._id}
+        />
+        {!isLoading && filtered.length > PAGE_SIZE && (
+          <div className="px-5 py-1 border-t border-gray-100">
+            <Pagination total={filtered.length} page={page} pageSize={PAGE_SIZE} onPageChange={setPage} showPageSizeSelector={false} />
+          </div>
+        )}
+      </motion.div>
+
+      {/* Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#2d6a4f]" />
+              {editTarget ? 'Chỉnh sửa quyền hạn' : 'Tạo quyền hạn mới'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSave} noValidate className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Tài nguyên (Resource) *</Label>
+              <Input value={form.resource} onChange={(e) => setForm({ ...form, resource: e.target.value })} placeholder="vd: course, lesson, user..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Hành động (Action) *</Label>
+              <select
+                value={form.action}
+                onChange={(e) => setForm({ ...form, action: e.target.value })}
+                className="h-9 px-3 w-full rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white cursor-pointer"
+              >
+                {COMMON_ACTIONS.map((a) => (
+                  <option key={a} value={a}>{a.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mô tả</Label>
+              <Input value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Mô tả ngắn về quyền này" />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Hủy</Button>
+              <Button type="submit" disabled={isSaving} className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSaving ? 'Đang lưu...' : editTarget ? 'Cập nhật' : 'Tạo quyền'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </motion.div>
   );
 }

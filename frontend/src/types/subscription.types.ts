@@ -7,7 +7,9 @@ export interface Subscription {
   _id: string;
   name: string;
   description?: string;
+  itemType?: 'course' | 'performance';
   courseId?: string;       // ID khóa học được mở khóa khi mua gói này
+  performanceId?: string;  // ID tiết mục được mở khóa
   price: number;
   currency?: Currency;
   billingCycle: BillingCycle;
@@ -21,7 +23,9 @@ export interface Subscription {
 /** Body dùng để Admin tạo / cập nhật gói subscription */
 export interface CreateSubscriptionInput {
   name: string;
-  courseId: string;         // bắt buộc — phải là khóa học isFree: false
+  itemType?: 'course' | 'performance';
+  courseId?: string;
+  performanceId?: string;
   description?: string;
   price: number;            // tối thiểu 0
   currency?: Currency;

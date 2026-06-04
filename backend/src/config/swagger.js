@@ -784,6 +784,18 @@ const options = {
           required: ['name', 'itemType', 'price', 'billingCycle'],
           description:
             '`courseId` bắt buộc khi `itemType === course`. `performanceId` bắt buộc khi `itemType === performance`.',
+          example: {
+            name: 'LenFolk Pro - Yearly',
+            itemType: 'course',
+            courseId: '60d5ecb5d74b8c3b44b8b4d4',
+            description: 'Gói năm — tiết kiệm 30%.',
+            price: 1690000,
+            currency: 'VND',
+            billingCycle: 'yearly',
+            features: ['Mở khóa toàn bộ khoá học', 'AI Feedback'],
+            qrCodeUrl: 'https://cdn.lenfolk.vn/qr/sub_001.png',
+            isActive: true,
+          },
           properties: {
             name: { type: 'string', example: 'LenFolk Pro - Yearly' },
             itemType: {
@@ -1011,7 +1023,8 @@ const options = {
             },
             status: {
               type: 'string',
-              enum: ['draft', 'pending', 'published', 'archived'],
+              enum: ['pending', 'published', 'archived'],
+              description: '`pending` = chờ admin duyệt | `published` = đã duyệt & xuất bản | `archived` = bị từ chối hoặc ẩn',
               example: 'published',
             },
             tags: {
@@ -1041,7 +1054,9 @@ const options = {
           type: 'object',
           required: ['title'],
           description:
-            '`instructorId` được inject tự động từ JWT token — không cần gửi lên.',
+            '`instructorId` được inject tự động từ JWT token — không cần gửi lên. ' +
+            'Instructor tạo luôn có `status: pending`. ' +
+            'Cần gửi `price` + `billingCycle` để BE tự tạo Subscription plan liên kết.',
           properties: {
             title: { type: 'string', example: 'Piano Nocturne Đêm Hà Nội' },
             description: {
@@ -1059,10 +1074,12 @@ const options = {
             isFree: { type: 'boolean', example: false },
             genre: { type: 'string', example: 'Jazz' },
             duration: { type: 'integer', minimum: 0, example: 300 },
-            status: {
-              type: 'string',
-              enum: ['draft', 'pending', 'published', 'archived'],
-              example: 'draft',
+            adminCommissionPercentage: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+              description: 'Phần trăm hoa hồng admin muốn đề xuất. Admin sẽ set lại khi duyệt.',
+              example: 30,
             },
             tags: {
               type: 'array',
@@ -1070,7 +1087,42 @@ const options = {
               example: ['piano', 'jazz', 'nocturne'],
             },
             isFeatured: { type: 'boolean', example: false },
-            publishedAt: { type: 'string', format: 'date-time' },
+            price: {
+              type: 'number',
+              minimum: 0,
+              description: 'Giá tiết mục (VND). BE dùng để tạo Subscription plan tự động.',
+              example: 149000,
+            },
+            billingCycle: {
+              type: 'string',
+              enum: ['monthly', 'quarterly', 'yearly'],
+              description: 'Chu kỳ thanh toán. Bắt buộc khi có price.',
+              example: 'monthly',
+            },
+          },
+        },
+        ApprovePerformanceInput: {
+          type: 'object',
+          description: 'Body khi Admin duyệt tiết mục. Chỉ có thể chỉnh adminCommissionPercentage.',
+          properties: {
+            adminCommissionPercentage: {
+              type: 'number',
+              minimum: 0,
+              maximum: 100,
+              description: 'Phần trăm hoa hồng admin lấy từ doanh thu. Mặc định 30 nếu không gửi.',
+              example: 25,
+            },
+          },
+        },
+        RejectPerformanceInput: {
+          type: 'object',
+          description: 'Body khi Admin từ chối tiết mục.',
+          properties: {
+            rejectReason: {
+              type: 'string',
+              description: 'Lý do từ chối (tuỳ chọn, hiển thị cho instructor).',
+              example: 'Video chất lượng thấp, vui lòng upload lại.',
+            },
           },
         },
         UpdatePerformanceInput: {
@@ -1090,7 +1142,8 @@ const options = {
             duration: { type: 'integer', minimum: 0 },
             status: {
               type: 'string',
-              enum: ['draft', 'pending', 'published', 'archived'],
+              enum: ['pending', 'published', 'archived'],
+              description: 'Instructor không thể tự đổi status; chỉ Admin mới có thể.',
             },
             tags: { type: 'array', items: { type: 'string' } },
             isFeatured: { type: 'boolean' },
@@ -1098,6 +1151,15 @@ const options = {
               type: 'number',
               minimum: 0,
               maximum: 100,
+            },
+            price: {
+              type: 'number',
+              minimum: 0,
+              description: 'Cập nhật giá → sẽ đồng bộ vào Subscription plan liên kết.',
+            },
+            billingCycle: {
+              type: 'string',
+              enum: ['monthly', 'quarterly', 'yearly'],
             },
             publishedAt: { type: 'string', format: 'date-time' },
           },
@@ -1366,6 +1428,8 @@ const options = {
       { name: 'Permissions', description: '🔒 Phân quyền — Admin only' },
       { name: 'AuditLogs', description: '📝 Nhật ký hành động — Admin only' },
       { name: 'ModeratorLogs', description: '🛡️ Nhật ký kiểm duyệt' },
+      { name: 'Coupons', description: '🎟️ Mã giảm giá — Admin only (CRUD)' },
+      { name: 'Wallets', description: '💰 Ví Instructor — Xem số dư, rút tiền, Admin duyệt payout' },
     ],
     paths: {
       // ─── AUTH ───────────────────────────────────────────────────────────
@@ -1889,7 +1953,7 @@ const options = {
         },
         post: {
           tags: ['Courses'],
-          summary: 'Tạo khóa học mới — Instructor hoặc Admin',
+          summary: 'Tạo khóa học mới — Admin',
           description:
             '`instructorId` được inject từ JWT token — không cần (và không nên) gửi lên. Nếu gửi, giá trị sẽ bị ghi đè bởi `req.user._id`.',
           security: [{ bearerAuth: [] }],
@@ -1928,12 +1992,12 @@ const options = {
               },
             },
             403: {
-              description: 'Chỉ Instructor hoặc Admin mới được tạo khóa học',
+              description: 'Chỉ Admin mới được tạo khóa học',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
                   example: {
-                    message: 'Access denied. Instructor or Admin required.',
+                    message: 'Access denied. Admin required.',
                   },
                 },
               },
@@ -1980,9 +2044,9 @@ const options = {
         },
         patch: {
           tags: ['Courses'],
-          summary: 'Cập nhật khóa học — Instructor hoặc Admin',
+          summary: 'Cập nhật khóa học — Admin',
           description:
-            'Instructor chỉ được sửa khóa học của chính mình (`instructorId === req.user._id`). Admin không bị giới hạn.',
+            'Chỉ Admin mới có quyền cập nhật khóa học.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -2016,12 +2080,12 @@ const options = {
               },
             },
             403: {
-              description: 'Instructor cố sửa khóa học của người khác',
+              description: 'Không có quyền cập nhật',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
                   example: {
-                    message: 'You do not have permission to update this course',
+                    message: 'Access denied. Admin required.',
                   },
                 },
               },
@@ -2130,9 +2194,9 @@ const options = {
         },
         post: {
           tags: ['Lessons'],
-          summary: 'Tạo bài học mới — Instructor hoặc Admin',
+          summary: 'Tạo bài học mới — Admin',
           description:
-            'Instructor chỉ được tạo bài học cho khóa học của chính mình (`course.instructorId === req.user._id`). Sau khi tạo, `Course.totalLessons` được tự động tăng thêm 1.',
+            'Chỉ Admin được tạo bài học cho khóa học. Sau khi tạo, `Course.totalLessons` được tự động tăng thêm 1.',
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -2175,13 +2239,13 @@ const options = {
             },
             403: {
               description:
-                'Instructor cố thêm bài học vào khóa học của người khác',
+                'Không có quyền tạo bài học',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
                   example: {
                     message:
-                      'You do not have permission to add lessons to this course',
+                      'Access denied.',
                   },
                 },
               },
@@ -2242,7 +2306,8 @@ const options = {
         },
         patch: {
           tags: ['Lessons'],
-          summary: 'Cập nhật bài học — Cần đăng nhập',
+          summary: 'Cập nhật bài học — Admin only',
+          description: 'Chỉ Admin được cập nhật bài học.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -3743,9 +3808,9 @@ const options = {
               in: 'query',
               schema: {
                 type: 'string',
-                enum: ['draft', 'pending', 'published', 'archived'],
+                enum: ['pending', 'published', 'archived'],
               },
-              description: 'Chỉ hiệu lực khi gọi với token Admin/Instructor.',
+              description: 'Chỉ hiệu lực khi gọi với token Admin/Instructor. `draft` không còn được hỗ trợ.',
             },
             {
               name: 'genre',
@@ -3783,7 +3848,9 @@ const options = {
           tags: ['Performances'],
           summary: 'Tạo tiết mục mới — Instructor hoặc Admin',
           description:
-            '`instructorId` được inject từ JWT token — không cần gửi lên.',
+            '`instructorId` được inject từ JWT token — không cần gửi lên.\n\n' +
+            'Instructor tạo → `status: pending`, chờ Admin duyệt (không có trạng thái `draft`).\n\n' +
+            'Nếu gửi `price` + `billingCycle`, BE tự động tạo một `Subscription plan` liên kết với tiết mục này.',
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -3795,14 +3862,20 @@ const options = {
           },
           responses: {
             201: {
-              description: 'Tiết mục được tạo',
+              description: 'Tiết mục được tạo thành công, đang chờ Admin duyệt',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
                     properties: {
                       success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Tiết mục đã được gửi thành công, đang chờ admin duyệt.' },
                       data: { $ref: '#/components/schemas/Performance' },
+                      subscription: {
+                        description: 'Subscription plan được tạo tự động (nếu có price+billingCycle)',
+                        nullable: true,
+                        $ref: '#/components/schemas/Subscription',
+                      },
                     },
                   },
                 },
@@ -3822,6 +3895,142 @@ const options = {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
                 },
+              },
+            },
+          },
+        },
+      },
+      '/performances/{id}/approve': {
+        patch: {
+          tags: ['Performances'],
+          summary: '✅ Duyệt tiết mục — Admin only (pending → published)',
+          description:
+            'Admin duyệt tiết mục đang ở trạng thái `pending`.\n\n' +
+            '- Set `status: published`, `publishedAt: now`\n' +
+            '- Optionally set `adminCommissionPercentage` (% hoa hồng admin lấy)\n' +
+            '- Kích hoạt Subscription plan liên kết (`isActive: true`)\n\n' +
+            '⚠️ Chỉ có thể approve tiết mục `pending`. Trả 400 nếu status khác.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              description: 'ID của Performance cần duyệt',
+              schema: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ApprovePerformanceInput' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Tiết mục đã được duyệt và xuất bản',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Tiết mục đã được duyệt và xuất bản thành công.' },
+                      data: { $ref: '#/components/schemas/Performance' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Tiết mục không ở trạng thái pending',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { message: "Cannot approve a performance with status 'published'." },
+                },
+              },
+            },
+            403: {
+              description: 'Không có quyền Admin',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+              },
+            },
+            404: {
+              description: 'Không tìm thấy',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+              },
+            },
+          },
+        },
+      },
+      '/performances/{id}/reject': {
+        patch: {
+          tags: ['Performances'],
+          summary: '❌ Từ chối tiết mục — Admin only (pending → archived)',
+          description:
+            'Admin từ chối tiết mục đang ở trạng thái `pending`.\n\n' +
+            '- Set `status: archived`\n' +
+            '- Vô hiệu hóa Subscription plan liên kết (`isActive: false`)\n\n' +
+            '⚠️ Chỉ có thể reject tiết mục `pending`. Trả 400 nếu status khác.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              description: 'ID của Performance cần từ chối',
+              schema: { type: 'string', example: '71f5ecb5d74b8c3b44b8bccc' },
+            },
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RejectPerformanceInput' },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Tiết mục đã bị từ chối',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Tiết mục đã bị từ chối.' },
+                      rejectReason: { type: 'string', nullable: true, example: 'Video chất lượng thấp.' },
+                      data: { $ref: '#/components/schemas/Performance' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Tiết mục không ở trạng thái pending',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                  example: { message: "Cannot reject a performance with status 'published'." },
+                },
+              },
+            },
+            403: {
+              description: 'Không có quyền Admin',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
+              },
+            },
+            404: {
+              description: 'Không tìm thấy',
+              content: {
+                'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } },
               },
             },
           },
@@ -3881,7 +4090,7 @@ const options = {
           tags: ['Performances'],
           summary: 'Cập nhật tiết mục — Instructor hoặc Admin',
           description:
-            'Instructor chỉ được sửa tiết mục của chính mình (`instructorId === req.user._id`). Admin không bị giới hạn.',
+            'Instructor chỉ được sửa tiết mục của chính mình (`instructorId === req.user._id`) và không thể tự thay đổi trường `status`. Admin không bị giới hạn.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -5069,14 +5278,256 @@ const options = {
       '/wallets/admin/payouts/{id}': {
         patch: {
           tags: ['Wallets'],
-          summary: 'Admin duyệt / từ chối rút tiền',
+          summary: 'Admin duyệt / từ chối yêu cầu rút tiền',
+          description: '`approved` → xác nhận đã chuyển khoản thực. `rejected` → hoàn tiền lại ví instructor.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
               name: 'id',
               in: 'path',
               required: true,
-              schema: { type: 'string' },
+              schema: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c3' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['status'],
+                  properties: {
+                    status: {
+                      type: 'string',
+                      enum: ['approved', 'rejected'],
+                      example: 'approved',
+                    },
+                    adminNote: {
+                      type: 'string',
+                      nullable: true,
+                      example: 'Đã chuyển khoản 500,000 VND',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Xử lý thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/PayoutRequest' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Trạng thái không hợp lệ hoặc payout không phải pending',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Payout request không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+
+      // ─── COUPONS ────────────────────────────────────────────────────────
+      '/coupons': {
+        get: {
+          tags: ['Coupons'],
+          summary: 'Danh sách mã giảm giá — Admin only',
+          description: 'Hỗ trợ filter, sort, pagination. Ví dụ: `?isActive=true&sort=-createdAt&page=1&limit=20`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } },
+            { name: 'sort', in: 'query', schema: { type: 'string' }, example: '-createdAt' },
+            {
+              name: 'isActive',
+              in: 'query',
+              schema: { type: 'boolean' },
+              example: true,
+              description: 'Lọc theo trạng thái kích hoạt',
+            },
+            {
+              name: 'applicableTo',
+              in: 'query',
+              schema: { type: 'string', enum: ['subscription', 'course', 'all'] },
+              description: 'Lọc theo loại áp dụng',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Danh sách coupon',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/PaginationMeta' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/Coupon' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            401: { description: 'Chưa đăng nhập', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            403: { description: 'Không có quyền Admin', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Coupons'],
+          summary: 'Tạo mã giảm giá mới — Admin only',
+          description: 'Code sẽ được tự động chuyển thành chữ hoa (uppercase). Nếu `maxUses = null` thì không giới hạn lượt dùng. Nếu `validTo = null` thì không có ngày hết hạn.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['code', 'discountType', 'discountValue'],
+                  properties: {
+                    code: {
+                      type: 'string',
+                      example: 'SUMMER2026',
+                      description: 'Mã coupon — tự động uppercase, phải là duy nhất.',
+                    },
+                    discountType: {
+                      type: 'string',
+                      enum: ['percent', 'fixed'],
+                      example: 'percent',
+                      description: '`percent` = giảm theo %, `fixed` = giảm số tiền cố định (VND).',
+                    },
+                    discountValue: {
+                      type: 'number',
+                      minimum: 0,
+                      example: 20,
+                      description: 'Giá trị giảm: 20 nếu percent (20%), hoặc 50000 nếu fixed (50,000 VND).',
+                    },
+                    maxUses: {
+                      type: 'number',
+                      nullable: true,
+                      example: 100,
+                      description: 'Số lượt dùng tối đa. `null` = không giới hạn.',
+                    },
+                    validFrom: {
+                      type: 'string',
+                      format: 'date-time',
+                      example: '2026-06-01T00:00:00.000Z',
+                      description: 'Ngày bắt đầu hiệu lực. Mặc định là ngay khi tạo.',
+                    },
+                    validTo: {
+                      type: 'string',
+                      format: 'date-time',
+                      nullable: true,
+                      example: '2026-08-31T23:59:59.000Z',
+                      description: 'Ngày hết hạn. `null` = không bao giờ hết hạn.',
+                    },
+                    isActive: {
+                      type: 'boolean',
+                      example: true,
+                      description: 'Có hiệu lực không. Mặc định `true`.',
+                    },
+                    applicableTo: {
+                      type: 'string',
+                      enum: ['subscription', 'course', 'all'],
+                      example: 'all',
+                      description: '`subscription` = chỉ dùng cho gói sub, `course` = chỉ cho mua lẻ course, `all` = dùng được cho tất cả.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Coupon được tạo thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Tạo mã giảm giá thành công' },
+                      data: { $ref: '#/components/schemas/Coupon' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Validation thất bại hoặc code đã tồn tại',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Không có quyền Admin',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/coupons/{id}': {
+        get: {
+          tags: ['Coupons'],
+          summary: 'Chi tiết mã giảm giá — Admin only',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: 'coupon_id_123' },
+              description: 'MongoDB ObjectId của coupon',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Chi tiết coupon',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/Coupon' },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Coupon không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        patch: {
+          tags: ['Coupons'],
+          summary: 'Cập nhật mã giảm giá — Admin only',
+          description: 'Tất cả trường là optional. Có thể vô hiệu hóa coupon bằng `isActive: false`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: 'coupon_id_123' },
             },
           ],
           requestBody: {
@@ -5086,14 +5537,73 @@ const options = {
                 schema: {
                   type: 'object',
                   properties: {
-                    status: { type: 'string', enum: ['approved', 'rejected'] },
-                    adminNote: { type: 'string' },
+                    discountType: { type: 'string', enum: ['percent', 'fixed'] },
+                    discountValue: { type: 'number', minimum: 0 },
+                    maxUses: { type: 'number', nullable: true },
+                    validFrom: { type: 'string', format: 'date-time' },
+                    validTo: { type: 'string', format: 'date-time', nullable: true },
+                    isActive: { type: 'boolean', example: false },
+                    applicableTo: { type: 'string', enum: ['subscription', 'course', 'all'] },
                   },
                 },
               },
             },
           },
-          responses: { 200: { description: 'Thành công' } },
+          responses: {
+            200: {
+              description: 'Coupon được cập nhật',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Cập nhật thành công' },
+                      data: { $ref: '#/components/schemas/Coupon' },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Coupon không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        delete: {
+          tags: ['Coupons'],
+          summary: 'Xóa mã giảm giá — Admin only',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: 'coupon_id_123' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Xóa thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Xóa thành công' },
+                      data: { type: 'object', nullable: true, example: null },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Coupon không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
         },
       },
     },

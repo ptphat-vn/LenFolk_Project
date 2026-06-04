@@ -9,6 +9,10 @@ import {
   CreateUserInput,
   UpdateUserInput,
 } from '@/types/user.types';
+import { createUserSchema, updateUserSchema } from '@/schema/form.schema';
+
+type UserFormField = 'name' | 'email' | 'passwordHash' | 'role' | 'phoneNumber';
+type UserFormErrors = Partial<Record<UserFormField, string>>;
 
 const ROLE_STYLE: Record<Role, { label: string; cls: string }> = {
   admin: { label: 'Admin', cls: 'bg-[#1a3a2a] text-white' },
@@ -45,10 +49,12 @@ export function UserFormModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<UserFormErrors>({});
 
   useEffect(() => {
     if (open) {
       setError('');
+      setFieldErrors({});
       if (editUser) {
         setForm({
           name: editUser.name,
@@ -73,27 +79,69 @@ export function UserFormModal({
 
   if (!open) return null;
 
+  const setField = <K extends keyof typeof form>(
+    key: K,
+    value: (typeof form)[K],
+  ) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (key in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+  };
+
+  const inputClass = (field: UserFormField) =>
+    `w-full h-9 px-3 rounded-lg border text-[13px] focus:outline-none focus:ring-2 ${
+      fieldErrors[field]
+        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+        : 'border-gray-200 focus:border-[#2d6a4f] focus:ring-[#2d6a4f]/30'
+    }`;
+
+  const renderFieldError = (field: UserFormField) =>
+    fieldErrors[field] ? (
+      <p className="mt-1 text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
-    try {
-      if (isEdit && editUser) {
-        const body: UpdateUserInput = {
+    setFieldErrors({});
+    const parsed = isEdit
+      ? updateUserSchema.safeParse({
           name: form.name,
           role: form.role,
-          phoneNumber: form.phoneNumber || undefined,
+          phoneNumber: form.phoneNumber,
           isActive: form.isActive,
-        };
-        await onSave(body, editUser._id);
-      } else {
-        const body: CreateUserInput = {
+        })
+      : createUserSchema.safeParse({
           name: form.name,
           email: form.email,
           passwordHash: form.passwordHash,
           role: form.role,
-          phoneNumber: form.phoneNumber || undefined,
-        };
+          phoneNumber: form.phoneNumber,
+        });
+
+    if (!parsed.success) {
+      const nextErrors: UserFormErrors = {};
+      const errors = parsed.error.flatten().fieldErrors;
+      for (const [field, messages] of Object.entries(errors)) {
+        const message = messages?.[0];
+        if (message) {
+          nextErrors[field as UserFormField] = message;
+        }
+      }
+      setFieldErrors(nextErrors);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (isEdit && editUser) {
+        const body: UpdateUserInput = parsed.data;
+        await onSave(body, editUser._id);
+      } else {
+        const body: CreateUserInput = parsed.data as CreateUserInput;
         await onSave(body);
       }
       onClose();
@@ -125,18 +173,19 @@ export function UserFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
           <div>
             <label className="block text-[12px] font-medium text-gray-700 mb-1">
               Họ tên *
             </label>
             <input
               value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              onChange={(e) => setField('name', e.target.value)}
               required
-              className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+              className={inputClass('name')}
               placeholder="Nguyễn Văn A"
             />
+            {renderFieldError('name')}
           </div>
 
           {!isEdit && (
@@ -147,14 +196,13 @@ export function UserFormModal({
                 </label>
                 <input
                   value={form.email}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, email: e.target.value }))
-                  }
+                  onChange={(e) => setField('email', e.target.value)}
                   required
                   type="email"
-                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                  className={inputClass('email')}
                   placeholder="email@example.com"
                 />
+                {renderFieldError('email')}
               </div>
               <div>
                 <label className="block text-[12px] font-medium text-gray-700 mb-1">
@@ -162,15 +210,14 @@ export function UserFormModal({
                 </label>
                 <input
                   value={form.passwordHash}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, passwordHash: e.target.value }))
-                  }
+                  onChange={(e) => setField('passwordHash', e.target.value)}
                   required
                   type="password"
                   minLength={6}
-                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                  className={inputClass('passwordHash')}
                   placeholder="Tối thiểu 6 ký tự"
                 />
+                {renderFieldError('passwordHash')}
               </div>
             </>
           )}
@@ -183,9 +230,9 @@ export function UserFormModal({
               <select
                 value={form.role}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, role: e.target.value as Role }))
+                  setField('role', e.target.value as Role)
                 }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                className={`${inputClass('role')} bg-white`}
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -193,6 +240,7 @@ export function UserFormModal({
                   </option>
                 ))}
               </select>
+              {renderFieldError('role')}
             </div>
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
@@ -200,12 +248,11 @@ export function UserFormModal({
               </label>
               <input
                 value={form.phoneNumber}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, phoneNumber: e.target.value }))
-                }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                onChange={(e) => setField('phoneNumber', e.target.value)}
+                className={inputClass('phoneNumber')}
                 placeholder="0901234567"
               />
+              {renderFieldError('phoneNumber')}
             </div>
           </div>
 

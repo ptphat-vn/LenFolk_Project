@@ -1,10 +1,7 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { View, TouchableOpacity, Dimensions, StyleSheet } from "react-native";
-import { Colors } from "../../constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-
-const { width } = Dimensions.get("window");
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   return (

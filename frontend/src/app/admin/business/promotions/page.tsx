@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { motion, Variants } from 'framer-motion';
 import {
   Plus,
@@ -134,23 +135,32 @@ export default function PromotionsPage() {
   }, [debouncedSearch, statusFilter]);
 
   const handleSave = async (data: CreateCouponInput, id?: string) => {
-    if (id) {
-      await couponApi.update(id, data);
-    } else {
-      await couponApi.create(data);
+    try {
+      if (id) {
+        const res = await couponApi.update(id, data);
+        toast.success(res.message || 'Cập nhật mã giảm giá thành công');
+      } else {
+        const res = await couponApi.create(data);
+        toast.success(res.message || 'Tạo mã giảm giá thành công');
+      }
+      await fetchCoupons();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
+      throw e;
     }
-    await fetchCoupons();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await couponApi.delete(deleteTarget._id);
+      const res = await couponApi.delete(deleteTarget._id);
+      toast.success(res.message || 'Đã xóa mã giảm giá');
       setCoupons((prev) => prev.filter((c) => c._id !== deleteTarget._id));
       setDeleteTarget(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Promotions] delete error:', e);
+      toast.error(e.response?.data?.message || 'Lỗi khi xóa mã giảm giá');
     } finally {
       setDeleting(false);
     }
@@ -158,14 +168,16 @@ export default function PromotionsPage() {
 
   const handleToggle = async (coupon: Coupon) => {
     try {
-      await couponApi.update(coupon._id, { isActive: !coupon.isActive });
+      const res = await couponApi.update(coupon._id, { isActive: !coupon.isActive });
+      toast.success(res.message || 'Đã cập nhật trạng thái mã giảm giá');
       setCoupons((prev) =>
         prev.map((c) =>
           c._id === coupon._id ? { ...c, isActive: !c.isActive } : c,
         ),
       );
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Promotions] toggle error:', e);
+      toast.error(e.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
     }
   };
 

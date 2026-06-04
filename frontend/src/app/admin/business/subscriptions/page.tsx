@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { motion, Variants } from 'framer-motion';
 import { Plus, Zap, DollarSign, CheckCircle2, RefreshCw } from 'lucide-react';
 import { SubscriptionFormModal } from '@/components/admin/subscriptions/SubscriptionFormModal';
@@ -10,10 +11,12 @@ import { subscriptionApi } from '@/lib/api/subscription.api';
 import {
   Subscription,
   CreateSubscriptionInput,
-  BillingCycle,
+
 } from '@/types/subscription.types';
 import { courseApi } from '@/lib/api/course.api';
 import { Course } from '@/types/course.types';
+import { performanceApi } from '@/lib/api/performance.api';
+import { Performance } from '@/types/performance.types';
 import { ActionButton } from '@/common/button/ActionButton';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -40,6 +43,7 @@ const item: Variants = {
 export default function SubscriptionsPage() {
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [performances, setPerformances] = useState<Performance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -50,9 +54,10 @@ export default function SubscriptionsPage() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [subsRes, coursesRes] = await Promise.allSettled([
+      const [subsRes, coursesRes, perfsRes] = await Promise.allSettled([
         subscriptionApi.getAll(),
         courseApi.getAll({ limit: 200 }),
+        performanceApi.getAll({ limit: 200 }),
       ]);
       if (subsRes.status === 'fulfilled' && Array.isArray(subsRes.value.data))
         setSubs(subsRes.value.data);
@@ -61,6 +66,11 @@ export default function SubscriptionsPage() {
         Array.isArray(coursesRes.value.data)
       )
         setCourses(coursesRes.value.data);
+      if (
+        perfsRes.status === 'fulfilled' &&
+        Array.isArray(perfsRes.value.data)
+      )
+        setPerformances(perfsRes.value.data);
     } catch (e) {
       console.error('[Subscriptions] fetch error:', e);
     } finally {
@@ -82,23 +92,32 @@ export default function SubscriptionsPage() {
   );
 
   const handleSave = async (data: CreateSubscriptionInput, id?: string) => {
-    if (id) {
-      await subscriptionApi.update(id, data);
-    } else {
-      await subscriptionApi.create(data);
+    try {
+      if (id) {
+        const res = await subscriptionApi.update(id, data);
+        toast.success(res.message || 'Cập nhật gói đăng ký thành công');
+      } else {
+        const res = await subscriptionApi.create(data);
+        toast.success(res.message || 'Tạo gói đăng ký thành công');
+      }
+      await fetchAll();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
+      throw e;
     }
-    await fetchAll();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await subscriptionApi.delete(deleteTarget._id);
+      const res = await subscriptionApi.delete(deleteTarget._id);
+      toast.success(res.message || 'Đã xóa gói đăng ký');
       setSubs((prev) => prev.filter((s) => s._id !== deleteTarget._id));
       setDeleteTarget(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Subscriptions] delete error:', e);
+      toast.error(e.response?.data?.message || 'Lỗi khi xóa gói đăng ký');
     } finally {
       setDeleting(false);
     }
@@ -106,14 +125,16 @@ export default function SubscriptionsPage() {
 
   const handleToggle = async (sub: Subscription) => {
     try {
-      await subscriptionApi.update(sub._id, { isActive: !sub.isActive });
+      const res = await subscriptionApi.update(sub._id, { isActive: !sub.isActive });
+      toast.success(res.message || 'Đã cập nhật trạng thái gói đăng ký');
       setSubs((prev) =>
         prev.map((s) =>
           s._id === sub._id ? { ...s, isActive: !s.isActive } : s,
         ),
       );
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Subscriptions] toggle error:', e);
+      toast.error(e.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
     }
   };
 
@@ -249,6 +270,7 @@ export default function SubscriptionsPage() {
         onSave={handleSave}
         editSub={editTarget}
         courses={courses}
+        performances={performances}
       />
       {deleteTarget && (
         <SubscriptionDeleteConfirmModal
