@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
+import { ActivityIndicator, Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { useRegister } from "@/hooks/auth/use-register";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -11,6 +12,32 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
+  const registerMutation = useRegister();
+
+  const handleRegister = () => {
+    if (!name || !email || !password) {
+      Alert.alert("Thiếu thông tin", "Vui lòng nhập họ tên, email và mật khẩu.");
+      return;
+    }
+
+    if (!agreeTerms) {
+      Alert.alert("Điều khoản", "Bạn cần đồng ý với Điều khoản & Điều kiện.");
+      return;
+    }
+
+    registerMutation.mutate(
+      { name, email, password },
+      {
+        onSuccess: () => router.replace("/(tabs)"),
+        onError: (error) => {
+          Alert.alert(
+            "Đăng ký thất bại",
+            error instanceof Error ? error.message : "Vui lòng thử lại."
+          );
+        },
+      }
+    );
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -107,7 +134,8 @@ export default function SignupScreen() {
           <TouchableOpacity
             activeOpacity={0.9}
             className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20 mb-8"
-            onPress={() => router.push("/terms")}
+            onPress={handleRegister}
+            disabled={registerMutation.isPending}
           >
             <Text 
               className="text-white text-base font-bold ml-4"
@@ -116,7 +144,11 @@ export default function SignupScreen() {
               Đăng ký
             </Text>
             <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+              {registerMutation.isPending ? (
+                <ActivityIndicator color="#8E9E6E" />
+              ) : (
+                <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+              )}
             </View>
           </TouchableOpacity>
 
@@ -155,10 +187,10 @@ export default function SignupScreen() {
             <Text className="text-sm text-charcoal/60">Đã có tài khoản? </Text>
             <TouchableOpacity onPress={() => router.push("/login")}>
               <Text 
-                className="text-sm font-extrabold text-[#0066FF]"
+                className="text-sm font-extrabold text-sky-500"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
-                ĐĂNG NHẬP
+                Đăng nhập
               </Text>
             </TouchableOpacity>
           </View>

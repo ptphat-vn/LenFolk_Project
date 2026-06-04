@@ -1,97 +1,53 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "../constants/api";
+import { User } from "@/types/users.type";
 
-export const useAuthStore = create((set) => ({
+type AuthState = {
+  user: User | null;
+  token: string | null;
+  refreshToken: string | null;
+  isLoading: boolean;
+  isCheckingAuth: boolean;
+  setAuth: (user: User, token: string, refreshToken?: string) => Promise<void>;
+  clearAuth: () => Promise<void>;
+  checkAuth: () => Promise<void>;
+};
+
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
+  refreshToken: null,
   isLoading: false,
   isCheckingAuth: true,
 
-  register: async (username: string, email: string, password: string) => {
-    set({ isLoading: true });
-    try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-        }),
-      });
+  setAuth: async (user, token, refreshToken) => {
+    set({ user, token, refreshToken: refreshToken ?? null });
+    await AsyncStorage.setItem("user", JSON.stringify(user));
+    await AsyncStorage.setItem("token", token);
 
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || "Something went wrong");
-
-      await AsyncStorage.setItem("user", JSON.stringify(data.user));
-      await AsyncStorage.setItem("token", data.token);
-
-      set({ token: data.token, user: data.user, isLoading: false });
-
-      return { success: true };
-    } catch (error: any) {
-      set({ isLoading: false });
-      return { success: false, error: error.message };
+    if (refreshToken) {
+      await AsyncStorage.setItem("refreshToken", refreshToken);
     }
   },
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
-
-    try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || "Something went wrong");
-
-      await AsyncStorage.setItem("user", JSON.stringify(data.user));
-      await AsyncStorage.setItem("token", data.token);
-
-      set({ token: data.token, user: data.user, isLoading: false });
-
-      return { success: true };
-    } catch (error: any) {
-      set({ isLoading: false });
-      return { success: false, error: error.message };
-    }
+  clearAuth: async () => {
+    set({ user: null, token: null, refreshToken: null });
+    await AsyncStorage.multiRemove(["user", "token", "refreshToken"]);
   },
 
   checkAuth: async () => {
     try {
-      const tokenGet = await fetch(`${API_URL}/tokens`, {
-        method: "GET",
-      });
-      const data = await tokenGet.json();
-      if (!tokenGet.ok) throw new Error(data.message || "Something went wrong");
-      const userGet = await AsyncStorage.getItem("user");
-      if (data && userGet) {
-        set({ token: data.token, user: JSON.parse(userGet), isCheckingAuth: false });
-      } else {
-        set({ token: null, user: null, isCheckingAuth: false });
-      }
-    } catch (error: any) {
-      console.log("Error checking auth", error);
-      set({ token: null, user: null, isCheckingAuth: false });
-    }
-  },
+      const [user, token, refreshToken] = await Promise.all([
+        AsyncStorage.getItem("user"),
+        AsyncStorage.getItem("token"),
+        AsyncStorage.getItem("refreshToken"),
+      ]);
 
-  logout: async () => {
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("user");
-    set({ token: null, user: null });
+      if (user && token) {
+        set({ user: JSON.parse(user), token, refreshToken });
+      }
+    } finally {
+      set({ isCheckingAuth: false });
+    }
   },
 }));

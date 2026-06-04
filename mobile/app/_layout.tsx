@@ -1,34 +1,31 @@
-import { SplashScreen, Stack, useRouter, useSegments } from "expo-router";
+import { SplashScreen, Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import SafeScreen from "../components/SafeScreen";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 
 import { useAuthStore } from "../store/authStore";
 import { useEffect } from "react";
-import '../global.css'
+import { QueryProvider } from "../providers/query";
+import "../global.css";
 
 SplashScreen.preventAutoHideAsync();
-
-type AuthStore = {
-    user: object | null;
-    token: string | null;
-    checkAuth: () => void;
-}
 
 export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
+  const navigationState = useRootNavigationState();
 
-  const { checkAuth, user, token } = useAuthStore() as AuthStore;
+  const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
 
   const [fontsLoaded] = useFonts({
     "BeVietnamPro-Medium": require("../assets/fonts/BeVietnamPro-Medium.ttf"),
   });
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded && !isCheckingAuth) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, isCheckingAuth]);
 
   useEffect(() => {
     check();
@@ -36,31 +33,34 @@ export default function RootLayout() {
 
   const check = async () => {
     try {
-      checkAuth();
+      await checkAuth();
     } catch (error) {
       console.log("Error checking auth", error);
-    } finally {
-      await SplashScreen.hideAsync();
     }
   };
 
   useEffect(() => {
+    if (!navigationState?.key || isCheckingAuth) return;
+
     const inAuthScreen = segments[0] === "(auth)";
     const isSignedIn = user && token;
 
-    if (!isSignedIn && !inAuthScreen) router.replace("/(auth)");
-    else if (isSignedIn && inAuthScreen) router.replace("/(tabs)");
-  }, [user, token, segments]);
+    if (!isSignedIn && !inAuthScreen) {
+      router.replace("/(auth)");
+    } else if (isSignedIn && inAuthScreen) {
+      router.replace("/(tabs)");
+    }
+  }, [user, token, segments, navigationState?.key, isCheckingAuth]);
 
   return (
-    <SafeAreaProvider>
-      <SafeScreen>
+    <QueryProvider>
+      <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
         </Stack>
-      </SafeScreen>
-      <StatusBar style="dark" />
-    </SafeAreaProvider>
+        <StatusBar style="dark" />
+      </SafeAreaProvider>
+    </QueryProvider>
   );
 }

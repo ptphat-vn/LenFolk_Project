@@ -1,45 +1,57 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useAuthStore } from "@/store/authStore";
+import SafeScreen from "../../components/SafeScreen";
 
 export default function GameScreen() {
+  const [activeGameIndex, setActiveGameIndex] = React.useState(0);
+  const user = useAuthStore((state) => state.user);
+  const displayName = user?.name?.trim() || "Bạn";
+  const avatarSource = user?.avatar
+    ? { uri: user.avatar }
+    : require("../../assets/images/Profile.png");
+
+  const handleScroll = (event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.x;
+    const index = Math.round(scrollOffset / 272);
+    setActiveGameIndex(Math.max(0, Math.min(games.length - 1, index)));
+  };
+
   const games = [
     {
       title: "Thổi Theo Nhịp",
-      badge: "Khó + 20 XP/vòng",
+      badge: "Khó",
+      xp: "+20 XP/vòng",
+      players: "620 người chơi",
       desc: "Thổi đúng theo nhịp metronome. Luyện cảm giác nhịp điệu chuyên nghiệp.",
       icon: "wind-power",
       type: "material",
     },
     {
       title: "Nghe & Đoán Nốt",
-      badge: "Dễ + 10 XP/câu",
+      badge: "Dễ",
+      xp: "+10 XP/câu",
+      players: "1.240 người chơi",
       desc: "Nghe âm thanh và chọn đúng nốt nhạc. Luyện tai nghe âm thanh.",
       icon: "headphones",
       type: "feather",
     },
     {
       title: "Bấm Đúng Nốt",
-      badge: "Trung bình + 15 XP/câu",
+      badge: "Trung bình",
+      xp: "+15 XP/câu",
+      players: "890 người chơi",
       desc: "Nhìn nốt nhạc hiển thị và bấm đúng lỗ trên sáo. Luyện kỹ thuật bấm.",
       icon: "music-note",
       type: "material",
     },
   ];
 
-  const tops = [
-    { rank: 4, name: "Lan Anh", score: "3.540", avatar: require("../../assets/images/Profile.png") },
-    { rank: 5, name: "Minh Quân", score: "2.892", avatar: require("../../assets/images/Profile.png") },
-    { rank: 6, name: "Hùng Nhân", score: "2.248", avatar: require("../../assets/images/Profile.png") },
-    { rank: 7, name: "Ngọc Hiển", score: "2.126", avatar: require("../../assets/images/Profile.png") },
-    { rank: 8, name: "Tú Ngân", score: "1.902", avatar: require("../../assets/images/Profile.png") },
-    { rank: 9, name: "Hải Lan", score: "1.830", avatar: require("../../assets/images/Profile.png") },
-  ];
-
   return (
-    <View className="flex-1 bg-[#FDF8EA]">
+    <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <StatusBar style="dark" />
 
       {/* Main Scroll Container */}
@@ -49,7 +61,7 @@ export default function GameScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* --- HEADER --- */}
-        <View className="px-6 pt-14 pb-4 flex-row justify-between items-center bg-[#FDF8EA]">
+        <AnimatedBlock className="px-6 pt-2 pb-4 flex-row justify-between items-center bg-[#FDF8EA]">
           {/* Back Button */}
           <TouchableOpacity
             activeOpacity={0.8}
@@ -69,31 +81,36 @@ export default function GameScreen() {
           {/* Bell Notifications */}
           <TouchableOpacity
             activeOpacity={0.8}
-            className="w-10 h-10 rounded-full justify-center items-center shadow"
-            style={{ backgroundColor: Colors.light.primary }}
+            className="w-10 h-10 rounded-full bg-[#8E9E6E]/20 border border-[#8E9E6E]/10 justify-center items-center"
           >
-            <Ionicons name="notifications" size={20} color="white" />
+            <Ionicons name="notifications" size={20} color="#8E9E6E" />
           </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
 
         {/* --- DAILY CHALLENGE GREEN BANNER CARD --- */}
-        <View 
-          className="mx-6 bg-[#8E9E6E] p-5 rounded-[32px] mb-6 shadow-sm border border-[#8E9E6E]/20 relative flex-row justify-between items-center"
+        <AnimatedBlock
+          delay={90}
+          className="mx-6 bg-[#8E9E6E] p-5 rounded-[32px] mb-6 shadow-sm border border-[#8E9E6E]/20 relative"
+          style={{ minHeight: 140 }}
         >
+          {/* Ribbon Flag - absolute top right */}
+          <View 
+            style={{ position: "absolute", right: 26, top: -1, width: 44, height: 55, backgroundColor: "#FFF9E6", borderBottomLeftRadius: 8, borderBottomRightRadius: 8, alignItems: "center", justifyContent: "center" }}
+            className="shadow-sm"
+          >
+            <Text className="text-[#8E9E6E] text-xs font-black">X3</Text>
+            <Text className="text-[#8E9E6E] text-[8px] font-black mt-0.5">XP</Text>
+          </View>
+
           {/* Left Contents */}
-          <View className="flex-1 pr-4">
+          <View className="pr-16">
             <View className="flex-row items-center mb-1">
               <Text className="text-white text-[15px] font-extrabold" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                 ⚡ THÁCH THỨC NGÀY
               </Text>
-              
-              {/* Gold Multiplier badge */}
-              <View className="bg-[#FFF9E6] px-2 py-0.5 rounded-md ml-3 border border-[#F4E0AC]/40">
-                <Text className="text-[9px] text-[#8E9E6E] font-extrabold">X3 XP</Text>
-              </View>
             </View>
 
-            <Text className="text-white/80 text-xs font-semibold mb-3">
+            <Text className="text-white/80 text-xs font-semibold mb-5 mt-1">
               Chơi 3 trò, nhận thưởng lớn
             </Text>
 
@@ -104,17 +121,18 @@ export default function GameScreen() {
             <Text className="text-[9px] text-white/90 font-bold">1/3 hoàn thành</Text>
           </View>
 
-          {/* Right Pause circle button */}
+          {/* Pause Button - absolute bottom right */}
           <TouchableOpacity
             activeOpacity={0.8}
-            className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-sm"
+            style={{ position: "absolute", right: 20, bottom: 20 }}
+            className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-md"
           >
-            <Ionicons name="pause" size={20} color="#8E9E6E" />
+            <Ionicons name="pause" size={22} color="#8E9E6E" />
           </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
 
         {/* --- CAROUSEL SELECT GAMES SECTION --- */}
-        <View className="mb-8">
+        <AnimatedBlock delay={150} className="mb-8">
           <Text
             className="text-base font-bold text-charcoal mb-4 mx-6"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -126,155 +144,136 @@ export default function GameScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 24, gap: 16 }}
+            snapToInterval={272}
+            decelerationRate="fast"
+            snapToAlignment="start"
+            scrollEventThrottle={16}
+            onScroll={handleScroll}
           >
             {games.map((game, idx) => (
-              <View
+              <AnimatedBlock
                 key={idx}
-                className="w-64 bg-[#E2E8D3] rounded-[32px] p-5 shadow-sm border border-[#D6DDC6]/30 flex-col justify-between my-2"
-                style={{ minHeight: 180 }}
+                delay={200 + idx * 55}
+                className="w-64 rounded-[32px] overflow-hidden shadow-sm border border-gray-150 flex-col my-2"
+                style={{ minHeight: 220 }}
               >
-                {/* Header Row */}
-                <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-sm">
-                    {game.type === "material" && <MaterialCommunityIcons name={game.icon as any} size={20} color="#8E9E6E" />}
-                    {game.type === "feather" && <Feather name={game.icon as any} size={18} color="#8E9E6E" />}
+                {/* Green Header Part */}
+                <View className="bg-[#8E9E6E] p-4 flex-row items-center rounded-t-[32px]">
+                  {/* Circular Icon Container */}
+                  <View className="w-11 h-11 rounded-full bg-white items-center justify-center shadow-xs mr-3">
+                    {game.type === "material" && <MaterialCommunityIcons name={game.icon as any} size={22} color="#8E9E6E" />}
+                    {game.type === "feather" && <Feather name={game.icon as any} size={20} color="#8E9E6E" />}
                   </View>
-                  <View className="ml-3 flex-1">
-                    <Text
-                      className="text-charcoal text-sm font-bold leading-5"
-                      style={{ fontFamily: "BeVietnamPro-Medium" }}
-                    >
+                  
+                  {/* Header text contents */}
+                  <View className="flex-1">
+                    <Text className="text-white text-sm font-bold leading-5" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                       {game.title}
                     </Text>
-                    <Text className="text-[8px] text-[#8E9E6E] font-bold">{game.badge}</Text>
+                    
+                    {/* Badge + XP row */}
+                    <View className="flex-row items-center mt-1 flex-wrap gap-1">
+                      <View className="bg-white/20 px-1.5 py-0.5 rounded">
+                        <Text className="text-[8px] text-white font-extrabold">{game.badge}</Text>
+                      </View>
+                      <Text className="text-[8px] text-white/90 font-bold ml-1">{game.xp}</Text>
+                    </View>
+                    
+                    {/* Player count */}
+                    <Text className="text-[8px] text-white/75 font-semibold mt-1">
+                      {game.players}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Description */}
-                <Text className="text-charcoal/70 text-[11px] leading-5 font-semibold mb-4 text-left">
-                  {game.desc}
-                </Text>
-
-                {/* Submit Play Button */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  className="w-full bg-[#FFF9E6] py-2.5 rounded-full items-center justify-center border border-[#F4E0AC]/30 shadow-sm"
-                >
-                  <Text
-                    className="text-charcoal font-bold text-xs"
-                    style={{ fontFamily: "BeVietnamPro-Medium" }}
-                  >
-                    Bắt đầu chơi
+                {/* Cream Body Part */}
+                <View className="bg-[#FFF9E6] p-4 flex-1 justify-between rounded-b-[32px]">
+                  {/* Description */}
+                  <Text className="text-charcoal/70 text-[11px] leading-5 font-semibold mb-4 text-left">
+                    {game.desc}
                   </Text>
-                </TouchableOpacity>
-              </View>
+
+                  {/* Play Button */}
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    className="w-full bg-white py-2 rounded-full items-center justify-center border border-gray-100 shadow-sm"
+                  >
+                    <Text
+                      className="text-[#8E9E6E] font-bold text-xs"
+                      style={{ fontFamily: "BeVietnamPro-Medium" }}
+                    >
+                      Bắt đầu chơi
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </AnimatedBlock>
             ))}
           </ScrollView>
 
           {/* Dots Indicator */}
           <View className="flex-row justify-center gap-1.5 mt-4">
-            <View className="w-1.5 h-1.5 rounded-full bg-[#8E9E6E]" />
-            <View className="w-1.5 h-1.5 rounded-full bg-[#C2C5BA]" />
-            <View className="w-1.5 h-1.5 rounded-full bg-[#C2C5BA]" />
+            {games.map((_, idx) => (
+              <View
+                key={idx}
+                className={`w-1.5 h-1.5 rounded-full ${idx === activeGameIndex ? "bg-[#8E9E6E]" : "bg-[#C2C5BA]"}`}
+              />
+            ))}
           </View>
-        </View>
+        </AnimatedBlock>
 
-        {/* --- WEEKLY TOP LEADERBOARD PODIUMS --- */}
-        <View className="mx-6 mb-3 flex-row justify-between items-center">
+        <AnimatedBlock delay={260} className="mx-6 mb-4 flex-row justify-between items-center">
           <Text
             className="text-base font-bold text-charcoal"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
           >
-            Top tuần này
+            Xếp hạng của bạn
           </Text>
-          <TouchableOpacity className="flex-row items-center">
-            <Text className="text-xs text-[#8E9E6E] font-bold mr-1">Xem tất cả</Text>
-            <Ionicons name="chevron-forward" size={14} color="#8E9E6E" />
-          </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
 
-        {/* Podiums visualization */}
-        <View className="flex-row justify-around items-end h-40 mx-10 mb-2 relative z-20">
-          {/* Rank 2 (Silver) */}
-          <View className="items-center">
-            <View className="relative mb-2">
-              <Image source={require("../../assets/images/Profile.png")} style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "#C0C0C0" }} />
-              <View className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#C0C0C0] items-center justify-center border border-white">
-                <Text className="text-[8px] text-white font-extrabold">2</Text>
-              </View>
-            </View>
-            <Text className="text-[10px] font-bold text-charcoal mb-0.5">Minh Anh</Text>
-            {/* Column Bar 2 */}
-            <View style={{ width: 44, height: 50 }} className="bg-[#8E9E6E]/60 rounded-t-xl items-center justify-center">
-              <Text className="text-[14px] text-white font-black">2</Text>
-            </View>
-          </View>
-
-          {/* Rank 1 (Gold) */}
-          <View className="items-center">
-            <View className="relative mb-3">
-              <Image source={require("../../assets/images/Profile.png")} style={{ width: 60, height: 60, borderRadius: 30, borderWidth: 3, borderColor: "#F4E0AC" }} />
-              <View className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#F4E0AC] items-center justify-center border border-white shadow-sm">
-                <Text className="text-[9px] text-[#8E9E6E] font-black">👑</Text>
-              </View>
-            </View>
-            <Text className="text-xs font-bold text-charcoal mb-0.5">Hoàng Minh</Text>
-            {/* Column Bar 1 */}
-            <View style={{ width: 50, height: 75 }} className="bg-[#8E9E6E] rounded-t-xl items-center justify-center">
-              <Text className="text-[18px] text-white font-black">1</Text>
-            </View>
-          </View>
-
-          {/* Rank 3 (Bronze) */}
-          <View className="items-center">
-            <View className="relative mb-2">
-              <Image source={require("../../assets/images/Profile.png")} style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "#CD7F32" }} />
-              <View className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#CD7F32] items-center justify-center border border-white">
-                <Text className="text-[8px] text-white font-extrabold">3</Text>
-              </View>
-            </View>
-            <Text className="text-[10px] font-bold text-charcoal mb-0.5">Bảo Lâm</Text>
-            {/* Column Bar 3 */}
-            <View style={{ width: 44, height: 40 }} className="bg-[#8E9E6E]/60 rounded-t-xl items-center justify-center">
-              <Text className="text-[14px] text-white font-black">3</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* --- CREAM BASE CONTAINER LISTING OTHERS --- */}
-        <View 
-          className="bg-[#FFF9E6] rounded-[40px] pt-8 pb-6 px-6 mx-6 shadow-sm -mt-6 border border-[#F4E0AC]/20 relative z-10"
+        <AnimatedBlock
+          delay={320}
+          className="bg-[#FFF9E6] rounded-[32px] p-5 mx-6 shadow-sm border border-[#F4E0AC]/20"
         >
-          {tops.map((top, idx) => (
-            <View
-              key={idx}
-              className="w-full bg-[#8E9E6E] p-4.5 p-3.5 mb-3 rounded-2xl flex-row items-center justify-between shadow-sm border border-[#8E9E6E]/20"
-            >
-              {/* Left Rank & Avatar/Name */}
-              <View className="flex-row items-center flex-1">
-                {/* Rank circle */}
-                <View className="w-6 h-6 rounded-full bg-white items-center justify-center mr-3 shadow-sm">
-                  <Text className="text-[10px] text-primary font-extrabold">{top.rank}</Text>
-                </View>
-                
-                {/* Avatar */}
-                <Image source={top.avatar} style={{ width: 32, height: 32, borderRadius: 16 }} className="mr-3" />
-                
-                {/* Name */}
-                <Text
-                  className="text-white text-xs font-bold"
-                  style={{ fontFamily: "BeVietnamPro-Medium" }}
-                >
-                  {top.name}
-                </Text>
-              </View>
-
-              {/* Score gold text */}
-              <Text className="text-xs text-[#F4E0AC] font-black">{top.score} điểm</Text>
+          <View className="bg-[#8E9E6E] rounded-3xl p-4 flex-row items-center mb-4">
+            <Image
+              source={avatarSource}
+              style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: "white" }}
+              className="mr-3"
+            />
+            <View className="flex-1">
+              <Text
+                className="text-white text-sm font-bold"
+                style={{ fontFamily: "BeVietnamPro-Medium" }}
+              >
+                {displayName}
+              </Text>
+              <Text className="text-white/75 text-[10px] font-semibold mt-1">
+                {user?.email || "Chưa có email"}
+              </Text>
             </View>
-          ))}
-        </View>
+            <View className="bg-white/20 px-3 py-1 rounded-full">
+              <Text className="text-white text-[10px] font-extrabold">
+                {user?.isVerified ? "Verified" : "Pending"}
+              </Text>
+            </View>
+          </View>
+
+          <View className="items-center py-5">
+            <View className="w-12 h-12 rounded-full bg-[#8E9E6E]/15 items-center justify-center mb-3">
+              <Ionicons name="podium-outline" size={24} color="#8E9E6E" />
+            </View>
+            <Text
+              className="text-charcoal text-sm font-bold text-center"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Chưa có dữ liệu điểm thật
+            </Text>
+            <Text className="text-charcoal/60 text-xs text-center leading-5 mt-2 px-3">
+              Khi API game trả về điểm và thứ hạng, khu vực này sẽ hiển thị bảng xếp hạng thật của tài khoản đang đăng nhập.
+            </Text>
+          </View>
+        </AnimatedBlock>
       </ScrollView>
-    </View>
+    </SafeScreen>
   );
 }

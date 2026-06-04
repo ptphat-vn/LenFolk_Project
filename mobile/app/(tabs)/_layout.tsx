@@ -66,24 +66,34 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           >
             {isFocused ? (
               <View
-                style={[
-                  styles.activeCircle,
-                  {
-                    backgroundColor: "#F4E0AC",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 2,
-                    elevation: 1,
-                  },
-                ]}
+                key={`active-${route.key}`}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: "#F4E0AC",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 2,
+                  elevation: 1,
+                }}
               >
                 <Ionicons name={iconName} size={22} color="#8E9E6E" />
               </View>
             ) : (
-              <View style={styles.inactiveIcon}>
+              <View
+                key={`inactive-${route.key}`}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <Ionicons name={iconName} size={22} color="#C2C5BA" />
               </View>
             )}
@@ -134,17 +144,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: "100%",
-  },
-  activeCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  inactiveIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

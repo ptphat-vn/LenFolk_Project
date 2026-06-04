@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { AnimatedBlock } from "@/components/AnimatedPage";
+import SafeScreen from "../../components/SafeScreen";
 
 const allLessons = [
   {
@@ -102,7 +104,7 @@ export default function CoursesScreen() {
   });
 
   return (
-    <View className="flex-1 bg-[#FDF8EA]">
+    <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <StatusBar style="dark" />
 
       <ScrollView
@@ -111,7 +113,7 @@ export default function CoursesScreen() {
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         {/* --- TOP CONTAINER (CREAM HEADER) --- */}
-        <View className="bg-[#FDF8EA] pt-14 pb-5 px-6">
+        <AnimatedBlock className="bg-[#FDF8EA] pt-2 pb-5 px-6">
           {/* Header Navigation Row */}
           <View className="flex-row justify-between items-center mb-6">
             {/* Back Button */}
@@ -155,10 +157,10 @@ export default function CoursesScreen() {
               <Ionicons name="options-outline" size={20} color="#8E9E6E" />
             </TouchableOpacity>
           </View>
-        </View>
+        </AnimatedBlock>
 
         {/* --- CATEGORY SELECTOR TABS ROW --- */}
-        <View className="flex-row justify-between mx-6 z-10 -mb-[1px]">
+        <AnimatedBlock delay={90} className="flex-row justify-between mx-6 z-10 -mb-[1px]">
           {categories.map((cat) => {
             const isSelected = activeFilter === cat;
             
@@ -204,10 +206,11 @@ export default function CoursesScreen() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </AnimatedBlock>
 
         {/* --- SAGE GREEN CONTAINER FOR LESSONS LIST --- */}
-        <View
+        <AnimatedBlock
+          delay={150}
           className="mx-6 bg-[#8E9E6E] pt-8 pb-4 px-5 shadow-sm"
           style={{
             borderBottomLeftRadius: 20,
@@ -217,9 +220,9 @@ export default function CoursesScreen() {
           }}
         >
           {filteredLessons.length > 0 ? (
-            filteredLessons.map((lesson) => (
+            filteredLessons.map((lesson, idx) => (
+              <AnimatedBlock key={lesson.id} delay={200 + idx * 45}>
               <TouchableOpacity
-                key={lesson.id}
                 activeOpacity={0.9}
                 className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
               >
@@ -273,6 +276,7 @@ export default function CoursesScreen() {
                   {lesson.duration}
                 </Text>
               </TouchableOpacity>
+              </AnimatedBlock>
             ))
           ) : (
             <View className="items-center justify-center py-20 bg-[#E2E8D3] rounded-3xl p-6">
@@ -285,8 +289,8 @@ export default function CoursesScreen() {
               </Text>
             </View>
           )}
-        </View>
+        </AnimatedBlock>
       </ScrollView>
-    </View>
+    </SafeScreen>
   );
 }

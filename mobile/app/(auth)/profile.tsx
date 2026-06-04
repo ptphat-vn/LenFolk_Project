@@ -26,7 +26,23 @@ export default function CompleteProfileScreen() {
       setShowCongrats(false);
       // Thiết lập mock session để qua Auth Guard và vào Trang chủ
       useAuthStore.setState({
-        user: { username: name || "Minh", email: email || "minh@lenfolk.vn" },
+        user: {
+          _id: "mock-user-id",
+          name: name || "Minh",
+          email: email || "minh@lenfolk.vn",
+          gender: "other",
+          dateOfBirth: null,
+          avatar: null,
+          phoneNumber: phone || null,
+          role: "learner",
+          currentSubscription: null,
+          isActive: true,
+          isVerified: false,
+          lastLoginAt: null,
+          deletedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
         token: "mock-session-token",
       });
       router.replace("/(tabs)");
