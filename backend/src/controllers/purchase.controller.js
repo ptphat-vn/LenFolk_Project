@@ -72,6 +72,11 @@ exports.requestPayment = async (req, res, next) => {
     return res.status(400).json({ success: false, message: 'This subscription plan is no longer available' });
   if (!plan.qrCodeUrl)
     return res.status(400).json({ success: false, message: 'This plan does not have a QR code configured yet. Please contact admin.' });
+
+  // Bug #3 fix: endpoint này chỉ xử lý course-type plan
+  if (plan.itemType === 'performance')
+    return res.status(400).json({ success: false, message: 'To purchase a performance subscription, please use POST /api/performances/:id/purchase' });
+
   if (plan.courseId?.isFree)
     return res.status(400).json({ success: false, message: 'This course is free. No subscription required.' });
 
@@ -83,7 +88,7 @@ exports.requestPayment = async (req, res, next) => {
 
   const alreadyHasCourse = activeSubs.some(
     (sub) =>
-      sub.subscriptionId?.courseId?.toString() === plan.courseId._id.toString(),
+      sub.subscriptionId?.courseId?.toString() === plan.courseId?._id?.toString(),
   );
   if (alreadyHasCourse)
     return res.status(400).json({ success: false, message: 'You already have an active subscription for this course.' });
@@ -420,6 +425,42 @@ exports.approve = async (req, res, next) => {
       { _id: transaction.userId, role: 'guest' },
       { role: 'learner' },
     );
+  } else if (transaction.transactionType === 'performance') {
+    // Bug #1 fix: kích hoạt UserSubscription cho tiết mục
+    const userSub = await UserSubscription.findById(
+      transaction.userSubscriptionId,
+    ).populate({
+      path: 'subscriptionId',
+      populate: [
+        {
+          path: 'performanceId',
+          select: 'instructorId adminCommissionPercentage',
+        },
+      ],
+    });
+    if (!userSub) return res.status(404).json({ success: false, message: 'UserSubscription not found' });
+
+    if (userSub.subscriptionId?.performanceId) {
+      instructorId = userSub.subscriptionId.performanceId.instructorId;
+      commissionPercentage = userSub.subscriptionId.performanceId.adminCommissionPercentage ?? 30;
+    }
+
+    const approvedStartDate = now;
+    const approvedEndDate = calcEndDate(
+      approvedStartDate,
+      userSub.subscriptionId?.billingCycle || 'monthly',
+    );
+
+    await UserSubscription.findByIdAndUpdate(transaction.userSubscriptionId, {
+      status: 'active',
+      startDate: approvedStartDate,
+      endDate: approvedEndDate,
+    });
+
+    await User.findOneAndUpdate(
+      { _id: transaction.userId, role: 'guest' },
+      { role: 'learner' },
+    );
   } else if (transaction.transactionType === 'course') {
     const course = await Course.findById(transaction.courseId).select(
       'instructorId adminCommissionPercentage',
@@ -482,7 +523,11 @@ exports.reject = async (req, res, next) => {
   transaction.reviewedAt = now;
   await transaction.save();
 
-  if (transaction.transactionType === 'subscription') {
+  // Bug #2 fix: cancel UserSubscription cho cả 'subscription' lẫn 'performance'
+  if (
+    (transaction.transactionType === 'subscription' || transaction.transactionType === 'performance') &&
+    transaction.userSubscriptionId
+  ) {
     await UserSubscription.findByIdAndUpdate(transaction.userSubscriptionId, {
       status: 'cancelled',
     });

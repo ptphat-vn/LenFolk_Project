@@ -1428,6 +1428,8 @@ const options = {
       { name: 'Permissions', description: '🔒 Phân quyền — Admin only' },
       { name: 'AuditLogs', description: '📝 Nhật ký hành động — Admin only' },
       { name: 'ModeratorLogs', description: '🛡️ Nhật ký kiểm duyệt' },
+      { name: 'Coupons', description: '🎟️ Mã giảm giá — Admin only (CRUD)' },
+      { name: 'Wallets', description: '💰 Ví Instructor — Xem số dư, rút tiền, Admin duyệt payout' },
     ],
     paths: {
       // ─── AUTH ───────────────────────────────────────────────────────────
@@ -5276,14 +5278,256 @@ const options = {
       '/wallets/admin/payouts/{id}': {
         patch: {
           tags: ['Wallets'],
-          summary: 'Admin duyệt / từ chối rút tiền',
+          summary: 'Admin duyệt / từ chối yêu cầu rút tiền',
+          description: '`approved` → xác nhận đã chuyển khoản thực. `rejected` → hoàn tiền lại ví instructor.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
               name: 'id',
               in: 'path',
               required: true,
-              schema: { type: 'string' },
+              schema: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c3' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['status'],
+                  properties: {
+                    status: {
+                      type: 'string',
+                      enum: ['approved', 'rejected'],
+                      example: 'approved',
+                    },
+                    adminNote: {
+                      type: 'string',
+                      nullable: true,
+                      example: 'Đã chuyển khoản 500,000 VND',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Xử lý thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/PayoutRequest' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Trạng thái không hợp lệ hoặc payout không phải pending',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            404: {
+              description: 'Payout request không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+
+      // ─── COUPONS ────────────────────────────────────────────────────────
+      '/coupons': {
+        get: {
+          tags: ['Coupons'],
+          summary: 'Danh sách mã giảm giá — Admin only',
+          description: 'Hỗ trợ filter, sort, pagination. Ví dụ: `?isActive=true&sort=-createdAt&page=1&limit=20`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } },
+            { name: 'sort', in: 'query', schema: { type: 'string' }, example: '-createdAt' },
+            {
+              name: 'isActive',
+              in: 'query',
+              schema: { type: 'boolean' },
+              example: true,
+              description: 'Lọc theo trạng thái kích hoạt',
+            },
+            {
+              name: 'applicableTo',
+              in: 'query',
+              schema: { type: 'string', enum: ['subscription', 'course', 'all'] },
+              description: 'Lọc theo loại áp dụng',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Danh sách coupon',
+              content: {
+                'application/json': {
+                  schema: {
+                    allOf: [
+                      { $ref: '#/components/schemas/PaginationMeta' },
+                      {
+                        type: 'object',
+                        properties: {
+                          data: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/Coupon' },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            401: { description: 'Chưa đăng nhập', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            403: { description: 'Không có quyền Admin', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        post: {
+          tags: ['Coupons'],
+          summary: 'Tạo mã giảm giá mới — Admin only',
+          description: 'Code sẽ được tự động chuyển thành chữ hoa (uppercase). Nếu `maxUses = null` thì không giới hạn lượt dùng. Nếu `validTo = null` thì không có ngày hết hạn.',
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['code', 'discountType', 'discountValue'],
+                  properties: {
+                    code: {
+                      type: 'string',
+                      example: 'SUMMER2026',
+                      description: 'Mã coupon — tự động uppercase, phải là duy nhất.',
+                    },
+                    discountType: {
+                      type: 'string',
+                      enum: ['percent', 'fixed'],
+                      example: 'percent',
+                      description: '`percent` = giảm theo %, `fixed` = giảm số tiền cố định (VND).',
+                    },
+                    discountValue: {
+                      type: 'number',
+                      minimum: 0,
+                      example: 20,
+                      description: 'Giá trị giảm: 20 nếu percent (20%), hoặc 50000 nếu fixed (50,000 VND).',
+                    },
+                    maxUses: {
+                      type: 'number',
+                      nullable: true,
+                      example: 100,
+                      description: 'Số lượt dùng tối đa. `null` = không giới hạn.',
+                    },
+                    validFrom: {
+                      type: 'string',
+                      format: 'date-time',
+                      example: '2026-06-01T00:00:00.000Z',
+                      description: 'Ngày bắt đầu hiệu lực. Mặc định là ngay khi tạo.',
+                    },
+                    validTo: {
+                      type: 'string',
+                      format: 'date-time',
+                      nullable: true,
+                      example: '2026-08-31T23:59:59.000Z',
+                      description: 'Ngày hết hạn. `null` = không bao giờ hết hạn.',
+                    },
+                    isActive: {
+                      type: 'boolean',
+                      example: true,
+                      description: 'Có hiệu lực không. Mặc định `true`.',
+                    },
+                    applicableTo: {
+                      type: 'string',
+                      enum: ['subscription', 'course', 'all'],
+                      example: 'all',
+                      description: '`subscription` = chỉ dùng cho gói sub, `course` = chỉ cho mua lẻ course, `all` = dùng được cho tất cả.',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: 'Coupon được tạo thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Tạo mã giảm giá thành công' },
+                      data: { $ref: '#/components/schemas/Coupon' },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: 'Validation thất bại hoặc code đã tồn tại',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            403: {
+              description: 'Không có quyền Admin',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+      },
+      '/coupons/{id}': {
+        get: {
+          tags: ['Coupons'],
+          summary: 'Chi tiết mã giảm giá — Admin only',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: 'coupon_id_123' },
+              description: 'MongoDB ObjectId của coupon',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Chi tiết coupon',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      data: { $ref: '#/components/schemas/Coupon' },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Coupon không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        patch: {
+          tags: ['Coupons'],
+          summary: 'Cập nhật mã giảm giá — Admin only',
+          description: 'Tất cả trường là optional. Có thể vô hiệu hóa coupon bằng `isActive: false`.',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: 'coupon_id_123' },
             },
           ],
           requestBody: {
@@ -5293,14 +5537,73 @@ const options = {
                 schema: {
                   type: 'object',
                   properties: {
-                    status: { type: 'string', enum: ['approved', 'rejected'] },
-                    adminNote: { type: 'string' },
+                    discountType: { type: 'string', enum: ['percent', 'fixed'] },
+                    discountValue: { type: 'number', minimum: 0 },
+                    maxUses: { type: 'number', nullable: true },
+                    validFrom: { type: 'string', format: 'date-time' },
+                    validTo: { type: 'string', format: 'date-time', nullable: true },
+                    isActive: { type: 'boolean', example: false },
+                    applicableTo: { type: 'string', enum: ['subscription', 'course', 'all'] },
                   },
                 },
               },
             },
           },
-          responses: { 200: { description: 'Thành công' } },
+          responses: {
+            200: {
+              description: 'Coupon được cập nhật',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Cập nhật thành công' },
+                      data: { $ref: '#/components/schemas/Coupon' },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Coupon không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
+        },
+        delete: {
+          tags: ['Coupons'],
+          summary: 'Xóa mã giảm giá — Admin only',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', example: 'coupon_id_123' },
+            },
+          ],
+          responses: {
+            200: {
+              description: 'Xóa thành công',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean', example: true },
+                      message: { type: 'string', example: 'Xóa thành công' },
+                      data: { type: 'object', nullable: true, example: null },
+                    },
+                  },
+                },
+              },
+            },
+            404: {
+              description: 'Coupon không tìm thấy',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+          },
         },
       },
     },
