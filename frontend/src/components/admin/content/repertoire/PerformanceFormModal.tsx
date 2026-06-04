@@ -24,8 +24,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { toast } from 'sonner';
 import { Layers, Loader2 } from 'lucide-react';
+import { performanceSchema, zodFieldErrors } from '@/schema/form.schema';
+
+type PerformanceFormField =
+  | 'title'
+  | 'thumbnail'
+  | 'videoUrl'
+  | 'genre'
+  | 'duration'
+  | 'price'
+  | 'billingCycle';
+type PerformanceFormErrors = Partial<Record<PerformanceFormField, string>>;
 
 interface PerformanceFormModalProps {
   open: boolean;
@@ -35,6 +45,20 @@ interface PerformanceFormModalProps {
   onSave: (data: CreatePerformanceInput) => void;
 }
 
+const EMPTY_FORM: CreatePerformanceInput = {
+  title: '',
+  description: '',
+  thumbnail: '',
+  videoUrl: '',
+  genre: '',
+  isFree: true,
+  duration: undefined,
+  tags: [],
+  isFeatured: false,
+  price: undefined,
+  billingCycle: undefined,
+};
+
 export function PerformanceFormModal({
   open,
   onOpenChange,
@@ -42,19 +66,9 @@ export function PerformanceFormModal({
   isSaving,
   onSave,
 }: PerformanceFormModalProps) {
-  const [form, setForm] = useState<CreatePerformanceInput>({
-    title: '',
-    description: '',
-    thumbnail: '',
-    videoUrl: '',
-    genre: '',
-    status: 'draft',
-    isFree: true,
-    duration: undefined,
-    tags: [],
-    isFeatured: false,
-  });
+  const [form, setForm] = useState<CreatePerformanceInput>(EMPTY_FORM);
   const [tagsInput, setTagsInput] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<PerformanceFormErrors>({});
 
   useEffect(() => {
     if (performance) {
@@ -69,41 +83,68 @@ export function PerformanceFormModal({
         duration: performance.duration,
         tags: performance.tags ?? [],
         isFeatured: performance.isFeatured ?? false,
+        // Pre-populate giá từ Subscription liên kết
+        price: performance.subscription?.price ?? undefined,
+        billingCycle: (performance.subscription?.billingCycle as CreatePerformanceInput['billingCycle']) ?? undefined,
       });
       setTagsInput((performance.tags ?? []).join(', '));
+      setFieldErrors({});
     } else {
-      setForm({
-        title: '',
-        description: '',
-        thumbnail: '',
-        videoUrl: '',
-        genre: '',
-        status: 'draft',
-        isFree: true,
-        duration: undefined,
-        tags: [],
-        isFeatured: false,
-      });
+      setForm(EMPTY_FORM);
       setTagsInput('');
+      setFieldErrors({});
     }
   }, [performance, open]);
 
   const set = <K extends keyof CreatePerformanceInput>(
     k: K,
     v: CreatePerformanceInput[K],
-  ) => setForm((prev) => ({ ...prev, [k]: v }));
+  ) => {
+    setForm((prev) => ({ ...prev, [k]: v }));
+    if (k in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [k]: undefined }));
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const renderFieldError = (field: PerformanceFormField) =>
+    fieldErrors[field] ? (
+      <p className="text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setFieldErrors({});
     if (!form.title.trim()) {
-      toast.error('Vui lòng nhập tên tiết mục');
+      setFieldErrors({ title: 'Vui lòng nhập tên tiết mục' });
+      return;
+    }
+    if (!form.isFree && !form.price) {
+      setFieldErrors({ price: 'Vui lòng nhập giá cho tiết mục trả phí' });
+      return;
+    }
+    if (!form.isFree && !form.billingCycle) {
+      setFieldErrors({ billingCycle: 'Vui lòng chọn chu kỳ thanh toán' });
       return;
     }
     const tags = tagsInput
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
-    onSave({ ...form, tags });
+    // Nếu miễn phí thì không gửi giá
+    const parsed = performanceSchema.safeParse({ ...form, tags });
+    if (!parsed.success) {
+      setFieldErrors(zodFieldErrors<PerformanceFormField>(parsed.error));
+      return;
+    }
+
+    const payload: CreatePerformanceInput = parsed.data;
+    if (payload.isFree) {
+      delete payload.price;
+      delete payload.billingCycle;
+    }
+    onSave(payload);
   };
 
   return (
@@ -115,7 +156,7 @@ export function PerformanceFormModal({
             {performance ? 'Chỉnh sửa tiết mục' : 'Thêm tiết mục mới'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label>Tên tiết mục *</Label>
@@ -124,31 +165,37 @@ export function PerformanceFormModal({
                 onChange={(e) => set('title', e.target.value)}
                 placeholder="Nhập tên tiết mục"
               />
+              {renderFieldError('title')}
             </div>
-            
+
             <div className="space-y-1.5">
-              <Label>Trạng thái</Label>
+              <Label>Trạng thái (Admin)</Label>
               <Select
-                value={form.status}
+                value={form.status ?? 'pending'}
                 onValueChange={(v) => set('status', v as PerformanceStatus)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
                   <SelectItem value="pending">Chờ duyệt</SelectItem>
                   <SelectItem value="published">Xuất bản</SelectItem>
                   <SelectItem value="archived">Lưu trữ</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-1.5">
               <Label>Loại hình</Label>
               <Select
                 value={form.isFree ? 'free' : 'paid'}
-                onValueChange={(v) => set('isFree', v === 'free')}
+                onValueChange={(v) => {
+                  set('isFree', v === 'free');
+                  if (v === 'free') {
+                    set('price', undefined);
+                    set('billingCycle', undefined);
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -159,7 +206,45 @@ export function PerformanceFormModal({
                 </SelectContent>
               </Select>
             </div>
-            
+
+            {/* Hiện giá & chu kỳ chỉ khi trả phí */}
+            {!form.isFree && (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Giá (VND) *</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.price ?? ''}
+                    onChange={(e) =>
+                      set('price', e.target.value ? Number(e.target.value) : undefined)
+                    }
+                    placeholder="50000"
+                  />
+                  {renderFieldError('price')}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Chu kỳ thanh toán *</Label>
+                  <Select
+                    value={form.billingCycle ?? ''}
+                    onValueChange={(v) =>
+                      set('billingCycle', v as CreatePerformanceInput['billingCycle'])
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn chu kỳ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Theo tháng</SelectItem>
+                      <SelectItem value="quarterly">Theo quý</SelectItem>
+                      <SelectItem value="yearly">Theo năm</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {renderFieldError('billingCycle')}
+                </div>
+              </>
+            )}
+
             <div className="space-y-1.5">
               <Label>Thể loại (Genre)</Label>
               <Input
@@ -167,8 +252,9 @@ export function PerformanceFormModal({
                 onChange={(e) => set('genre', e.target.value)}
                 placeholder="Pop, Classical..."
               />
+              {renderFieldError('genre')}
             </div>
-            
+
             <div className="space-y-1.5">
               <Label>Thời lượng (giây)</Label>
               <Input
@@ -176,15 +262,13 @@ export function PerformanceFormModal({
                 min={0}
                 value={form.duration ?? ''}
                 onChange={(e) =>
-                  set(
-                    'duration',
-                    e.target.value ? Number(e.target.value) : undefined,
-                  )
+                  set('duration', e.target.value ? Number(e.target.value) : undefined)
                 }
                 placeholder="180"
               />
+              {renderFieldError('duration')}
             </div>
-            
+
             <div className="col-span-2 space-y-1.5">
               <Label>Video URL</Label>
               <Input
@@ -192,6 +276,7 @@ export function PerformanceFormModal({
                 onChange={(e) => set('videoUrl', e.target.value)}
                 placeholder="https://..."
               />
+              {renderFieldError('videoUrl')}
             </div>
 
             <div className="col-span-2 space-y-1.5">
@@ -201,6 +286,7 @@ export function PerformanceFormModal({
                 onChange={(e) => set('thumbnail', e.target.value)}
                 placeholder="https://..."
               />
+              {renderFieldError('thumbnail')}
             </div>
 
             <div className="col-span-2 space-y-1.5">
@@ -212,7 +298,7 @@ export function PerformanceFormModal({
                 rows={2}
               />
             </div>
-            
+
             <div className="col-span-2 space-y-1.5">
               <Label>Tags (cách nhau bởi dấu phẩy)</Label>
               <Input
@@ -221,6 +307,7 @@ export function PerformanceFormModal({
                 placeholder="piano, solo"
               />
             </div>
+
             <div className="col-span-2 flex items-center gap-2">
               <input
                 type="checkbox"
@@ -234,6 +321,7 @@ export function PerformanceFormModal({
               </Label>
             </div>
           </div>
+
           <DialogFooter className="mt-4">
             <Button
               type="button"

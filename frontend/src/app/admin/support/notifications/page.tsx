@@ -117,7 +117,7 @@ export default function AdminNotificationsPage() {
               <h2 className="text-lg font-semibold text-gray-900">Gửi thông báo mới</h2>
             </div>
 
-            <form onSubmit={handleSend} className="space-y-4">
+            <form onSubmit={handleSend} noValidate className="space-y-4">
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1">
                   <User className="w-4 h-4 text-gray-400" />

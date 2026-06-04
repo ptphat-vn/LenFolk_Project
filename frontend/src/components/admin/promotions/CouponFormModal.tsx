@@ -9,6 +9,17 @@ import {
   DiscountType,
   CouponApplicableTo,
 } from '@/types/coupon.types';
+import { couponSchema, zodFieldErrors } from '@/schema/form.schema';
+
+type CouponFormField =
+  | 'code'
+  | 'discountType'
+  | 'discountValue'
+  | 'maxUses'
+  | 'validFrom'
+  | 'validTo'
+  | 'applicableTo';
+type CouponFormErrors = Partial<Record<CouponFormField, string>>;
 
 export function CouponFormModal({
   open,
@@ -34,11 +45,13 @@ export function CouponFormModal({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<CouponFormErrors>({});
 
   useEffect(() => {
     if (open) {
       const timeout = setTimeout(() => {
         setError('');
+        setFieldErrors({});
         if (editCoupon) {
           setForm({
             code: editCoupon.code,
@@ -69,20 +82,56 @@ export function CouponFormModal({
 
   if (!open) return null;
 
+  const setField = <K extends keyof CreateCouponInput>(
+    key: K,
+    value: CreateCouponInput[K],
+  ) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (key in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+  };
+
+  const inputClass = (field: CouponFormField, extra = '') =>
+    `w-full h-9 px-3 rounded-lg border text-[13px] focus:outline-none focus:ring-2 ${
+      fieldErrors[field]
+        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+        : 'border-gray-200 focus:border-[#2d6a4f] focus:ring-[#2d6a4f]/30'
+    } ${extra}`;
+
+  const renderFieldError = (field: CouponFormField) =>
+    fieldErrors[field] ? (
+      <p className="mt-1 text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
+    setFieldErrors({});
+    const parsed = couponSchema.safeParse({
+      code: form.code,
+      discountType: form.discountType,
+      discountValue: form.discountValue,
+      maxUses: form.maxUses,
+      validFrom: form.validFrom,
+      validTo: form.validTo,
+      isActive: form.isActive,
+      applicableTo: form.applicableTo,
+    });
+
+    if (!parsed.success) {
+      setFieldErrors(zodFieldErrors<CouponFormField>(parsed.error));
+      return;
+    }
+
+    setSaving(true);
     try {
       const body: CreateCouponInput = {
-        code: form.code!.trim().toUpperCase(),
-        discountType: form.discountType!,
-        discountValue: Number(form.discountValue),
-        maxUses: form.maxUses ? Number(form.maxUses) : null,
-        validFrom: new Date(form.validFrom!).toISOString(),
-        validTo: form.validTo ? new Date(form.validTo).toISOString() : null,
-        isActive: form.isActive,
-        applicableTo: form.applicableTo,
+        ...parsed.data,
+        validFrom: new Date(parsed.data.validFrom).toISOString(),
+        validTo: parsed.data.validTo ? new Date(parsed.data.validTo).toISOString() : null,
       };
       await onSave(body, editCoupon?._id);
       onClose();
@@ -111,20 +160,19 @@ export function CouponFormModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
           <div>
             <label className="block text-[12px] font-medium text-gray-700 mb-1">
               Mã coupon *
             </label>
             <input
               value={form.code ?? ''}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))
-              }
+              onChange={(e) => setField('code', e.target.value.toUpperCase())}
               required
-              className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+              className={inputClass('code', 'font-mono uppercase')}
               placeholder="SALE20"
             />
+            {renderFieldError('code')}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -135,16 +183,14 @@ export function CouponFormModal({
               <select
                 value={form.discountType ?? 'percent'}
                 onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    discountType: e.target.value as DiscountType,
-                  }))
+                  setField('discountType', e.target.value as DiscountType)
                 }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                className={inputClass('discountType', 'bg-white')}
               >
                 <option value="percent">Phần trăm (%)</option>
                 <option value="fixed">Cố định (VND)</option>
               </select>
+              {renderFieldError('discountType')}
             </div>
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
@@ -155,15 +201,13 @@ export function CouponFormModal({
                 min={0}
                 value={form.discountValue ?? ''}
                 onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    discountValue: Number(e.target.value),
-                  }))
+                  setField('discountValue', Number(e.target.value))
                 }
                 required
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                className={inputClass('discountValue')}
                 placeholder={form.discountType === 'percent' ? '10' : '50000'}
               />
+              {renderFieldError('discountValue')}
             </div>
           </div>
 
@@ -176,11 +220,12 @@ export function CouponFormModal({
                 type="date"
                 value={form.validFrom ?? ''}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, validFrom: e.target.value }))
+                  setField('validFrom', e.target.value)
                 }
                 required
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                className={inputClass('validFrom')}
               />
+              {renderFieldError('validFrom')}
             </div>
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
@@ -190,10 +235,11 @@ export function CouponFormModal({
                 type="date"
                 value={form.validTo ?? ''}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, validTo: e.target.value || null }))
+                  setField('validTo', e.target.value || null)
                 }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                className={inputClass('validTo')}
               />
+              {renderFieldError('validTo')}
             </div>
           </div>
 
@@ -207,14 +253,12 @@ export function CouponFormModal({
                 min={0}
                 value={form.maxUses ?? ''}
                 onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    maxUses: e.target.value ? Number(e.target.value) : null,
-                  }))
+                  setField('maxUses', e.target.value ? Number(e.target.value) : null)
                 }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                className={inputClass('maxUses')}
                 placeholder="Không giới hạn"
               />
+              {renderFieldError('maxUses')}
             </div>
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
@@ -223,17 +267,15 @@ export function CouponFormModal({
               <select
                 value={form.applicableTo ?? 'all'}
                 onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    applicableTo: e.target.value as CouponApplicableTo,
-                  }))
+                  setField('applicableTo', e.target.value as CouponApplicableTo)
                 }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                className={inputClass('applicableTo', 'bg-white')}
               >
                 <option value="all">Tất cả</option>
                 <option value="subscription">Gói đăng ký</option>
                 <option value="course">Khoá học</option>
               </select>
+              {renderFieldError('applicableTo')}
             </div>
           </div>
 

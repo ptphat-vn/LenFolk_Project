@@ -1,5 +1,5 @@
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/AppError');
+
+
 const { Subscription, UserSubscription } = require('../models/Subscription');
 const TransactionRecord = require('../models/TransactionRecord');
 const Course = require('../models/Course');
@@ -7,6 +7,9 @@ const Performance = require('../models/Performance');
 const User = require('../models/User');
 const Coupon = require('../models/Coupon');
 const Wallet = require('../models/Wallet');
+
+
+
 
 // Helper: tính endDate theo billingCycle
 const calcEndDate = (startDate, billingCycle) => {
@@ -25,17 +28,17 @@ const calculateDiscount = async (couponCode, originalPrice, type) => {
     code: couponCode.toUpperCase(),
     isActive: true,
   });
-  if (!coupon) throw new AppError('Invalid or inactive coupon code', 400);
+  if (!coupon) (() => { const _e = new Error('Invalid or inactive coupon code'); _e.statusCode = 400; throw _e; })();
 
   const now = new Date();
   if (coupon.validFrom && now < coupon.validFrom)
-    throw new AppError('Coupon is not yet valid', 400);
+    (() => { const _e = new Error('Coupon is not yet valid'); _e.statusCode = 400; throw _e; })();
   if (coupon.validTo && now > coupon.validTo)
-    throw new AppError('Coupon has expired', 400);
+    (() => { const _e = new Error('Coupon has expired'); _e.statusCode = 400; throw _e; })();
   if (coupon.maxUses && coupon.usedCount >= coupon.maxUses)
-    throw new AppError('Coupon usage limit reached', 400);
+    (() => { const _e = new Error('Coupon usage limit reached'); _e.statusCode = 400; throw _e; })();
   if (coupon.applicableTo !== 'all' && coupon.applicableTo !== type)
-    throw new AppError(`Coupon cannot be applied to ${type}`, 400);
+    (() => { const _e = new Error(`Coupon cannot be applied to ${type}`); _e.statusCode = 400; throw _e; })();
 
   let discountAmount = 0;
   if (coupon.discountType === 'percent') {
@@ -54,7 +57,8 @@ const calculateDiscount = async (couponCode, originalPrice, type) => {
  * POST /api/subscriptions/:id/request
  * User yêu cầu mua gói subscription.
  */
-exports.requestPayment = catchAsync(async (req, res, next) => {
+exports.requestPayment = async (req, res, next) => {
+  try {
   const { id: subscriptionId } = req.params;
   const { couponCode } = req.body;
   const userId = req.user._id;
@@ -63,22 +67,13 @@ exports.requestPayment = catchAsync(async (req, res, next) => {
     path: 'courseId',
     select: 'isFree title',
   });
-  if (!plan) return next(new AppError('Subscription plan not found', 404));
+  if (!plan) return res.status(404).json({ success: false, message: 'Subscription plan not found' });
   if (!plan.isActive)
-    return next(
-      new AppError('This subscription plan is no longer available', 400),
-    );
+    return res.status(400).json({ success: false, message: 'This subscription plan is no longer available' });
   if (!plan.qrCodeUrl)
-    return next(
-      new AppError(
-        'This plan does not have a QR code configured yet. Please contact admin.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'This plan does not have a QR code configured yet. Please contact admin.' });
   if (plan.courseId?.isFree)
-    return next(
-      new AppError('This course is free. No subscription required.', 400),
-    );
+    return res.status(400).json({ success: false, message: 'This course is free. No subscription required.' });
 
   const activeSubs = await UserSubscription.find({
     userId,
@@ -91,12 +86,7 @@ exports.requestPayment = catchAsync(async (req, res, next) => {
       sub.subscriptionId?.courseId?.toString() === plan.courseId._id.toString(),
   );
   if (alreadyHasCourse)
-    return next(
-      new AppError(
-        'You already have an active subscription for this course.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'You already have an active subscription for this course.' });
 
   const existingPending = await UserSubscription.findOne({
     userId,
@@ -104,12 +94,7 @@ exports.requestPayment = catchAsync(async (req, res, next) => {
     status: 'pending',
   });
   if (existingPending)
-    return next(
-      new AppError(
-        'You already have a pending payment request for this plan. Please upload your proof or wait for admin review.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'You already have a pending payment request for this plan. Please upload your proof or wait for admin review.' });
 
   // Tính giảm giá
   const { discountAmount, couponId } = await calculateDiscount(
@@ -158,28 +143,26 @@ exports.requestPayment = catchAsync(async (req, res, next) => {
       courseName: plan.courseId?.title ?? null,
     },
   });
-});
+  } catch (err) { next(err); }
+};
 
 /**
  * POST /api/courses/:id/purchase
  * User yêu cầu mua đứt (lifetime) một Khóa học.
  * Giá được lấy từ gói Subscription liên kết với khóa học.
  */
-exports.requestCoursePayment = catchAsync(async (req, res, next) => {
+exports.requestCoursePayment = async (req, res, next) => {
+  try {
   const { id: courseId } = req.params;
   const { couponCode } = req.body;
   const userId = req.user._id;
 
   const course = await Course.findById(courseId);
-  if (!course) return next(new AppError('Course not found', 404));
+  if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
   if (course.isFree)
-    return next(
-      new AppError('This course is free. No purchase required.', 400),
-    );
+    return res.status(400).json({ success: false, message: 'This course is free. No purchase required.' });
   if (course.status !== 'published')
-    return next(
-      new AppError('This course is not available for purchase.', 400),
-    );
+    return res.status(400).json({ success: false, message: 'This course is not available for purchase.' });
 
   // Lấy giá từ gói Subscription liên kết
   const plan = await Subscription.findOne({
@@ -188,24 +171,14 @@ exports.requestCoursePayment = catchAsync(async (req, res, next) => {
     isActive: true,
   });
   if (!plan)
-    return next(
-      new AppError(
-        'No active subscription plan found for this course. Please contact admin.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'No active subscription plan found for this course. Please contact admin.' });
   if (!plan.qrCodeUrl)
-    return next(
-      new AppError(
-        'This course does not have a QR code configured yet. Please contact admin.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'This course does not have a QR code configured yet. Please contact admin.' });
 
   // Kiểm tra user đã có khóa học chưa
   const user = await User.findById(userId);
   if (user.enrolledCourses && user.enrolledCourses.includes(courseId)) {
-    return next(new AppError('You have already purchased this course.', 400));
+    return res.status(400).json({ success: false, message: 'You have already purchased this course.' });
   }
 
   // Tính giảm giá
@@ -242,27 +215,25 @@ exports.requestCoursePayment = catchAsync(async (req, res, next) => {
       courseName: course.title,
     },
   });
-});
+  } catch (err) { next(err); }
+};
 
 /**
  * POST /api/performances/:id/purchase
  * User yêu cầu truy cập Tiết mục qua gói Subscription liên kết.
  */
-exports.requestPerformancePayment = catchAsync(async (req, res, next) => {
+exports.requestPerformancePayment = async (req, res, next) => {
+  try {
   const { id: performanceId } = req.params;
   const { couponCode } = req.body;
   const userId = req.user._id;
 
   const performance = await Performance.findById(performanceId);
-  if (!performance) return next(new AppError('Performance not found', 404));
+  if (!performance) return res.status(404).json({ success: false, message: 'Performance not found' });
   if (performance.isFree)
-    return next(
-      new AppError('This performance is free. No purchase required.', 400),
-    );
+    return res.status(400).json({ success: false, message: 'This performance is free. No purchase required.' });
   if (performance.status !== 'published')
-    return next(
-      new AppError('This performance is not available for purchase.', 400),
-    );
+    return res.status(400).json({ success: false, message: 'This performance is not available for purchase.' });
 
   // Lấy giá từ gói Subscription liên kết
   const plan = await Subscription.findOne({
@@ -271,19 +242,9 @@ exports.requestPerformancePayment = catchAsync(async (req, res, next) => {
     isActive: true,
   });
   if (!plan)
-    return next(
-      new AppError(
-        'No active subscription plan found for this performance. Please contact admin.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'No active subscription plan found for this performance. Please contact admin.' });
   if (!plan.qrCodeUrl)
-    return next(
-      new AppError(
-        'This performance does not have a QR code configured yet. Please contact admin.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'This performance does not have a QR code configured yet. Please contact admin.' });
 
   // Kiểm tra user đã có access chưa (qua subscription đang active)
   const activeSubs = await UserSubscription.find({
@@ -299,9 +260,7 @@ exports.requestPerformancePayment = catchAsync(async (req, res, next) => {
         performanceId.toString(),
   );
   if (alreadyHasAccess)
-    return next(
-      new AppError('You already have active access to this performance.', 400),
-    );
+    return res.status(400).json({ success: false, message: 'You already have active access to this performance.' });
 
   const existingPending = await UserSubscription.findOne({
     userId,
@@ -309,12 +268,7 @@ exports.requestPerformancePayment = catchAsync(async (req, res, next) => {
     status: 'pending',
   });
   if (existingPending)
-    return next(
-      new AppError(
-        'You already have a pending payment request for this performance.',
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: 'You already have a pending payment request for this performance.' });
 
   const { discountAmount, couponId } = await calculateDiscount(
     couponCode,
@@ -362,30 +316,23 @@ exports.requestPerformancePayment = catchAsync(async (req, res, next) => {
       performanceName: performance.title,
     },
   });
-});
+  } catch (err) { next(err); }
+};
 
-exports.uploadProof = catchAsync(async (req, res, next) => {
+exports.uploadProof = async (req, res, next) => {
+  try {
   const { id } = req.params;
   const userId = req.user._id;
 
   if (!req.file)
-    return next(
-      new AppError('Please attach a payment proof image (field: proof)', 400),
-    );
+    return res.status(400).json({ success: false, message: 'Please attach a payment proof image (field: proof)' });
 
   const transaction = await TransactionRecord.findById(id);
-  if (!transaction) return next(new AppError('Transaction not found', 404));
+  if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
   if (!transaction.userId.equals(userId))
-    return next(
-      new AppError('Forbidden: this transaction does not belong to you', 403),
-    );
+    return res.status(403).json({ success: false, message: 'Forbidden: this transaction does not belong to you' });
   if (transaction.status !== 'pending')
-    return next(
-      new AppError(
-        `Cannot upload proof for a transaction with status '${transaction.status}'`,
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: `Cannot upload proof for a transaction with status '${transaction.status}'` });
 
   transaction.proofImageUrl = req.file.path;
   transaction.status = 'reviewing';
@@ -400,24 +347,21 @@ exports.uploadProof = catchAsync(async (req, res, next) => {
       proofImageUrl: transaction.proofImageUrl,
     },
   });
-});
+  } catch (err) { next(err); }
+};
 
 /**
  * PATCH /api/transaction-records/:id/approve
  */
-exports.approve = catchAsync(async (req, res, next) => {
+exports.approve = async (req, res, next) => {
+  try {
   const { id } = req.params;
   const adminId = req.user._id;
 
   const transaction = await TransactionRecord.findById(id);
-  if (!transaction) return next(new AppError('Transaction not found', 404));
+  if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
   if (transaction.status !== 'reviewing')
-    return next(
-      new AppError(
-        `Cannot approve a transaction with status '${transaction.status}'`,
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: `Cannot approve a transaction with status '${transaction.status}'` });
 
   const now = new Date();
   transaction.status = 'success';
@@ -448,7 +392,7 @@ exports.approve = catchAsync(async (req, res, next) => {
         },
       ],
     });
-    if (!userSub) return next(new AppError('UserSubscription not found', 404));
+    if (!userSub) return res.status(404).json({ success: false, message: 'UserSubscription not found' });
 
     const linkedItem =
       userSub.subscriptionId?.itemType === 'performance'
@@ -510,29 +454,26 @@ exports.approve = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: {
-      message: 'Payment approved successfully.',
+      message: 'Đã duyệt thanh toán thành công.',
       transactionId: transaction._id,
     },
   });
-});
+  } catch (err) { next(err); }
+};
 
 /**
  * PATCH /api/transaction-records/:id/reject
  */
-exports.reject = catchAsync(async (req, res, next) => {
+exports.reject = async (req, res, next) => {
+  try {
   const { id } = req.params;
   const adminId = req.user._id;
   const { rejectReason } = req.body;
 
   const transaction = await TransactionRecord.findById(id);
-  if (!transaction) return next(new AppError('Transaction not found', 404));
+  if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
   if (transaction.status !== 'reviewing')
-    return next(
-      new AppError(
-        `Cannot reject a transaction with status '${transaction.status}'`,
-        400,
-      ),
-    );
+    return res.status(400).json({ success: false, message: `Cannot reject a transaction with status '${transaction.status}'` });
 
   const now = new Date();
   transaction.status = 'failed';
@@ -550,8 +491,9 @@ exports.reject = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: {
-      message: 'Payment rejected.',
+      message: 'Đã từ chối thanh toán.',
       transactionId: transaction._id,
     },
   });
-});
+  } catch (err) { next(err); }
+};

@@ -10,6 +10,19 @@ import {
 } from '@/types/subscription.types';
 import { Course } from '@/types/course.types';
 import { Performance } from '@/types/performance.types';
+import { subscriptionSchema, zodFieldErrors } from '@/schema/form.schema';
+
+type SubscriptionFormField =
+  | 'name'
+  | 'itemType'
+  | 'courseId'
+  | 'performanceId'
+  | 'description'
+  | 'price'
+  | 'currency'
+  | 'billingCycle'
+  | 'features';
+type SubscriptionFormErrors = Partial<Record<SubscriptionFormField, string>>;
 
 const CYCLE_LABEL: Record<BillingCycle, string> = {
   monthly: 'Hàng tháng',
@@ -24,6 +37,7 @@ export function SubscriptionFormModal({
   onSave,
   editSub,
   courses,
+  performances,
 }: {
   open: boolean;
   onClose: () => void;
@@ -50,10 +64,12 @@ export function SubscriptionFormModal({
   const [featuresText, setFeaturesText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<SubscriptionFormErrors>({});
 
   useEffect(() => {
     if (open) {
       setError('');
+      setFieldErrors({});
       if (editSub) {
         setForm({
           name: editSub.name,
@@ -88,25 +104,63 @@ export function SubscriptionFormModal({
 
   if (!open) return null;
 
+  const setField = <K extends keyof CreateSubscriptionInput | 'isActive'>(
+    key: K,
+    value: (CreateSubscriptionInput & { isActive: boolean })[K],
+  ) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (key in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+  };
+
+  const inputClass = (field: SubscriptionFormField, extra = '') =>
+    `w-full h-9 px-3 rounded-lg border text-[13px] focus:outline-none focus:ring-2 ${
+      fieldErrors[field]
+        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+        : 'border-gray-200 focus:border-[#2d6a4f] focus:ring-[#2d6a4f]/30'
+    } ${extra}`;
+
+  const renderFieldError = (field: SubscriptionFormField) =>
+    fieldErrors[field] ? (
+      <p className="mt-1 text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
+    setFieldErrors({});
+    const features = featuresText
+      .split('\n')
+      .map((f) => f.trim())
+      .filter(Boolean);
+    const parsed = subscriptionSchema.safeParse({
+      name: form.name,
+      itemType: form.itemType,
+      courseId: form.courseId,
+      performanceId: form.performanceId,
+      description: form.description,
+      price: form.price,
+      currency: form.currency,
+      billingCycle: form.billingCycle,
+      features,
+      isActive: form.isActive,
+    });
+
+    if (!parsed.success) {
+      setFieldErrors(zodFieldErrors<SubscriptionFormField>(parsed.error));
+      return;
+    }
+
+    setSaving(true);
     try {
-      const features = featuresText
-        .split('\n')
-        .map((f) => f.trim())
-        .filter(Boolean);
       const body: CreateSubscriptionInput = {
-        name: form.name!,
-        itemType: form.itemType,
-        ...(form.itemType === 'course' ? { courseId: form.courseId } : { performanceId: form.performanceId }),
-        description: form.description,
-        price: Number(form.price),
-        currency: form.currency,
-        billingCycle: form.billingCycle!,
-        features,
-        isActive: form.isActive,
+        ...parsed.data,
+        ...(parsed.data.itemType === 'course'
+          ? { courseId: parsed.data.courseId || undefined, performanceId: undefined }
+          : { performanceId: parsed.data.performanceId || undefined, courseId: undefined }),
       };
       await onSave(body, editSub?._id);
       onClose();
@@ -136,18 +190,19 @@ export function SubscriptionFormModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
           <div>
             <label className="block text-[12px] font-medium text-gray-700 mb-1">
               Tên gói *
             </label>
             <input
               value={form.name ?? ''}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              onChange={(e) => setField('name', e.target.value)}
               required
-              className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+              className={inputClass('name')}
               placeholder="VD: Gói Technique - Hàng tháng"
             />
+            {renderFieldError('name')}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -158,14 +213,20 @@ export function SubscriptionFormModal({
               <select
                 value={form.itemType ?? 'course'}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, itemType: e.target.value as 'course' | 'performance', courseId: '', performanceId: '' }))
+                  setForm((p) => ({
+                    ...p,
+                    itemType: e.target.value as 'course' | 'performance',
+                    courseId: '',
+                    performanceId: '',
+                  }))
                 }
                 required
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                className={inputClass('itemType', 'bg-white')}
               >
                 <option value="course">Khóa học</option>
                 <option value="performance">Tiết mục biểu diễn</option>
               </select>
+              {renderFieldError('itemType')}
             </div>
 
             <div>
@@ -173,13 +234,14 @@ export function SubscriptionFormModal({
                 {form.itemType === 'course' ? 'Khóa học *' : 'Tiết mục *'}
               </label>
               {form.itemType === 'course' ? (
+                <>
                 <select
                   value={form.courseId ?? ''}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, courseId: e.target.value }))
+                    setField('courseId', e.target.value)
                   }
                   required
-                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                  className={inputClass('courseId', 'bg-white')}
                 >
                   <option value="">-- Chọn khóa học --</option>
                   {courses.map((c) => (
@@ -188,14 +250,17 @@ export function SubscriptionFormModal({
                     </option>
                   ))}
                 </select>
+                {renderFieldError('courseId')}
+                </>
               ) : (
+                <>
                 <select
                   value={form.performanceId ?? ''}
                   onChange={(e) =>
-                    setForm((p) => ({ ...p, performanceId: e.target.value }))
+                    setField('performanceId', e.target.value)
                   }
                   required
-                  className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                  className={inputClass('performanceId', 'bg-white')}
                 >
                   <option value="">-- Chọn tiết mục --</option>
                   {performances.map((p) => (
@@ -204,6 +269,8 @@ export function SubscriptionFormModal({
                     </option>
                   ))}
                 </select>
+                {renderFieldError('performanceId')}
+                </>
               )}
             </div>
           </div>
@@ -233,12 +300,13 @@ export function SubscriptionFormModal({
                 min={0}
                 value={form.price ?? 0}
                 onChange={(e) =>
-                  setForm((p) => ({ ...p, price: Number(e.target.value) }))
+                  setField('price', Number(e.target.value))
                 }
                 required
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f]"
+                className={inputClass('price')}
                 placeholder="299000"
               />
+              {renderFieldError('price')}
             </div>
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
@@ -247,12 +315,9 @@ export function SubscriptionFormModal({
               <select
                 value={form.billingCycle ?? 'monthly'}
                 onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    billingCycle: e.target.value as BillingCycle,
-                  }))
+                  setField('billingCycle', e.target.value as BillingCycle)
                 }
-                className="w-full h-9 px-3 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] bg-white"
+                className={inputClass('billingCycle', 'bg-white')}
               >
                 {CYCLES.map((c) => (
                   <option key={c} value={c}>
@@ -260,6 +325,7 @@ export function SubscriptionFormModal({
                   </option>
                 ))}
               </select>
+              {renderFieldError('billingCycle')}
             </div>
           </div>
 

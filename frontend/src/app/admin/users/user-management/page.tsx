@@ -1,18 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { motion, Variants } from 'framer-motion';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   Plus,
-  Search,
+ 
   Users,
   ShieldCheck,
   GraduationCap,
   UserCheck,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
+ 
 } from 'lucide-react';
 import { StatCard } from '@/components/admin/users/StatCard';
 import { UserFormModal } from '@/components/admin/users/UserFormModal';
@@ -140,23 +139,32 @@ export default function UsersPage() {
     data: CreateUserInput | UpdateUserInput,
     id?: string,
   ) => {
-    if (id) {
-      await userApi.updateUser(id, data as UpdateUserInput);
-    } else {
-      await userApi.createUser(data as CreateUserInput);
+    try {
+      if (id) {
+        const res = await userApi.updateUser(id, data as UpdateUserInput);
+        toast.success(res.message || 'Cập nhật người dùng thành công');
+      } else {
+        const res = await userApi.createUser(data as CreateUserInput);
+        toast.success(res.message || 'Tạo người dùng thành công');
+      }
+      await fetchUsers();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
+      throw e;
     }
-    await fetchUsers();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await userApi.deleteUser(deleteTarget._id);
+      const res = await userApi.deleteUser(deleteTarget._id);
+      toast.success(res.message || 'Đã xóa người dùng');
       setUsers((prev) => prev.filter((u) => u._id !== deleteTarget._id));
       setDeleteTarget(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Users] delete error:', e);
+      toast.error(e.response?.data?.message || 'Lỗi khi xóa người dùng');
     } finally {
       setDeleting(false);
     }
@@ -164,14 +172,16 @@ export default function UsersPage() {
 
   const handleToggleActive = async (user: User) => {
     try {
-      await userApi.updateUser(user._id, { isActive: !user.isActive });
+      const res = await userApi.updateUser(user._id, { isActive: !user.isActive });
+      toast.success(res.message || 'Đã cập nhật trạng thái người dùng');
       setUsers((prev) =>
         prev.map((u) =>
           u._id === user._id ? { ...u, isActive: !u.isActive } : u,
         ),
       );
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Users] toggle error:', e);
+      toast.error(e.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
     }
   };
 
@@ -329,7 +339,7 @@ export default function UsersPage() {
 
           <FilterSelect
             value={statusFilter}
-            onChange={(val) => setStatusFilter(val as string)}
+            onChange={(val) => setStatusFilter(val as 'active' | 'inactive' | 'all')}
             options={[
               { label: 'Đang hoạt động', value: 'active' },
               { label: 'Đã khoá', value: 'inactive' },

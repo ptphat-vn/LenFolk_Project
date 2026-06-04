@@ -5,6 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserCheck, Loader2 } from 'lucide-react';
 import { InstructorProfile, CreateInstructorProfileInput } from '@/types/instructor.types';
+import { instructorProfileSchema, zodFieldErrors } from '@/schema/form.schema';
+
+type InstructorFormField = 'userId' | 'expertise' | 'bio' | 'websiteUrl';
+type InstructorFormErrors = Partial<Record<InstructorFormField, string>>;
 
 interface InstructorFormModalProps {
   open: boolean;
@@ -23,9 +27,13 @@ const DEFAULT_FORM: CreateInstructorProfileInput = {
 export function InstructorFormModal({ open, onClose, onSave, editInstructor }: InstructorFormModalProps) {
   const [form, setForm] = useState<CreateInstructorProfileInput>(DEFAULT_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<InstructorFormErrors>({});
 
   useEffect(() => {
     if (open) {
+      setError('');
+      setFieldErrors({});
       if (editInstructor) {
         setForm({
           userId: editInstructor.userId,
@@ -39,11 +47,31 @@ export function InstructorFormModal({ open, onClose, onSave, editInstructor }: I
     }
   }, [open, editInstructor]);
 
+  const renderFieldError = (field: InstructorFormField) =>
+    fieldErrors[field] ? (
+      <p className="text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
+
+  const clearFieldError = (field: InstructorFormField) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
+    const parsed = instructorProfileSchema.safeParse(form);
+    if (!parsed.success) {
+      setFieldErrors(zodFieldErrors<InstructorFormField>(parsed.error));
+      return;
+    }
+
     try {
       setIsSaving(true);
-      await onSave(form, editInstructor?._id);
+      await onSave(parsed.data, editInstructor?._id);
       onClose();
     } finally {
       setIsSaving(false);
@@ -60,16 +88,20 @@ export function InstructorFormModal({ open, onClose, onSave, editInstructor }: I
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
           {!editInstructor && (
             <div className="space-y-1.5">
               <Label>User ID *</Label>
               <Input
                 value={form.userId}
-                onChange={(e) => setForm({ ...form, userId: e.target.value })}
+                onChange={(e) => {
+                  clearFieldError('userId');
+                  setForm({ ...form, userId: e.target.value });
+                }}
                 placeholder="Nhập ID người dùng (MongoDB ID)..."
                 required
               />
+              {renderFieldError('userId')}
             </div>
           )}
 
@@ -77,29 +109,43 @@ export function InstructorFormModal({ open, onClose, onSave, editInstructor }: I
             <Label>Chuyên môn</Label>
             <Input
               value={form.expertise}
-              onChange={(e) => setForm({ ...form, expertise: e.target.value })}
+              onChange={(e) => {
+                clearFieldError('expertise');
+                setForm({ ...form, expertise: e.target.value });
+              }}
               placeholder="VD: Guitar điện, Thanh nhạc..."
             />
+            {renderFieldError('expertise')}
           </div>
 
           <div className="space-y-1.5">
             <Label>Tiểu sử (Bio)</Label>
             <textarea
               value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
+              onChange={(e) => {
+                clearFieldError('bio');
+                setForm({ ...form, bio: e.target.value });
+              }}
               placeholder="Giới thiệu ngắn về kinh nghiệm..."
               className="w-full h-24 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2d6a4f]/30 focus:border-[#2d6a4f] resize-none"
             />
+            {renderFieldError('bio')}
           </div>
 
           <div className="space-y-1.5">
             <Label>Website (tùy chọn)</Label>
             <Input
               value={form.websiteUrl}
-              onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })}
+              onChange={(e) => {
+                clearFieldError('websiteUrl');
+                setForm({ ...form, websiteUrl: e.target.value });
+              }}
               placeholder="https://..."
             />
+            {renderFieldError('websiteUrl')}
           </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={onClose}>

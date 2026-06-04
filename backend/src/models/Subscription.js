@@ -72,16 +72,13 @@ subscriptionSchema.index({ courseId: 1 });
 subscriptionSchema.index({ performanceId: 1 });
 
 // Đảm bảo chỉ đúng một trong courseId/performanceId được cung cấp tương ứng itemType
-subscriptionSchema.pre('save', function (next) {
+subscriptionSchema.pre('save', function () {
   if (this.itemType === 'course' && !this.courseId) {
-    return next(new Error('courseId is required when itemType is "course"'));
+    throw new Error('courseId is required when itemType is "course"');
   }
   if (this.itemType === 'performance' && !this.performanceId) {
-    return next(
-      new Error('performanceId is required when itemType is "performance"'),
-    );
+    throw new Error('performanceId is required when itemType is "performance"');
   }
-  next();
 });
 
 const Subscription = mongoose.model('Subscription', subscriptionSchema);

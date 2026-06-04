@@ -21,13 +21,17 @@ exports.createSubscriptionSchema = z.object({
     })
     .refine(
       (data) => {
-        if (data.itemType === 'course') return !!data.courseId;
-        if (data.itemType === 'performance') return !!data.performanceId;
+        if (data.itemType === 'course') {
+          return !!data.courseId && !data.performanceId;
+        }
+        if (data.itemType === 'performance') {
+          return !!data.performanceId && !data.courseId;
+        }
         return false;
       },
       {
         message:
-          'courseId is required when itemType is "course"; performanceId is required when itemType is "performance"',
+          'If itemType is "course", courseId must be provided and performanceId must be empty. If itemType is "performance", performanceId must be provided and courseId must be empty.',
       },
     ),
 });
@@ -46,5 +50,15 @@ exports.updateSubscriptionSchema = z.object({
     maxCourses: z.number().optional(),
     isActive: z.boolean().optional(),
     qrCodeUrl: z.string().url().nullable().optional(),
-  }),
+  })
+  .refine(
+    (data) => {
+      if (data.itemType === 'course') return !data.performanceId;
+      if (data.itemType === 'performance') return !data.courseId;
+      return true; // if itemType not provided (partial update), we allow it
+    },
+    {
+      message: 'Cannot provide both courseId and performanceId',
+    }
+  ),
 });

@@ -26,7 +26,15 @@ app.get('/', (req, res) => {
 })
 // Handle undefined routes
 app.all('/{*splat}', (req, res, next) => {
-  const AppError = require('./utils/AppError');
+  class AppError extends Error {
+    constructor(message, statusCode) {
+      super(message);
+      this.statusCode = statusCode;
+      this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+      this.isOperational = true;
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 

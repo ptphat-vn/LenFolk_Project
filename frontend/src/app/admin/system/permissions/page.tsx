@@ -291,7 +291,7 @@ export default function AdminPermissionsPage() {
               {editTarget ? 'Chỉnh sửa quyền hạn' : 'Tạo quyền hạn mới'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="space-y-4 mt-2">
+          <form onSubmit={handleSave} noValidate className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label>Tài nguyên (Resource) *</Label>
               <Input value={form.resource} onChange={(e) => setForm({ ...form, resource: e.target.value })} placeholder="vd: course, lesson, user..." />

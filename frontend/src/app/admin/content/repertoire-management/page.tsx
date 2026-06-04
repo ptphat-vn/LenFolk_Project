@@ -7,30 +7,12 @@ import {
   PerformanceStatus,
   CreatePerformanceInput,
 } from '@/types/performance.types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
 import { toast } from 'sonner';
 import {
   Music,
   Clock,
-  Layers,
   Pencil,
   Plus,
   Star,
@@ -38,6 +20,7 @@ import {
   PlayCircle,
   Loader2,
   Eye,
+  CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { FilterInput } from '@/common/filter/FilterInput';
@@ -47,16 +30,16 @@ import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PerformanceFormModal } from '@/components/admin/content/repertoire/PerformanceFormModal';
+import { ApprovePerformanceDialog } from '@/components/admin/content/repertoire/ApprovePerformanceDialog';
+import Image from 'next/image';
 
 const STATUS_LABELS: Record<PerformanceStatus, string> = {
-  draft: 'Nháp',
   pending: 'Chờ duyệt',
   published: 'Xuất bản',
   archived: 'Lưu trữ',
 };
 
 const STATUS_COLORS: Record<PerformanceStatus, string> = {
-  draft: 'bg-gray-100 text-gray-600',
   pending: 'bg-amber-100 text-amber-700',
   published: 'bg-emerald-100 text-emerald-700',
   archived: 'bg-red-100 text-red-600',
@@ -69,6 +52,8 @@ export default function RepertoireManagementPage() {
   const [statusFilter, setStatusFilter] = useState<PerformanceStatus | 'all'>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Performance | null>(null);
+  const [approveTarget, setApproveTarget] = useState<Performance | null>(null);
+  const [approveOpen, setApproveOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -113,6 +98,11 @@ export default function RepertoireManagementPage() {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   useEffect(() => setPage(1), [debouncedSearch, statusFilter]);
+
+  const handleApprove = (perf: Performance) => {
+    setApproveTarget(perf);
+    setApproveOpen(true);
+  };
 
   const handleEdit = (perf: Performance) => {
     setEditTarget(perf);
@@ -163,7 +153,7 @@ export default function RepertoireManagementPage() {
       render: (perf) => (
         <div className="flex items-center gap-3">
           {perf.thumbnail ? (
-            <img src={perf.thumbnail} alt={perf.title} className="w-12 h-8 object-cover rounded shadow-sm" />
+            <Image src={perf.thumbnail} alt={perf.title} className="w-12 h-8 object-cover rounded shadow-sm" />
           ) : (
             <div className="w-12 h-8 bg-gray-100 flex items-center justify-center rounded">
               <PlayCircle className="w-4 h-4 text-gray-400" />
@@ -212,6 +202,26 @@ export default function RepertoireManagementPage() {
       ),
     },
     {
+      header: 'Giá',
+      className: 'text-center',
+      render: (perf) => {
+        if (perf.isFree) return <span className="text-blue-600 text-[11px] font-medium">Miễn phí</span>;
+        const sub = perf.subscription;
+        if (!sub) return <span className="text-gray-400 text-[11px]">Chưa có</span>;
+        const CYCLE_LABELS: Record<string, string> = { monthly: '/tháng', quarterly: '/quý', yearly: '/năm' };
+        const formatted = new Intl.NumberFormat('vi-VN').format(sub.price);
+        return (
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="font-semibold text-gray-800 text-[12px]">{formatted}đ</span>
+            <span className="text-gray-400 text-[10px]">{CYCLE_LABELS[sub.billingCycle] ?? sub.billingCycle}</span>
+            {!sub.isActive && (
+              <span className="text-amber-600 text-[10px]">chờ duyệt</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       header: 'Thời lượng',
       className: 'text-center',
       render: (perf) => <span className="text-gray-600">{perf.duration ? `${perf.duration}s` : '—'}</span>,
@@ -221,6 +231,16 @@ export default function RepertoireManagementPage() {
       className: 'text-right',
       render: (perf) => (
         <div className="flex items-center justify-end gap-1.5">
+          {perf.status === 'pending' && (
+            <button
+              onClick={() => handleApprove(perf)}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-semibold transition-colors cursor-pointer border border-amber-200"
+              title="Xem & Duyệt"
+            >
+              <CheckCircle className="w-3 h-3" />
+              Duyệt
+            </button>
+          )}
           <Link
             href={`/admin/content/repertoire-management/${perf._id}`}
             className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
@@ -352,7 +372,6 @@ export default function RepertoireManagementPage() {
           options={[
             { value: 'published', label: 'Xuất bản' },
             { value: 'pending', label: 'Chờ duyệt' },
-            { value: 'draft', label: 'Bản nháp' },
             { value: 'archived', label: 'Lưu trữ' },
           ]}
           placeholder="Tất cả trạng thái"
@@ -394,6 +413,14 @@ export default function RepertoireManagementPage() {
         performance={editTarget}
         isSaving={isSaving}
         onSave={handleSave}
+      />
+
+      {/* Approve Dialog */}
+      <ApprovePerformanceDialog
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        performance={approveTarget}
+        onDone={fetchPerformances}
       />
     </div>
   );

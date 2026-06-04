@@ -47,6 +47,7 @@ import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { courseSchema, zodFieldErrors } from '@/schema/form.schema';
 
 const LEVEL_LABELS: Record<CourseLevel, string> = {
   beginner: 'Cơ bản',
@@ -66,6 +67,16 @@ const LEVEL_COLORS: Record<CourseLevel, string> = {
   intermediate: 'bg-blue-100 text-blue-700',
   advanced: 'bg-purple-100 text-purple-700',
 };
+
+type CourseFormField =
+  | 'title'
+  | 'description'
+  | 'thumbnail'
+  | 'level'
+  | 'status'
+  | 'courseType'
+  | 'price';
+type CourseFormErrors = Partial<Record<CourseFormField, string>>;
 
 const STATUS_COLORS: Record<CourseStatus, string> = {
   draft: 'bg-gray-100 text-gray-600',
@@ -466,6 +477,7 @@ function CourseFormDialog({
     isFeatured: false,
   });
   const [tagsInput, setTagsInput] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<CourseFormErrors>({});
 
   useEffect(() => {
     if (course) {
@@ -482,6 +494,7 @@ function CourseFormDialog({
         isFeatured: course.isFeatured ?? false,
       });
       setTagsInput((course.tags ?? []).join(', '));
+      setFieldErrors({});
     } else {
       setForm({
         title: '',
@@ -496,25 +509,44 @@ function CourseFormDialog({
         isFeatured: false,
       });
       setTagsInput('');
+      setFieldErrors({});
     }
   }, [course, open]);
 
   const set = <K extends keyof CreateCourseInput>(
     k: K,
     v: CreateCourseInput[K],
-  ) => setForm((prev) => ({ ...prev, [k]: v }));
+  ) => {
+    setForm((prev) => ({ ...prev, [k]: v }));
+    if (k in fieldErrors) {
+      setFieldErrors((prev) => ({ ...prev, [k]: undefined }));
+    }
+  };
+
+  const renderFieldError = (field: CourseFormField) =>
+    fieldErrors[field] ? (
+      <p className="text-[11px] font-medium text-red-500">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     if (!form.title.trim()) {
-      toast.error('Vui lòng nhập tên khóa học');
+      setFieldErrors({ title: 'Vui lòng nhập tên khóa học' });
       return;
     }
     const tags = tagsInput
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
-    onSave({ ...form, tags });
+    const parsed = courseSchema.safeParse({ ...form, tags });
+    if (!parsed.success) {
+      setFieldErrors(zodFieldErrors<CourseFormField>(parsed.error));
+      return;
+    }
+    onSave(parsed.data);
   };
 
   return (
@@ -526,7 +558,7 @@ function CourseFormDialog({
             {course ? 'Chỉnh sửa khóa học' : 'Thêm khóa học mới'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label>Tên khóa học *</Label>
@@ -535,6 +567,7 @@ function CourseFormDialog({
                 onChange={(e) => set('title', e.target.value)}
                 placeholder="Nhập tên khóa học"
               />
+              {renderFieldError('title')}
             </div>
             <div className="space-y-1.5">
               <Label>Cấp độ</Label>
@@ -607,6 +640,7 @@ function CourseFormDialog({
                   }
                   placeholder="0"
                 />
+                {renderFieldError('price')}
               </div>
             )}
             <div className="col-span-2 space-y-1.5">
@@ -625,6 +659,7 @@ function CourseFormDialog({
                 onChange={(e) => set('thumbnail', e.target.value)}
                 placeholder="https://..."
               />
+              {renderFieldError('thumbnail')}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Tags (cách nhau bởi dấu phẩy)</Label>

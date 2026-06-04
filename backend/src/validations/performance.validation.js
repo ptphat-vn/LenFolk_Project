@@ -13,10 +13,15 @@ exports.createPerformanceSchema = z.object({
     isFree: z.boolean().optional(),
     genre: z.string().optional(),
     duration: z.number().min(0).optional(),
-    status: z.enum(['draft', 'published', 'archived']).optional(),
+    // draft đã bị loại bỏ — instructor tạo mới luôn là pending
+    status: z.enum(['pending', 'published', 'archived']).optional(),
+    adminCommissionPercentage: z.number().min(0).max(100).optional(),
     tags: z.array(z.string()).optional(),
     isFeatured: z.boolean().optional(),
     publishedAt: z.string().datetime().optional(),
+    // Giá và chu kỳ — instructor nhập để BE tự tạo Subscription
+    price: z.number().min(0).optional(),
+    billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
   }),
 });
 
@@ -29,9 +34,25 @@ exports.updatePerformanceSchema = z.object({
     isFree: z.boolean().optional(),
     genre: z.string().optional(),
     duration: z.number().min(0).optional(),
-    status: z.enum(['draft', 'published', 'archived']).optional(),
+    // draft đã bị loại bỏ
+    status: z.enum(['pending', 'published', 'archived']).optional(),
+    adminCommissionPercentage: z.number().min(0).max(100).optional(),
     tags: z.array(z.string()).optional(),
     isFeatured: z.boolean().optional(),
     publishedAt: z.string().datetime().optional(),
+    price: z.number().min(0).optional(),
+    billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  }),
+});
+
+exports.approvePerformanceSchema = z.object({
+  body: z.object({
+    adminCommissionPercentage: z.number().min(0).max(100).optional(),
+  }),
+});
+
+exports.rejectPerformanceSchema = z.object({
+  body: z.object({
+    rejectReason: z.string().optional(),
   }),
 });

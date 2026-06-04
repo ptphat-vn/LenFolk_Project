@@ -9,7 +9,7 @@ export const lessonApi = {
     return res.data;
   },
 
-  /** POST /lessons — Tạo bài học mới (Instructor hoặc Admin) */
+  /** POST /lessons — Tạo bài học mới (Admin only) */
   create: async (body: CreateLessonInput) => {
     const res = await axiosInstance.post<APIResponse<Lesson>>('/lessons', body);
     return res.data;
@@ -21,7 +21,7 @@ export const lessonApi = {
     return res.data;
   },
 
-  /** PATCH /lessons/:id — Cập nhật bài học (Instructor hoặc Admin) */
+  /** PATCH /lessons/:id — Cập nhật bài học (Admin only) */
   update: async (id: string, body: Partial<CreateLessonInput>) => {
     const res = await axiosInstance.patch<APIResponse<Lesson>>(`/lessons/${id}`, body);
     return res.data;

@@ -335,7 +335,7 @@ export default function AdminBadgesPage() {
           <DialogHeader>
             <DialogTitle>{editTarget ? 'Chỉnh sửa huy hiệu' : 'Thêm huy hiệu mới'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSave} className="space-y-4 mt-2">
+          <form onSubmit={handleSave} noValidate className="space-y-4 mt-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <Label>Tên huy hiệu *</Label>
