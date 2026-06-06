@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import { AnimatedBlock } from "@/components/AnimatedPage";
 
 export default function OtpScreen() {
   const router = useRouter();
@@ -43,14 +44,14 @@ export default function OtpScreen() {
       <StatusBar style="dark" />
 
       {/* Header and top instructions */}
-      <View>
+      <AnimatedBlock variant="panel">
         {/* Header */}
-        <View className="flex-row items-center mb-8">
+        <AnimatedBlock variant="header" className="flex-row items-center mb-8">
           <TouchableOpacity
             className="p-2 rounded-full bg-gray-50 mr-4"
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#10120C" />
+            <Ionicons name="arrow-back" size={24} color="#10120C" className="animate-arrow-left" />
           </TouchableOpacity>
           <Text
             className="text-2xl font-bold text-charcoal"
@@ -58,18 +59,20 @@ export default function OtpScreen() {
           >
             Quên mật khẩu
           </Text>
-        </View>
+        </AnimatedBlock>
 
         {/* Subtitle masked contact */}
-        <Text
-          className="text-sm font-semibold text-charcoal/80 text-center mb-10 px-4 leading-6"
-          style={{ fontFamily: "BeVietnamPro-Medium" }}
-        >
-          Mã đã được gửi đến ( +84 ) ***-***-*999
-        </Text>
+        <AnimatedBlock variant="chip" delay={80}>
+          <Text
+            className="text-sm font-semibold text-charcoal/80 text-center mb-10 px-4 leading-6"
+            style={{ fontFamily: "BeVietnamPro-Medium" }}
+          >
+            Mã đã được gửi đến ( +84 ) ***-***-*999
+          </Text>
+        </AnimatedBlock>
 
         {/* OTP Input Slots Container */}
-        <View className="flex-row justify-center gap-4 mb-6">
+        <AnimatedBlock variant="card" delay={140} className="flex-row justify-center gap-4 mb-6">
           {[0, 1, 2, 3].map((index) => {
             const isCurrent = index === otp.length;
             return (
@@ -87,7 +90,7 @@ export default function OtpScreen() {
               </View>
             );
           })}
-        </View>
+        </AnimatedBlock>
 
         {/* Resend Code Countdown */}
         <TouchableOpacity disabled={timer > 0} className="self-center mb-6">
@@ -96,10 +99,10 @@ export default function OtpScreen() {
             <Text className="text-[#0066FF] font-bold">{timer > 0 ? `${timer}s` : "gửi ngay"}</Text>
           </Text>
         </TouchableOpacity>
-      </View>
+      </AnimatedBlock>
 
       {/* Custom On-screen Numpad */}
-      <View className="mb-4">
+      <AnimatedBlock variant="card" delay={210} className="mb-4">
         {/* Row 1 */}
         <View className="flex-row justify-around py-3">
           {["1", "2", "3"].map((val) => (
@@ -187,10 +190,10 @@ export default function OtpScreen() {
             <Ionicons name="backspace-outline" size={26} color="#10120C" />
           </TouchableOpacity>
         </View>
-      </View>
+      </AnimatedBlock>
 
       {/* Submit button "Xác Minh" with white round right arrow */}
-      <View className="w-full">
+      <AnimatedBlock variant="button" delay={280} className="w-full">
         <TouchableOpacity
           activeOpacity={0.9}
           className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
@@ -203,10 +206,10 @@ export default function OtpScreen() {
             Xác Minh
           </Text>
           <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
           </View>
         </TouchableOpacity>
-      </View>
+      </AnimatedBlock>
     </View>
   );
 }
