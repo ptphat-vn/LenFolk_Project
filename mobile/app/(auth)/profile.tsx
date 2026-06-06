@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useAuthStore } from "../../store/authStore";
+import { AnimatedBlock } from "@/components/AnimatedPage";
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
@@ -62,14 +63,14 @@ export default function CompleteProfileScreen() {
         <StatusBar style="dark" />
 
         {/* Top Header Section */}
-        <View>
+        <AnimatedBlock variant="panel">
           {/* Header */}
-          <View className="flex-row items-center mb-8 mt-4">
+          <AnimatedBlock variant="header" className="flex-row items-center mb-8 mt-4">
             <TouchableOpacity
               className="p-2 rounded-full bg-gray-50 mr-4"
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={24} color="#10120C" />
+              <Ionicons name="arrow-back" size={24} color="#10120C" className="animate-arrow-left" />
             </TouchableOpacity>
             <Text
               className="text-2xl font-bold text-charcoal"
@@ -77,10 +78,10 @@ export default function CompleteProfileScreen() {
             >
               Hoàn thiện hồ sơ của bạn
             </Text>
-          </View>
+          </AnimatedBlock>
 
           {/* Avatar Area with Edit Badge */}
-          <View className="items-center mb-10 mt-2">
+          <AnimatedBlock variant="hero" delay={80} className="items-center mb-10 mt-2">
             <View className="relative">
               <Image
                 source={require("../../assets/images/Profile.png")}
@@ -96,10 +97,10 @@ export default function CompleteProfileScreen() {
                 <Feather name="edit-2" size={15} color="white" />
               </TouchableOpacity>
             </View>
-          </View>
+          </AnimatedBlock>
 
           {/* Input Cards Stack with Shadows */}
-          <View className="gap-5 px-1">
+          <AnimatedBlock variant="card" delay={150} className="gap-5 px-1">
             {/* Full Name */}
             <View className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100">
               <TextInput
@@ -165,11 +166,11 @@ export default function CompleteProfileScreen() {
               </View>
               <Ionicons name="chevron-down" size={18} color="#6B7280" />
             </TouchableOpacity>
-          </View>
-        </View>
+          </AnimatedBlock>
+        </AnimatedBlock>
 
         {/* Submit button "Đăng nhập" with white round right arrow */}
-        <View className="w-full mb-4">
+        <AnimatedBlock variant="button" delay={240} className="w-full mb-4">
           <TouchableOpacity
             activeOpacity={0.9}
             className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
@@ -182,10 +183,10 @@ export default function CompleteProfileScreen() {
               Đăng nhập
             </Text>
             <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
             </View>
           </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
       </ScrollView>
 
       {/* --- SUCCESS CONGRATS MODAL OVERLAY --- */}
@@ -195,7 +196,7 @@ export default function CompleteProfileScreen() {
         animationType="fade"
       >
         <View className="flex-1 bg-black/55 justify-center items-center px-8">
-          <View className="bg-white rounded-[40px] px-8 py-10 w-full items-center shadow-2xl">
+          <AnimatedBlock variant="hero" className="bg-white rounded-[40px] px-8 py-10 w-full items-center shadow-2xl">
             {/* Mascot successfully done logo */}
             <Image
               source={require("../../assets/images/Profile.png")}
@@ -224,7 +225,7 @@ export default function CompleteProfileScreen() {
                 className="mt-2"
               />
             )}
-          </View>
+          </AnimatedBlock>
         </View>
       </Modal>
     </KeyboardAvoidingView>

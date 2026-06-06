@@ -1,9 +1,64 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Dimensions, Image } from "react-native";
+import { ActivityIndicator, Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { useLogin } from "@/hooks/auth/use-login";
+import { AnimatedBlock } from "@/components/AnimatedPage";
+
+type BouncingNoteProps = {
+  delay: number;
+  icon: "musical-note" | "musical-notes";
+  size: number;
+  color: string;
+  style: object;
+};
+
+function BouncingNote({ delay, icon, size, color, style }: BouncingNoteProps) {
+  const progress = useSharedValue(0);
+
+  React.useEffect(() => {
+    progress.value = withDelay(
+      delay,
+      withRepeat(
+        withTiming(1, {
+          duration: 1500,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        -1,
+        true,
+      ),
+    );
+
+    return () => cancelAnimation(progress);
+  }, [delay, progress]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [4, -10]) },
+      { rotate: `${interpolate(progress.value, [0, 1], [-6, 8])}deg` },
+    ],
+  }));
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[{ position: "absolute" }, style, animatedStyle]}
+    >
+      <Ionicons name={icon} size={size} color={color} />
+    </Animated.View>
+  );
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -46,24 +101,70 @@ export default function LoginScreen() {
         <StatusBar style="dark" />
 
         {/* Back Button */}
-        <TouchableOpacity
-          className="absolute top-14 left-6 z-10 w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={22} color="#10120C" />
-        </TouchableOpacity>
+        <AnimatedBlock variant="header" className="absolute top-14 left-6 z-10">
+          <TouchableOpacity
+            className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" className="animate-arrow-left" />
+          </TouchableOpacity>
+        </AnimatedBlock>
 
         {/* Large Avatar/Logo Placeholder at Top */}
-        <View className="items-center mt-24 mb-6">
+        <AnimatedBlock variant="hero" delay={80} className="items-center mt-24 mb-6 relative">
+          <BouncingNote
+            delay={0}
+            icon="musical-note"
+            size={24}
+            color="#8E9E6E"
+            style={{ left: "21%", top: 8 }}
+          />
+          <BouncingNote
+            delay={220}
+            icon="musical-notes"
+            size={20}
+            color="#F0C96A"
+            style={{ right: "20%", top: 30 }}
+          />
+          <BouncingNote
+            delay={420}
+            icon="musical-note"
+            size={17}
+            color="#8E9E6E"
+            style={{ right: "27%", bottom: 6 }}
+          />
+          <BouncingNote
+            delay={140}
+            icon="musical-notes"
+            size={16}
+            color="#F0C96A"
+            style={{ left: "29%", bottom: 4 }}
+          />
+          <BouncingNote
+            delay={560}
+            icon="musical-note"
+            size={19}
+            color="#8E9E6E"
+            style={{ left: "14%", top: 52 }}
+          />
+          <BouncingNote
+            delay={720}
+            icon="musical-notes"
+            size={15}
+            color="#F0C96A"
+            style={{ right: "13%", top: 2 }}
+          />
           <Image
             source={require("../../assets/images/mascot_thoisao.png")}
             style={{ width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: "white" }}
             className="shadow-md"
           />
-        </View>
+        </AnimatedBlock>
 
         {/* Cream Card Container Rising from Bottom */}
-        <View
+        <AnimatedBlock
+          variant="panel"
+          delay={140}
           className="bg-accent rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl flex-1 justify-between"
           style={{ minHeight: 500 }}
         >
@@ -188,7 +289,7 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </AnimatedBlock>
       </ScrollView>
     </KeyboardAvoidingView>
   );

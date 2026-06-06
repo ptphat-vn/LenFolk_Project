@@ -3,10 +3,12 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
 
 export default function GameScreen() {
+  const scrollRef = useScrollToTopOnFocus();
   const [activeGameIndex, setActiveGameIndex] = React.useState(0);
   const user = useAuthStore((state) => state.user);
   const displayName = user?.name?.trim() || "Bạn";
@@ -56,18 +58,24 @@ export default function GameScreen() {
 
       {/* Main Scroll Container */}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* --- HEADER --- */}
-        <AnimatedBlock className="px-6 pt-2 pb-4 flex-row justify-between items-center bg-[#FDF8EA]">
+        <AnimatedBlock variant="header" className="px-6 pt-2 pb-4 flex-row justify-between items-center bg-[#FDF8EA]">
           {/* Back Button */}
           <TouchableOpacity
             activeOpacity={0.8}
             className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
           >
-            <Ionicons name="arrow-back" size={22} color="#10120C" />
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#10120C"
+              className="animate-arrow-left"
+            />
           </TouchableOpacity>
 
           {/* Title */}
@@ -89,6 +97,7 @@ export default function GameScreen() {
 
         {/* --- DAILY CHALLENGE GREEN BANNER CARD --- */}
         <AnimatedBlock
+          variant="hero"
           delay={90}
           className="mx-6 bg-[#8E9E6E] p-5 rounded-[32px] mb-6 shadow-sm border border-[#8E9E6E]/20 relative"
           style={{ minHeight: 140 }}
@@ -99,13 +108,13 @@ export default function GameScreen() {
             className="shadow-sm"
           >
             <Text className="text-[#8E9E6E] text-xs font-black">X3</Text>
-            <Text className="text-[#8E9E6E] text-[8px] font-black mt-0.5">XP</Text>
+            <Text className="text-[#8E9E6E] text-[12px] font-black mt-0.5">XP</Text>
           </View>
 
           {/* Left Contents */}
           <View className="pr-16">
             <View className="flex-row items-center mb-1">
-              <Text className="text-white text-[15px] font-extrabold" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+              <Text className="text-white text-[16px] font-extrabold" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                 ⚡ THÁCH THỨC NGÀY
               </Text>
             </View>
@@ -118,7 +127,7 @@ export default function GameScreen() {
             <View className="w-full bg-white/20 h-2 rounded-full mb-1">
               <View className="h-full bg-white rounded-full" style={{ width: "33%" }} />
             </View>
-            <Text className="text-[9px] text-white/90 font-bold">1/3 hoàn thành</Text>
+            <Text className="text-[13px] text-white/90 font-bold">1/3 hoàn thành</Text>
           </View>
 
           {/* Pause Button - absolute bottom right */}
@@ -132,7 +141,7 @@ export default function GameScreen() {
         </AnimatedBlock>
 
         {/* --- CAROUSEL SELECT GAMES SECTION --- */}
-        <AnimatedBlock delay={150} className="mb-8">
+        <AnimatedBlock variant="panel" delay={150} className="mb-8">
           <Text
             className="text-base font-bold text-charcoal mb-4 mx-6"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -152,6 +161,7 @@ export default function GameScreen() {
           >
             {games.map((game, idx) => (
               <AnimatedBlock
+                variant="card"
                 key={idx}
                 delay={200 + idx * 55}
                 className="w-64 rounded-[32px] overflow-hidden shadow-sm border border-gray-150 flex-col my-2"
@@ -174,13 +184,13 @@ export default function GameScreen() {
                     {/* Badge + XP row */}
                     <View className="flex-row items-center mt-1 flex-wrap gap-1">
                       <View className="bg-white/20 px-1.5 py-0.5 rounded">
-                        <Text className="text-[8px] text-white font-extrabold">{game.badge}</Text>
+                        <Text className="text-[12px] text-white font-extrabold">{game.badge}</Text>
                       </View>
-                      <Text className="text-[8px] text-white/90 font-bold ml-1">{game.xp}</Text>
+                      <Text className="text-[12px] text-white/90 font-bold ml-1">{game.xp}</Text>
                     </View>
                     
                     {/* Player count */}
-                    <Text className="text-[8px] text-white/75 font-semibold mt-1">
+                    <Text className="text-[12px] text-white/75 font-semibold mt-1">
                       {game.players}
                     </Text>
                   </View>
@@ -189,7 +199,7 @@ export default function GameScreen() {
                 {/* Cream Body Part */}
                 <View className="bg-[#FFF9E6] p-4 flex-1 justify-between rounded-b-[32px]">
                   {/* Description */}
-                  <Text className="text-charcoal/70 text-[11px] leading-5 font-semibold mb-4 text-left">
+                  <Text className="text-charcoal/70 text-[13px] leading-5 font-semibold mb-4 text-left">
                     {game.desc}
                   </Text>
 
@@ -221,7 +231,7 @@ export default function GameScreen() {
           </View>
         </AnimatedBlock>
 
-        <AnimatedBlock delay={260} className="mx-6 mb-4 flex-row justify-between items-center">
+        <AnimatedBlock variant="chip" delay={260} className="mx-6 mb-4 flex-row justify-between items-center">
           <Text
             className="text-base font-bold text-charcoal"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -231,6 +241,7 @@ export default function GameScreen() {
         </AnimatedBlock>
 
         <AnimatedBlock
+          variant="card"
           delay={320}
           className="bg-[#FFF9E6] rounded-[32px] p-5 mx-6 shadow-sm border border-[#F4E0AC]/20"
         >
@@ -247,12 +258,12 @@ export default function GameScreen() {
               >
                 {displayName}
               </Text>
-              <Text className="text-white/75 text-[10px] font-semibold mt-1">
+              <Text className="text-white/75 text-[12px] font-semibold mt-1">
                 {user?.email || "Chưa có email"}
               </Text>
             </View>
             <View className="bg-white/20 px-3 py-1 rounded-full">
-              <Text className="text-white text-[10px] font-extrabold">
+              <Text className="text-white text-[12px] font-extrabold">
                 {user?.isVerified ? "Verified" : "Pending"}
               </Text>
             </View>

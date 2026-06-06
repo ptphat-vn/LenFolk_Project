@@ -4,7 +4,13 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import SafeScreen from "../../components/SafeScreen";
 
 const allLessons = [
@@ -90,10 +96,27 @@ const allLessons = [
 
 export default function CoursesScreen() {
   const router = useRouter();
+  const scrollRef = useScrollToTopOnFocus();
   const [activeFilter, setActiveFilter] = useState("Tất cả");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterWidth, setFilterWidth] = useState(0);
+  const filterIndicatorX = useSharedValue(0);
 
   const categories = ["Tất cả", "Cơ bản", "Trung cấp", "Nâng cao"];
+  const activeFilterIndex = categories.indexOf(activeFilter);
+
+  React.useEffect(() => {
+    filterIndicatorX.value = withSpring(activeFilterIndex * filterWidth, {
+      damping: 22,
+      stiffness: 220,
+      mass: 0.7,
+      overshootClamping: false,
+    });
+  }, [activeFilterIndex, filterIndicatorX, filterWidth]);
+
+  const filterIndicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: filterIndicatorX.value }],
+  }));
 
   // Filter lessons based on category pill and search query
   const filteredLessons = allLessons.filter((lesson) => {
@@ -108,12 +131,13 @@ export default function CoursesScreen() {
       <StatusBar style="dark" />
 
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         {/* --- TOP CONTAINER (CREAM HEADER) --- */}
-        <AnimatedBlock className="bg-[#FDF8EA] pt-2 pb-5 px-6">
+        <AnimatedBlock variant="header" className="bg-[#FDF8EA] pt-2 pb-5 px-6">
           {/* Header Navigation Row */}
           <View className="flex-row justify-between items-center mb-6">
             {/* Back Button */}
@@ -122,7 +146,12 @@ export default function CoursesScreen() {
               className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={22} color="#10120C" />
+              <Ionicons
+                name="arrow-back"
+                size={22}
+                color="#10120C"
+                className="animate-arrow-left"
+              />
             </TouchableOpacity>
 
             {/* Center Screen Title */}
@@ -160,43 +189,38 @@ export default function CoursesScreen() {
         </AnimatedBlock>
 
         {/* --- CATEGORY SELECTOR TABS ROW --- */}
-        <AnimatedBlock delay={90} className="flex-row justify-between mx-6 z-10 -mb-[1px]">
+        <AnimatedBlock
+          variant="chip"
+          delay={90}
+          className="flex-row justify-between mx-6 z-10 -mb-[1px] relative"
+          style={{ overflow: "hidden" }}
+        >
+          <View
+            pointerEvents="none"
+            className="absolute inset-0"
+            onLayout={(event) => {
+              setFilterWidth(event.nativeEvent.layout.width / categories.length);
+            }}
+          />
+          {filterWidth > 0 && (
+            <Animated.View
+              pointerEvents="none"
+              className="absolute left-0 top-0 bottom-0 bg-[#8E9E6E] rounded-t-2xl"
+              style={[{ width: filterWidth }, filterIndicatorStyle]}
+            />
+          )}
           {categories.map((cat) => {
             const isSelected = activeFilter === cat;
-            
-            // Apply customized rounded corners to active tab to match the green box's shoulder shape
-            let tabStyle: any = {};
-            if (isSelected) {
-              if (cat === "Tất cả") {
-                tabStyle = {
-                  borderTopLeftRadius: 16,
-                  borderTopRightRadius: 16,
-                };
-              } else if (cat === "Nâng cao") {
-                tabStyle = {
-                  borderTopLeftRadius: 16,
-                  borderTopRightRadius: 16,
-                };
-              } else {
-                tabStyle = {
-                  borderTopLeftRadius: 16,
-                  borderTopRightRadius: 16,
-                };
-              }
-            }
 
             return (
               <TouchableOpacity
                 key={cat}
                 activeOpacity={0.85}
                 onPress={() => setActiveFilter(cat)}
-                className={`py-3.5 items-center justify-center flex-1 ${
-                  isSelected ? "bg-[#8E9E6E]" : ""
-                }`}
-                style={isSelected ? [tabStyle, { borderBottomWidth: 0 }] : {}}
+                className="py-3.5 items-center justify-center flex-1 z-10"
               >
                 <Text
-                  className={`text-[15px] font-bold ${
+                  className={`text-[16px] font-bold ${
                     isSelected ? "text-[#10120C]" : "text-charcoal"
                   }`}
                   style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -209,9 +233,8 @@ export default function CoursesScreen() {
         </AnimatedBlock>
 
         {/* --- SAGE GREEN CONTAINER FOR LESSONS LIST --- */}
-        <AnimatedBlock
-          delay={150}
-          className="mx-6 bg-[#8E9E6E] pt-8 pb-4 px-5 shadow-sm"
+        <View
+          className="mx-6 shadow-sm overflow-hidden"
           style={{
             borderBottomLeftRadius: 20,
             borderBottomRightRadius: 20,
@@ -219,77 +242,82 @@ export default function CoursesScreen() {
             borderTopRightRadius: activeFilter === "Nâng cao" ? 0 : 20,
           }}
         >
-          {filteredLessons.length > 0 ? (
-            filteredLessons.map((lesson, idx) => (
-              <AnimatedBlock key={lesson.id} delay={200 + idx * 45}>
-              <TouchableOpacity
-                activeOpacity={0.9}
-                className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
-              >
-                {/* Left Column: Icon Status badge + Title & Category */}
-                <View className="flex-row items-center flex-1 pr-4 px-2">
-                  {/* Status Badge */}
-                  <View className="mr-4">
-                    {lesson.status === "completed" && (
-                      <View className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border-2 border-[#8E9E6E]">
-                        <Ionicons name="checkmark" size={20} color="#8E9E6E" />
-                      </View>
-                    )}
-                    {lesson.status === "in_progress" && (
-                      <View className="w-10 h-10 rounded-full bg-[#8E9E6E] justify-center items-center shadow-sm">
-                        <Ionicons name="pause" size={18} color="white" />
-                      </View>
-                    )}
-                    {lesson.status === "not_started" && (
-                      <View className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border-2 border-white">
-                        <Ionicons name="play" size={18} color="#8E9E6E" style={{ marginLeft: 3 }} />
-                      </View>
-                    )}
+          <AnimatedBlock
+            variant="listContainer"
+            delay={420}
+            className="bg-[#8E9E6E] pt-8 pb-4 px-5"
+          >
+            {filteredLessons.length > 0 ? (
+              filteredLessons.map((lesson) => (
+                <TouchableOpacity
+                  key={lesson.id}
+                  activeOpacity={0.9}
+                  className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
+                >
+                  {/* Left Column: Icon Status badge + Title & Category */}
+                  <View className="flex-row items-center flex-1 pr-4 px-2">
+                    {/* Status Badge */}
+                    <View className="mr-4">
+                      {lesson.status === "completed" && (
+                        <View className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border-2 border-[#8E9E6E]">
+                          <Ionicons name="checkmark" size={20} color="#8E9E6E" />
+                        </View>
+                      )}
+                      {lesson.status === "in_progress" && (
+                        <View className="w-10 h-10 rounded-full bg-[#8E9E6E] justify-center items-center shadow-sm">
+                          <Ionicons name="pause" size={18} color="white" />
+                        </View>
+                      )}
+                      {lesson.status === "not_started" && (
+                        <View className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border-2 border-white">
+                          <Ionicons name="play" size={18} color="#8E9E6E" style={{ marginLeft: 3 }} />
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Titles */}
+                    <View className="flex-1">
+                      <Text className="text-xs text-charcoal/70 font-semibold mb-0.5">
+                        {lesson.category}
+                      </Text>
+                      <Text
+                        className="text-[16px] font-bold text-charcoal leading-5"
+                        style={{ fontFamily: "BeVietnamPro-Medium" }}
+                      >
+                        {lesson.title}
+                      </Text>
+
+                      {/* Progress bar under title for in_progress status */}
+                      {lesson.status === "in_progress" && (
+                        <View className="w-full max-w-[180px] h-1.5 bg-white rounded-full mt-2.5 overflow-hidden">
+                          <View
+                            className="h-full bg-primary"
+                            style={{ width: `${(lesson.progress || 0.6) * 100}%`, backgroundColor: Colors.light.primary }}
+                          />
+                        </View>
+                      )}
+                    </View>
                   </View>
 
-                  {/* Titles */}
-                  <View className="flex-1">
-                    <Text className="text-xs text-charcoal/70 font-semibold mb-0.5">
-                      {lesson.category}
-                    </Text>
-                    <Text
-                      className="text-[15px] font-bold text-charcoal leading-5"
-                      style={{ fontFamily: "BeVietnamPro-Medium" }}
-                    >
-                      {lesson.title}
-                    </Text>
-
-                    {/* Progress bar under title for in_progress status */}
-                    {lesson.status === "in_progress" && (
-                      <View className="w-full max-w-[180px] h-1.5 bg-white rounded-full mt-2.5 overflow-hidden">
-                        <View
-                          className="h-full bg-primary"
-                          style={{ width: `${(lesson.progress || 0.6) * 100}%`, backgroundColor: Colors.light.primary }}
-                        />
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                {/* Right Column: Duration duration */}
-                <Text className="text-sm font-bold text-charcoal/90">
-                  {lesson.duration}
+                  {/* Right Column: Duration duration */}
+                  <Text className="text-sm font-bold text-charcoal/90">
+                    {lesson.duration}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View className="items-center justify-center py-20 bg-[#E2E8D3] rounded-3xl p-6">
+                <Feather name="search" size={32} color="#8E9E6E" className="mb-3" />
+                <Text className="text-base font-bold text-charcoal text-center mb-1">
+                  Không tìm thấy bài học nào
                 </Text>
-              </TouchableOpacity>
-              </AnimatedBlock>
-            ))
-          ) : (
-            <View className="items-center justify-center py-20 bg-[#E2E8D3] rounded-3xl p-6">
-              <Feather name="search" size={32} color="#8E9E6E" className="mb-3" />
-              <Text className="text-base font-bold text-charcoal text-center mb-1">
-                Không tìm thấy bài học nào
-              </Text>
-              <Text className="text-xs text-charcoal/60 text-center px-4 leading-4">
-                Hãy thử tìm kiếm với từ khóa khác hoặc điều chỉnh bộ lọc của bạn.
-              </Text>
-            </View>
-          )}
-        </AnimatedBlock>
+                <Text className="text-xs text-charcoal/60 text-center px-4 leading-4">
+                  Hãy thử tìm kiếm với từ khóa khác hoặc điều chỉnh bộ lọc của bạn.
+                </Text>
+              </View>
+            )}
+          </AnimatedBlock>
+        </View>
       </ScrollView>
     </SafeScreen>
   );

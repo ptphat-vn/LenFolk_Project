@@ -1,11 +1,42 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { View, TouchableOpacity, Dimensions, StyleSheet } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
+  const [itemWidth, setItemWidth] = React.useState(0);
+  const indicatorX = useSharedValue(0);
+
+  React.useEffect(() => {
+    if (itemWidth === 0) {
+      return;
+    }
+
+    indicatorX.value = withSpring(state.index * itemWidth, {
+      damping: 22,
+      stiffness: 220,
+      mass: 0.7,
+      overshootClamping: false,
+    });
+  }, [indicatorX, itemWidth, state.index]);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: indicatorX.value }],
+  }));
+
   return (
     <View
+      onLayout={(event) => {
+        setItemWidth(
+          (event.nativeEvent.layout.width - styles.tabContainer.paddingHorizontal * 2) /
+            state.routes.length,
+        );
+      }}
       style={[
         styles.tabContainer,
         {
@@ -15,6 +46,19 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         },
       ]}
     >
+      {itemWidth > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.activeIndicatorSlot,
+            { width: itemWidth },
+            indicatorStyle,
+          ]}
+        >
+          <View style={styles.activeIndicator} />
+        </Animated.View>
+      )}
+
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
@@ -64,39 +108,13 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             style={styles.tabButton}
             activeOpacity={0.8}
           >
-            {isFocused ? (
-              <View
-                key={`active-${route.key}`}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: "#F4E0AC",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 2,
-                  elevation: 1,
-                }}
-              >
-                <Ionicons name={iconName} size={22} color="#8E9E6E" />
-              </View>
-            ) : (
-              <View
-                key={`inactive-${route.key}`}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Ionicons name={iconName} size={22} color="#C2C5BA" />
-              </View>
-            )}
+            <View style={styles.iconSlot}>
+              <Ionicons
+                name={iconName}
+                size={22}
+                color={isFocused ? "#8E9E6E" : "#C2C5BA"}
+              />
+            </View>
           </TouchableOpacity>
         );
       })}
@@ -144,5 +162,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: "100%",
+    zIndex: 1,
+  },
+  iconSlot: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeIndicatorSlot: {
+    position: "absolute",
+    left: 8,
+    top: 10,
+    height: 48,
+    alignItems: "center",
+  },
+  activeIndicator: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#F4E0AC",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
 });

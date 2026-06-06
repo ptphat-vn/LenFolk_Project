@@ -1,12 +1,22 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import LottieView from "lottie-react-native";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
 
+const greetingPrompt = "Hôm nay bạn muốn học gì?";
+const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nhạc.";
+const typewriterMessages = [greetingPrompt, lenFolkMessage];
+
 export default function HomeScreen() {
+  const isFocused = useIsFocused();
+  const scrollRef = useScrollToTopOnFocus();
+  const [typedGreeting, setTypedGreeting] = React.useState("");
   const user = useAuthStore((state) => state.user);
   const displayName = user?.name?.trim() || "Bạn";
   const firstName = displayName.split(" ").filter(Boolean).pop() || displayName;
@@ -14,9 +24,52 @@ export default function HomeScreen() {
     ? { uri: user.avatar }
     : require("../../assets/images/Profile.png");
 
+  React.useEffect(() => {
+    if (!isFocused) {
+      setTypedGreeting("");
+      return;
+    }
+
+    let messageIndex = 0;
+    let characterIndex = 0;
+    let isDeleting = false;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    const updateTypewriter = () => {
+      const currentMessage = typewriterMessages[messageIndex];
+
+      if (isDeleting) {
+        characterIndex -= 1;
+      } else {
+        characterIndex += 1;
+      }
+
+      setTypedGreeting(currentMessage.slice(0, characterIndex));
+
+      if (!isDeleting && characterIndex === currentMessage.length) {
+        isDeleting = true;
+        timeout = setTimeout(updateTypewriter, 1200);
+        return;
+      }
+
+      if (isDeleting && characterIndex === 0) {
+        isDeleting = false;
+        messageIndex = (messageIndex + 1) % typewriterMessages.length;
+        timeout = setTimeout(updateTypewriter, 350);
+        return;
+      }
+
+      timeout = setTimeout(updateTypewriter, isDeleting ? 24 : 42);
+    };
+
+    timeout = setTimeout(updateTypewriter, 350);
+    return () => clearTimeout(timeout);
+  }, [isFocused]);
+
   return (
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <ScrollView
+        ref={scrollRef}
         className="flex-1 bg-[#FDF8EA]" // Cream/yellow soft base background matching headers
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ backgroundColor: "#FDF8EA" }}
@@ -24,30 +77,36 @@ export default function HomeScreen() {
         <StatusBar style="dark" />
 
         {/* --- TOP CONTAINER (SOFT CREAM HEADER CARD) --- */}
-        <AnimatedBlock className="bg-[#FDF8EA] px-6 pt-2 pb-8 shadow-sm">
+        <AnimatedBlock variant="header" className="bg-[#FDF8EA] px-6 pt-2 pb-8 shadow-sm">
         {/* Welcome row */}
-        <View className="flex-row justify-between items-center mb-6">
-          <View className="flex-row items-center">
+        <View className="flex-row justify-between items-start mb-6">
+          <View className="flex-row items-center flex-1 pr-3">
             <Image
               source={avatarSource}
               style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "white" }}
               className="mr-3 shadow"
             />
-            <View>
+            <View className="flex-1 min-w-0">
               <Text
                 className="text-primary text-base font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
                 Xin chào, {firstName}
               </Text>
-              <Text className="text-gray-500 text-xs mt-0.5">Hôm nay bạn muốn học gì?</Text>
+              <Text
+                className="text-gray-500 text-xs mt-0.5"
+                style={{ height: 38 }}
+              >
+                {typedGreeting}
+                {" |"}
+              </Text>
             </View>
           </View>
 
           {/* Bell Notifications */}
           <TouchableOpacity
             activeOpacity={0.8}
-            className="w-12 h-12 rounded-full bg-[#8E9E6E]/20 border border-[#8E9E6E]/10 justify-center items-center"
+            className="w-12 h-12 shrink-0 rounded-full bg-[#8E9E6E]/20 border border-[#8E9E6E]/10 justify-center items-center"
           >
             <Ionicons name="notifications" size={22} color="#8E9E6E" />
           </TouchableOpacity>
@@ -68,22 +127,27 @@ export default function HomeScreen() {
       </AnimatedBlock>
 
       {/* --- BODY SCRoll AREA (WHITE WRAPPER CONTAINER) --- */}
-      <AnimatedBlock delay={90} className="bg-white rounded-[30px] px-6 pt-8 pb-12 -mt-6 flex-1">
+      <AnimatedBlock variant="panel" delay={90} className="bg-white rounded-[30px] px-6 pt-8 pb-12 -mt-6 flex-1">
         {/* Streak & Goals Block Row */}
-        <AnimatedBlock delay={140} className="flex-row justify-between gap-4 mb-6">
+        <AnimatedBlock variant="card" delay={140} className="flex-row justify-between gap-4 mb-6">
           {/* Study streak points */}
           <View className="flex-1 bg-[#F3F4F6]/50 rounded-3xl p-4 flex-row items-center">
-            <View className="w-10 h-10 rounded-full bg-gray-200 justify-center items-center mr-3">
-              <Ionicons name="flame" size={20} color="#E05B35" />
+            <View className="w-10 h-10 justify-center items-center mr-3">
+              <LottieView
+                source={require("../../assets/images/flame.json")}
+                autoPlay
+                loop
+                style={{ width: 40, height: 40 }}
+              />
             </View>
             <View>
               <Text
-                className="text-charcoal text-base font-bold"
+                className="text-charcoal text-xs font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
                 {user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}
               </Text>
-              <Text className="text-[10px] text-gray-400 font-bold">Tài khoản</Text>
+              <Text className="text-[12px] text-gray-400 font-bold">Tài khoản</Text>
             </View>
           </View>
 
@@ -98,21 +162,21 @@ export default function HomeScreen() {
               </Text>
               <View className="flex-row items-center mt-1">
                 <Ionicons name="book-outline" size={12} color="#8E9E6E" />
-                <Text className="text-[10px] text-gray-500 font-bold ml-1">{user?.role || "learner"}</Text>
+                <Text className="text-[12px] text-gray-500 font-bold ml-1">{user?.role || "learner"}</Text>
               </View>
               <View className="flex-row items-center mt-0.5">
                 <MaterialCommunityIcons name="weight-lifter" size={12} color="#8E9E6E" />
-                <Text className="text-[10px] text-gray-500 font-bold ml-1">{user?.currentSubscription ? "Premium" : "Cơ bản"}</Text>
+                <Text className="text-[12px] text-gray-500 font-bold ml-1">{user?.currentSubscription ? "Premium" : "Cơ bản"}</Text>
               </View>
             </View>
             <View className="w-10 h-10 rounded-full bg-[#8E9E6E]/20 items-center justify-center">
-              <Ionicons name="checkmark-done-circle" size={22} color="#8E9E6E" />
+              <Ionicons name="checkmark-circle" size={22} color="#8E9E6E" />
             </View>
           </View>
         </AnimatedBlock>
 
         {/* Continue lesson green banner button */}
-        <AnimatedBlock delay={190}>
+        <AnimatedBlock variant="button" delay={190}>
         <TouchableOpacity
           activeOpacity={0.95}
           className="w-full bg-[#D6DDC6]/50 py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#8E9E6E]/20 mb-8"
@@ -128,12 +192,17 @@ export default function HomeScreen() {
               Tiếp tục bài học của bạn
             </Text>
           </View>
-          <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+          <Ionicons
+            name="arrow-forward"
+            size={22}
+            color="#8E9E6E"
+            className="animate-arrow-right"
+          />
         </TouchableOpacity>
         </AnimatedBlock>
 
         {/* Ôn tập hôm nay Section */}
-        <AnimatedBlock delay={240} className="mb-8">
+        <AnimatedBlock variant="chip" delay={240} className="mb-8">
           <Text
             className="text-lg font-bold text-charcoal mb-4"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -147,7 +216,7 @@ export default function HomeScreen() {
               <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
                 <MaterialCommunityIcons name="timer-music-outline" size={24} color="#8E9E6E" />
               </TouchableOpacity>
-              <Text className="text-[11px] text-charcoal font-bold text-center">Luyện hơi 1</Text>
+              <Text className="text-[13px] text-charcoal font-bold text-center">Luyện hơi 1</Text>
             </View>
 
             {/* Luyện hơi 2 */}
@@ -155,7 +224,7 @@ export default function HomeScreen() {
               <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
                 <MaterialCommunityIcons name="timer-music-outline" size={24} color="#8E9E6E" />
               </TouchableOpacity>
-              <Text className="text-[11px] text-charcoal font-bold text-center">Luyện hơi 2</Text>
+              <Text className="text-[13px] text-charcoal font-bold text-center">Luyện hơi 2</Text>
             </View>
 
             {/* Luyện ngón */}
@@ -163,7 +232,7 @@ export default function HomeScreen() {
               <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
                 <MaterialCommunityIcons name="gesture-tap" size={24} color="#8E9E6E" />
               </TouchableOpacity>
-              <Text className="text-[11px] text-charcoal font-bold text-center">Luyện ngón</Text>
+              <Text className="text-[13px] text-charcoal font-bold text-center">Luyện ngón</Text>
             </View>
 
             {/* Đánh lưỡi */}
@@ -171,13 +240,13 @@ export default function HomeScreen() {
               <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
                 <Ionicons name="musical-notes-outline" size={22} color="#8E9E6E" />
               </TouchableOpacity>
-              <Text className="text-[11px] text-charcoal font-bold text-center">Đánh lưỡi</Text>
+              <Text className="text-[13px] text-charcoal font-bold text-center">Đánh lưỡi</Text>
             </View>
           </View>
         </AnimatedBlock>
 
         {/* Bài học hôm nay Section */}
-        <AnimatedBlock delay={290} className="mb-8">
+        <AnimatedBlock variant="hero" delay={290} className="mb-8">
           <Text
             className="text-lg font-bold text-charcoal mb-4"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -209,10 +278,15 @@ export default function HomeScreen() {
                 <View className="flex-row justify-between items-center">
                   <View className="flex-row items-center">
                     <Ionicons name="time-outline" size={12} color="gray" />
-                    <Text className="text-[10px] text-gray-400 ml-1 font-bold">12 phút</Text>
+                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">12 phút</Text>
                   </View>
                   <View className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center">
-                    <Ionicons className="arrow-up-forward" size={12} color="#8E9E6E" />
+                    <Ionicons
+                      name="arrow-up-right-box-outline"
+                      size={12}
+                      color="#8E9E6E"
+                      className="animate-arrow-up-right"
+                    />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -232,10 +306,15 @@ export default function HomeScreen() {
                 <View className="flex-row justify-between items-center">
                   <View className="flex-row items-center">
                     <Ionicons name="time-outline" size={12} color="gray" />
-                    <Text className="text-[10px] text-gray-400 ml-1 font-bold">10 phút</Text>
+                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">10 phút</Text>
                   </View>
                   <View className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center">
-                    <Ionicons className="arrow-up-forward" size={12} color="#8E9E6E" />
+                    <Ionicons
+                      name="arrow-up-right-box-outline"
+                      size={12}
+                      color="#8E9E6E"
+                      className="animate-arrow-up-right"
+                    />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -244,7 +323,7 @@ export default function HomeScreen() {
         </AnimatedBlock>
 
         {/* Lộ trình học tập Grid Section */}
-        <AnimatedBlock delay={340} className="mb-20">
+        <AnimatedBlock variant="card" delay={340} className="mb-20">
           <Text
             className="text-lg font-bold text-charcoal mb-4"
             style={{ fontFamily: "BeVietnamPro-Medium" }}

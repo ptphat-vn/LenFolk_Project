@@ -4,10 +4,12 @@ import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
 
 export default function ProgressScreen() {
+  const scrollRef = useScrollToTopOnFocus();
   const user = useAuthStore((state) => state.user);
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
@@ -52,18 +54,24 @@ export default function ProgressScreen() {
 
       {/* Main Scroll Container */}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* --- HEADER --- */}
-        <AnimatedBlock className="px-6 pt-2 flex-row justify-between items-center bg-[#FDF8EA]">
+        <AnimatedBlock variant="header" className="px-6 pt-2 flex-row justify-between items-center bg-[#FDF8EA]">
           {/* Back Button */}
           <TouchableOpacity
             activeOpacity={0.8}
             className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
           >
-            <Ionicons name="arrow-back" size={22} color="#10120C" />
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#10120C"
+              className="animate-arrow-left"
+            />
           </TouchableOpacity>
 
           {/* Title */}
@@ -85,7 +93,7 @@ export default function ProgressScreen() {
         </AnimatedBlock>
 
         {/* --- MASCOT POPPING & BUBBLE SPEECH --- */}
-        <AnimatedBlock delay={80} className="relative h-28 mx-20 z-50 mt-[-20] flex-row items-end justify-between overflow-visible">
+        <AnimatedBlock variant="hero" delay={80} className="relative h-28 mx-20 z-50 mt-[-20] flex-row items-end justify-between overflow-visible">
           {/* Speech Bubble */}
           <View className="bg-white rounded-3xl px-5 py-3 shadow-md border border-gray-100 mb-2 relative max-w-[65%]">
             <Text className="text-xs text-charcoal font-bold leading-5">
@@ -117,7 +125,7 @@ export default function ProgressScreen() {
         </AnimatedBlock>
 
         {/* --- PROGRESS USER CARD --- */}
-        <AnimatedBlock delay={130} className="bg-white rounded-[32px] p-5 mx-6 shadow-sm mb-6 border border-gray-50">
+        <AnimatedBlock variant="card" delay={130} className="bg-white rounded-[32px] p-5 mx-6 shadow-sm mb-6 border border-gray-50">
           {/* User Profile Info Row */}
           <View className="flex-row items-center mb-5">
             <Image
@@ -127,12 +135,12 @@ export default function ProgressScreen() {
             />
             <View>
               <Text
-                className="text-charcoal text-[15px] font-bold"
+                className="text-charcoal text-[16px] font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
                 {displayName}
               </Text>
-              <Text className="text-[11px] text-gray-400 font-bold mt-0.5">
+              <Text className="text-[13px] text-gray-400 font-bold mt-0.5">
                 {user?.email || "Chưa có email"}
               </Text>
             </View>
@@ -141,8 +149,8 @@ export default function ProgressScreen() {
           {/* Progress Tracker Slider */}
           <View>
             <View className="flex-row justify-between items-center mb-2 px-1">
-              <Text className="text-[10px] text-gray-400 font-bold">XP</Text>
-              <Text className="text-[10px] text-charcoal font-extrabold">{profileProgress}%</Text>
+              <Text className="text-[12px] text-gray-400 font-bold">XP</Text>
+              <Text className="text-[12px] text-charcoal font-extrabold">{profileProgress}%</Text>
             </View>
             
             {/* Custom Track Bar */}
@@ -157,18 +165,18 @@ export default function ProgressScreen() {
                 style={{ position: "absolute", left: `${profileProgress}%`, marginLeft: -20 }}
                 className="bg-white rounded-full px-2 py-0.5 shadow border border-gray-100 items-center justify-center"
               >
-                <Text className="text-[9px] text-[#8E9E6E] font-extrabold">{profileProgress}%</Text>
+                <Text className="text-[13px] text-[#8E9E6E] font-extrabold">{profileProgress}%</Text>
               </View>
             </View>
 
-            <Text className="text-[10px] text-[#8E9E6E] font-bold mt-2 px-1">
+            <Text className="text-[12px] text-[#8E9E6E] font-bold mt-2 px-1">
               Hồ sơ được tính từ dữ liệu tài khoản đã đăng nhập
             </Text>
           </View>
         </AnimatedBlock>
 
         {/* --- STATS GRID CARDS (2 COLUMNS WITH CUSTOM CIRCULAR CUTOUT) --- */}
-        <AnimatedBlock delay={180} className="flex-row flex-wrap justify-between mx-6 mb-6 gap-y-4">
+        <AnimatedBlock variant="chip" delay={180} className="flex-row flex-wrap justify-between mx-6 mb-6 gap-y-4">
           {stats.map((stat, idx) => (
             <View
               key={idx}
@@ -183,7 +191,7 @@ export default function ProgressScreen() {
               </View>
 
               {/* Title & Value */}
-              <Text className="text-[10px] text-white/70 font-semibold mb-1">{stat.title}</Text>
+              <Text className="text-[12px] text-white/70 font-semibold mb-1">{stat.title}</Text>
               <Text
                 className="text-white text-base font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -195,7 +203,7 @@ export default function ProgressScreen() {
         </AnimatedBlock>
 
         {/* --- WEEKLY ACTIVITY CHARTS --- */}
-        <AnimatedBlock delay={230} className="bg-[#FFF9E6] rounded-[32px] p-5 mx-6 mb-6 shadow-sm border border-[#F4E0AC]/20">
+        <AnimatedBlock variant="card" delay={230} className="bg-[#FFF9E6] rounded-[32px] p-5 mx-6 mb-6 shadow-sm border border-[#F4E0AC]/20">
           <Text
             className="text-sm font-bold text-charcoal mb-4 px-1"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -223,19 +231,19 @@ export default function ProgressScreen() {
                     style={{ height: bar.height }}
                   />
                 </View>
-                <Text className="text-[10px] text-charcoal/60 font-bold">{bar.day}</Text>
+                <Text className="text-[12px] text-charcoal/60 font-bold">{bar.day}</Text>
               </View>
             ))}
           </View>
 
           <View className="flex-row justify-between items-center px-1 pt-2 border-t border-gray-150/40">
-            <Text className="text-[10px] text-charcoal/60 font-semibold">Nguồn: <Text className="font-bold text-charcoal">Tài khoản</Text></Text>
-            <Text className="text-[10px] text-primary font-bold">{profileProgress}% hồ sơ</Text>
+            <Text className="text-[12px] text-charcoal/60 font-semibold">Nguồn: <Text className="font-bold text-charcoal">Tài khoản</Text></Text>
+            <Text className="text-[12px] text-primary font-bold">{profileProgress}% hồ sơ</Text>
           </View>
         </AnimatedBlock>
 
         {/* --- ACHIEVEMENTS BADGES ROW --- */}
-        <AnimatedBlock delay={280} className="mb-6">
+        <AnimatedBlock variant="chip" delay={280} className="mb-6">
           <Text
             className="text-sm font-bold text-charcoal mb-4 mx-6"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -261,7 +269,7 @@ export default function ProgressScreen() {
                     </View>
                   ) : (
                     <View className="bg-[#FFF9E6] px-1 py-0.5 rounded-full border border-primary/20 items-center justify-center">
-                      <Text className="text-[8px] text-primary font-extrabold">{badge.progress}</Text>
+                      <Text className="text-[12px] text-primary font-extrabold">{badge.progress}</Text>
                     </View>
                   )}
                 </View>
@@ -272,14 +280,14 @@ export default function ProgressScreen() {
                 </View>
 
                 {/* Badge title */}
-                <Text className="text-[8px] text-charcoal font-bold text-center leading-3">{badge.name}</Text>
+                <Text className="text-[12px] text-charcoal font-bold text-center leading-3">{badge.name}</Text>
               </View>
             ))}
           </ScrollView>
         </AnimatedBlock>
 
         {/* --- PRACTICE HISTORY --- */}
-        <AnimatedBlock delay={330} className="mx-6">
+        <AnimatedBlock variant="listItem" delay={330} className="mx-6">
           <Text
             className="text-sm font-bold text-charcoal mb-4"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -304,7 +312,7 @@ export default function ProgressScreen() {
                     >
                       {item.title}
                     </Text>
-                    <Text className="text-[10px] text-gray-400 font-bold mt-0.5">{item.time}</Text>
+                    <Text className="text-[12px] text-gray-400 font-bold mt-0.5">{item.time}</Text>
                   </View>
                 </View>
 

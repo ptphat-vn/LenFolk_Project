@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRegister } from "@/hooks/auth/use-register";
+import { AnimatedBlock } from "@/components/AnimatedPage";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -55,20 +56,22 @@ export default function SignupScreen() {
         <View className="h-32" />
 
         {/* White container rising from the bottom */}
-        <View className="bg-white rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl">
+        <AnimatedBlock variant="panel" className="bg-white rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl">
           {/* Header titles */}
-          <Text 
-            className="text-4xl font-extrabold text-primary mb-3"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
-          >
-            Bắt đầu!!!
-          </Text>
-          <Text className="text-sm text-gray-500 leading-6 mb-8">
-            Tạo tài khoản để tiếp tục tất cả khóa học của bạn
-          </Text>
+          <AnimatedBlock variant="header">
+            <Text 
+              className="text-4xl font-extrabold text-primary mb-3"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Bắt đầu!!!
+            </Text>
+            <Text className="text-sm text-gray-500 leading-6 mb-8">
+              Tạo tài khoản để tiếp tục tất cả khóa học của bạn
+            </Text>
+          </AnimatedBlock>
 
           {/* Input Fields */}
-          <View className="gap-5 mb-6">
+          <AnimatedBlock variant="card" delay={100} className="gap-5 mb-6">
             {/* Name Input */}
             <View className="w-full flex-row items-center bg-white border border-primary rounded-2xl px-4 py-4 shadow-sm">
               <Feather name="user" size={20} color="#8E9E6E" />
@@ -110,14 +113,15 @@ export default function SignupScreen() {
                 <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#8E9E6E" />
               </TouchableOpacity>
             </View>
-          </View>
+          </AnimatedBlock>
 
           {/* Terms Agreement Checkbox Row */}
-          <TouchableOpacity 
-            activeOpacity={0.8}
-            className="flex-row items-center mb-8 px-1"
-            onPress={() => setAgreeTerms(!agreeTerms)}
-          >
+          <AnimatedBlock variant="chip" delay={170}>
+            <TouchableOpacity 
+              activeOpacity={0.8}
+              className="flex-row items-center mb-8 px-1"
+              onPress={() => setAgreeTerms(!agreeTerms)}
+            >
             <View className={`w-6 h-6 rounded-full border items-center justify-center ${
               agreeTerms 
                 ? "bg-primary border-primary" 
@@ -128,15 +132,17 @@ export default function SignupScreen() {
             <Text className="text-sm text-charcoal/80 ml-3 font-semibold">
               Đồng ý với Điều khoản & Điều kiện
             </Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </AnimatedBlock>
 
           {/* Register Button - Custom green pill with arrow-forward in white circle */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20 mb-8"
-            onPress={handleRegister}
-            disabled={registerMutation.isPending}
-          >
+          <AnimatedBlock variant="button" delay={230}>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20 mb-8"
+              onPress={handleRegister}
+              disabled={registerMutation.isPending}
+            >
             <Text 
               className="text-white text-base font-bold ml-4"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -147,10 +153,11 @@ export default function SignupScreen() {
               {registerMutation.isPending ? (
                 <ActivityIndicator color="#8E9E6E" />
               ) : (
-                <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+                <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
               )}
             </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </AnimatedBlock>
 
           {/* Social login separator */}
           <Text className="text-sm text-charcoal/60 text-center font-bold mb-6">
@@ -194,7 +201,7 @@ export default function SignupScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </AnimatedBlock>
       </ScrollView>
     </KeyboardAvoidingView>
   );
