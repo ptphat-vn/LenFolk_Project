@@ -85,14 +85,14 @@ export default function CourseDetailPage() {
   const lessonColumns: Column<Lesson>[] = [
     {
       header: 'STT',
-      render: (l) => <span className="font-medium text-gray-600">{l.orderIndex}</span>,
+      render: (l) => <span className="font-medium text-gray-600">{l.order}</span>,
     },
     {
       header: 'Tên bài học',
       render: (l) => (
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            {l.lessonType === 'video' ? <Video className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+            {l.videoUrl ? <Video className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
           </div>
           <span className="font-medium text-[13px] text-gray-900">{l.title}</span>
         </div>
@@ -102,7 +102,7 @@ export default function CourseDetailPage() {
       header: 'Loại',
       render: (l) => (
         <span className="text-[12px] font-medium text-gray-500 uppercase">
-          {l.lessonType}
+          {l.videoUrl ? 'video' : 'lesson'}
         </span>
       ),
     },
@@ -219,7 +219,7 @@ export default function CourseDetailPage() {
         
         <DataTable
           columns={lessonColumns}
-          data={lessons.sort((a, b) => a.orderIndex - b.orderIndex)}
+          data={[...lessons].sort((a, b) => a.order - b.order)}
           isLoading={loading}
           emptyIcon={Video}
           emptyMessage="Khóa học này chưa có bài học nào"

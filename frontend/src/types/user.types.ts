@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'instructor' | 'moderator' | 'learner' | 'guest';
+export type Role = 'admin' | 'instructor' | 'learner' | 'guest';
 
 export type Gender = 'male' | 'female' | 'other';
 

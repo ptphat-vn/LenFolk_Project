@@ -38,7 +38,7 @@ export const instructorApi = {
 
   /** DELETE /instructor-profiles/:id — Xóa hồ sơ giảng viên (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/instructor-profiles/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/instructor-profiles/${id}`);
     return res.data;
   },
 };

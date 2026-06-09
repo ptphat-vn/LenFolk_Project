@@ -43,7 +43,7 @@ export const userApi = {
 
   /** DELETE /users/:id — Soft-delete user (Admin only) */
   deleteUser: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/users/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/users/${id}`);
     return res.data;
   },
 };

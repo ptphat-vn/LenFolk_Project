@@ -5,7 +5,6 @@ const transactionRecordController = require('../controllers/transaction-record.c
 const { verifyToken, verifyAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const {
-  createTransactionRecordSchema,
   updateTransactionRecordSchema,
 } = require('../validations/transaction-record.validation');
 
@@ -16,10 +15,7 @@ router
   
   .get(transactionRecordController.getAll)
   
-  .post(
-    validate(createTransactionRecordSchema),
-    transactionRecordController.createOne,
-  );
+.post(transactionRecordController.createOne);
 
 router
   .route('/:id')

@@ -11,7 +11,7 @@ exports.createCourseSchema = z.object({
     // Giá được lấy từ gói Subscription liên kết — không nhập trực tiếp
     courseType: z.string().optional(),
     level: z.enum(['beginner', 'intermediate', 'advanced']),
-    status: z.enum(['draft', 'published', 'archived']).optional(),
+    status: z.enum(['pending', 'published', 'archived']).optional(),
     tags: z.array(z.any()).optional(),
     totalLessons: z.number().optional(),
     enrollCount: z.number().optional(),
@@ -29,7 +29,7 @@ exports.updateCourseSchema = z.object({
     isFree: z.boolean().optional(),
     courseType: z.string().optional(),
     level: z.enum(['beginner', 'intermediate', 'advanced']).optional(),
-    status: z.enum(['draft', 'published', 'archived']).optional(),
+    status: z.enum(['pending', 'published', 'archived']).optional(),
     tags: z.array(z.any()).optional(),
     totalLessons: z.number().optional(),
     enrollCount: z.number().optional(),

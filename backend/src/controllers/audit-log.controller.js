@@ -13,7 +13,12 @@ exports.getAll = async (req, res, next) => {
   const page = req.query.page * 1 || 1;
   const limit = req.query.limit * 1 || 100;
   const skip = (page - 1) * limit;
-  let query = AuditLog.find(JSON.parse(queryStr)).sort(req.query.sort ? req.query.sort.split(',').join(' ') : '-createdAt').skip(skip).limit(limit).select('-__v');
+  let query = AuditLog.find(JSON.parse(queryStr))
+    .sort(req.query.sort ? req.query.sort.split(',').join(' ') : '-createdAt')
+    .skip(skip)
+    .limit(limit)
+    .select('+before +after -__v')
+    .populate('actorId', 'name email role');
   const docs = await query;
   res.status(200).json({ success: true, results: docs.length, data: docs });
   } catch (err) { next(err); }
@@ -21,7 +26,9 @@ exports.getAll = async (req, res, next) => {
 
 exports.getOne = async (req, res, next) => {
   try {
-  const doc = await AuditLog.findById(req.params.id);
+  const doc = await AuditLog.findById(req.params.id)
+    .select('+before +after -__v')
+    .populate('actorId', 'name email role');
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }

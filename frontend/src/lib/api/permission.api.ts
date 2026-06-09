@@ -29,7 +29,7 @@ export const permissionApi = {
 
   /** DELETE /permissions/:id — Xóa permission (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/permissions/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/permissions/${id}`);
     return res.data;
   },
 };

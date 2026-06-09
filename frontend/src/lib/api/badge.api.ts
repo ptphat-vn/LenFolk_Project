@@ -29,7 +29,7 @@ export const badgeApi = {
 
   /** DELETE /badges/:id — Xóa badge (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/badges/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/badges/${id}`);
     return res.data;
   },
 };

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 
-const baseURL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api");
+const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 const axiosInstance = axios.create({
   baseURL,
@@ -41,14 +41,14 @@ axiosInstance.interceptors.response.use(
         }
         
         // Call refresh endpoint directly using axios to avoid circular dependency / infinite loop
-        const response = await axios.post(`${baseURL}/auth/refresh`, {
+        const response = await axios.post(`${baseURL}/auth/refresh-token`, {
           refreshToken
         });
         
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { accessToken: newAccessToken } = response.data.data;
         
         // Update store with new tokens
-        useAuthStore.getState().setToken(newAccessToken, newRefreshToken);
+        useAuthStore.getState().setToken(newAccessToken, refreshToken);
         
         // Retry original request with new token
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
