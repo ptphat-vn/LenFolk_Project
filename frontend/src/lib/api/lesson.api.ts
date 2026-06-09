@@ -1,6 +1,11 @@
 import axiosInstance from '../axios';
 import { APIResponse } from '@/types/response.type';
 import { Lesson, CreateLessonInput, GetLessonsQuery } from '@/types/lesson.types';
+import { hasFileValue, toFormData } from './form-data';
+
+function lessonPayload(body: Partial<CreateLessonInput>) {
+  return hasFileValue(body) ? toFormData(body) : body;
+}
 
 export const lessonApi = {
   /** GET /lessons — Lấy danh sách bài học (cần đăng nhập) */
@@ -11,7 +16,7 @@ export const lessonApi = {
 
   /** POST /lessons — Tạo bài học mới (Admin only) */
   create: async (body: CreateLessonInput) => {
-    const res = await axiosInstance.post<APIResponse<Lesson>>('/lessons', body);
+    const res = await axiosInstance.post<APIResponse<Lesson>>('/lessons', lessonPayload(body));
     return res.data;
   },
 
@@ -23,13 +28,16 @@ export const lessonApi = {
 
   /** PATCH /lessons/:id — Cập nhật bài học (Admin only) */
   update: async (id: string, body: Partial<CreateLessonInput>) => {
-    const res = await axiosInstance.patch<APIResponse<Lesson>>(`/lessons/${id}`, body);
+    const res = await axiosInstance.patch<APIResponse<Lesson>>(
+      `/lessons/${id}`,
+      lessonPayload(body),
+    );
     return res.data;
   },
 
   /** DELETE /lessons/:id — Xóa bài học (Admin only, tự giảm Course.totalLessons) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/lessons/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/lessons/${id}`);
     return res.data;
   },
 };

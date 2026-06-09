@@ -48,6 +48,7 @@ type LessonFormField =
   | 'title'
   | 'description'
   | 'videoUrl'
+  | 'video'
   | 'audioUrl'
   | 'order'
   | 'duration';
@@ -445,6 +446,7 @@ function LessonFormDialog({
     audioUrl: '',
     order: 1,
     duration: undefined,
+    video: undefined,
     status: 'draft',
     isFree: false,
     techniques: [],
@@ -461,6 +463,7 @@ function LessonFormDialog({
         audioUrl: lesson.audioUrl ?? '',
         order: lesson.order,
         duration: lesson.duration,
+        video: undefined,
         status: lesson.status,
         isFree: lesson.isFree,
         techniques: lesson.techniques ?? [],
@@ -475,6 +478,7 @@ function LessonFormDialog({
         audioUrl: '',
         order: 1,
         duration: undefined,
+        video: undefined,
         status: 'draft',
         isFree: false,
         techniques: [],
@@ -629,6 +633,20 @@ function LessonFormDialog({
                 placeholder="https://..."
               />
               {renderFieldError('videoUrl')}
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Upload video</Label>
+              <Input
+                type="file"
+                accept="video/*"
+                onChange={(e) => set('video', e.target.files?.[0])}
+              />
+              {lesson?.videoUrl && (
+                <p className="text-[11px] text-gray-500 truncate">
+                  Video hiện tại: {lesson.videoUrl}
+                </p>
+              )}
+              {renderFieldError('video')}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>URL audio</Label>

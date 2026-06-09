@@ -26,6 +26,17 @@ async function hasPerformanceAccess(userId, performanceId) {
   );
 }
 
+function mapUploadedDocuments(files = []) {
+  return files.map((file) => ({
+    name: file.originalname,
+    url: file.path,
+    publicId: file.filename || null,
+    format: file.format || null,
+    resourceType: file.resource_type || 'raw',
+    bytes: file.size || null,
+  }));
+}
+
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 /**
@@ -149,6 +160,10 @@ exports.createOne = async (req, res, next) => {
   try {
   // Tách price & billingCycle ra để tạo Subscription riêng (không lưu vào Performance)
   const { price, billingCycle, ...performanceData } = req.body;
+  const uploadedDocuments = mapUploadedDocuments(req.files);
+  if (uploadedDocuments.length > 0) {
+    performanceData.documents = uploadedDocuments;
+  }
 
   // instructorId lấy từ token nếu là instructor, hoặc từ body nếu là admin
   if (req.user.role === 'instructor') {
@@ -212,6 +227,7 @@ exports.updateOne = async (req, res, next) => {
 
   // Nếu có cập nhật price/billingCycle, cập nhật vào Subscription liên kết
   const { price, billingCycle, ...updateData } = req.body;
+  const uploadedDocuments = mapUploadedDocuments(req.files);
   if (price !== undefined || billingCycle !== undefined) {
     const existingSub = await Subscription.findOne({
       itemType: 'performance',
@@ -224,7 +240,15 @@ exports.updateOne = async (req, res, next) => {
     }
   }
 
-  const updated = await Performance.findByIdAndUpdate(req.params.id, updateData, {
+  const updatePayload =
+    uploadedDocuments.length > 0
+      ? {
+          ...(Object.keys(updateData).length > 0 ? { $set: updateData } : {}),
+          $push: { documents: { $each: uploadedDocuments } },
+        }
+      : updateData;
+
+  const updated = await Performance.findByIdAndUpdate(req.params.id, updatePayload, {
     new: true,
     runValidators: true,
   }).select('-__v');

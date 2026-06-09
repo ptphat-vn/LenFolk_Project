@@ -9,7 +9,7 @@ const auditLogSchema = new mongoose.Schema(
     },
     actorRole: {
       type: String,
-      enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'],
+      enum: ['admin', 'instructor', 'learner', 'guest'],
       required: true,
     },
     action: {

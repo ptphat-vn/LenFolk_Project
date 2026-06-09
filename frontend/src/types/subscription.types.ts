@@ -32,6 +32,7 @@ export interface CreateSubscriptionInput {
   billingCycle: BillingCycle;
   features?: string[];
   qrCodeUrl?: string;
+  qrCode?: File;
   isActive?: boolean;
 }
 

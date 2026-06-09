@@ -8,6 +8,11 @@ import {
   RejectPerformanceInput,
 } from '@/types/performance.types';
 import { CoursePurchaseInput, CoursePurchaseResponse } from '@/types/coupon.types';
+import { hasFileValue, toFormData } from './form-data';
+
+function performancePayload(body: Partial<CreatePerformanceInput>) {
+  return hasFileValue(body) ? toFormData(body) : body;
+}
 
 export const performanceApi = {
   /** GET /performances — Lấy danh sách tiết mục (pending/published/archived cho admin/instructor) */
@@ -22,7 +27,10 @@ export const performanceApi = {
    * - Admin: có thể chỉ định status.
    */
   create: async (body: CreatePerformanceInput) => {
-    const res = await axiosInstance.post<APIResponse<Performance>>('/performances', body);
+    const res = await axiosInstance.post<APIResponse<Performance>>(
+      '/performances',
+      performancePayload(body),
+    );
     return res.data;
   },
 
@@ -34,13 +42,16 @@ export const performanceApi = {
 
   /** PATCH /performances/:id — Cập nhật tiết mục (Instructor không thể đổi status, Admin ok) */
   update: async (id: string, body: Partial<CreatePerformanceInput>) => {
-    const res = await axiosInstance.patch<APIResponse<Performance>>(`/performances/${id}`, body);
+    const res = await axiosInstance.patch<APIResponse<Performance>>(
+      `/performances/${id}`,
+      performancePayload(body),
+    );
     return res.data;
   },
 
   /** DELETE /performances/:id — Xóa tiết mục (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/performances/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/performances/${id}`);
     return res.data;
   },
 

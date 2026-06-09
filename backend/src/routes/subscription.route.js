@@ -4,6 +4,7 @@ const router = express.Router();
 const subscriptionController = require('../controllers/subscription.controller');
 const purchaseController = require('../controllers/purchase.controller');
 const { verifyToken, verifyAdmin } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 const validate = require('../middlewares/validate.middleware');
 const {
   createSubscriptionSchema,
@@ -20,6 +21,7 @@ router
   .post(
     verifyToken,
     verifyAdmin,
+    upload.qrCode.single('qrCode'),
     validate(createSubscriptionSchema),
     subscriptionController.createOne,
   );
@@ -35,6 +37,7 @@ router
   .patch(
     verifyToken,
     verifyAdmin,
+    upload.qrCode.single('qrCode'),
     validate(updateSubscriptionSchema),
     subscriptionController.updateOne,
   )

@@ -36,7 +36,7 @@ export const practiceSessionApi = {
 
   /** DELETE /practice-sessions/:id — Xóa phiên luyện tập (cần đăng nhập, chỉ session của mình) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/practice-sessions/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/practice-sessions/${id}`);
     return res.data;
   },
 };

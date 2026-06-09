@@ -21,7 +21,8 @@ type SubscriptionFormField =
   | 'price'
   | 'currency'
   | 'billingCycle'
-  | 'features';
+  | 'features'
+  | 'qrCode';
 type SubscriptionFormErrors = Partial<Record<SubscriptionFormField, string>>;
 
 const CYCLE_LABEL: Record<BillingCycle, string> = {
@@ -59,6 +60,7 @@ export function SubscriptionFormModal({
     currency: 'VND',
     billingCycle: 'monthly',
     features: [],
+    qrCode: undefined,
     isActive: true,
   });
   const [featuresText, setFeaturesText] = useState('');
@@ -81,6 +83,7 @@ export function SubscriptionFormModal({
           currency: editSub.currency ?? 'VND',
           billingCycle: editSub.billingCycle,
           features: editSub.features ?? [],
+          qrCode: undefined,
           isActive: editSub.isActive ?? true,
         });
         setFeaturesText((editSub.features ?? []).join('\n'));
@@ -95,6 +98,7 @@ export function SubscriptionFormModal({
           currency: 'VND',
           billingCycle: 'monthly',
           features: [],
+          qrCode: undefined,
           isActive: true,
         });
         setFeaturesText('');
@@ -146,6 +150,7 @@ export function SubscriptionFormModal({
       currency: form.currency,
       billingCycle: form.billingCycle,
       features,
+      qrCode: form.qrCode,
       isActive: form.isActive,
     });
 
@@ -342,6 +347,24 @@ export function SubscriptionFormModal({
                 'Truy cập tất cả bài học\nLuyện tập với AI\nChứng chỉ hoàn thành'
               }
             />
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-medium text-gray-700 mb-1">
+              QR chuyển khoản
+            </label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => setField('qrCode', e.target.files?.[0])}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-[#2d6a4f]/10 file:px-3 file:py-1.5 file:text-[#2d6a4f]"
+            />
+            {editSub?.qrCodeUrl && (
+              <p className="mt-1 truncate text-[11px] text-gray-500">
+                QR hiện tại: {editSub.qrCodeUrl}
+              </p>
+            )}
+            {renderFieldError('qrCode')}
           </div>
 
           <div className="flex items-center gap-2">

@@ -8,7 +8,7 @@ const options = {
       version: '1.0.0',
       description:
         'RESTful API documentation for the LenFolk music learning platform.\n\n' +
-        '**Roles:** `guest` (default on register) → `learner` (after subscription payment) → `instructor` / `moderator` / `admin` (assigned by admin).\n\n' +
+        '**Roles:** `guest` (default on register) → `learner` (after subscription payment) → `instructor` / `admin` (assigned by admin).\n\n' +
         'All protected routes require a Bearer JWT token in the `Authorization` header.',
       contact: { name: 'LenFolk Team' },
     },
@@ -141,7 +141,7 @@ const options = {
             },
             role: {
               type: 'string',
-              enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'],
+              enum: ['admin', 'instructor', 'learner', 'guest'],
               example: 'guest',
             },
             currentSubscription: {
@@ -204,7 +204,7 @@ const options = {
             },
             role: {
               type: 'string',
-              enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'],
+              enum: ['admin', 'instructor', 'learner', 'guest'],
               example: 'instructor',
             },
             phoneNumber: { type: 'string', example: '+84912345678' },
@@ -226,8 +226,8 @@ const options = {
             },
             role: {
               type: 'string',
-              enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'],
-              example: 'moderator',
+              enum: ['admin', 'instructor', 'learner', 'guest'],
+              example: 'instructor',
             },
             phoneNumber: { type: 'string', example: '+84111222333' },
             isActive: { type: 'boolean', example: true },
@@ -259,7 +259,7 @@ const options = {
             },
             status: {
               type: 'string',
-              enum: ['draft', 'pending', 'published', 'archived'],
+              enum: ['pending', 'published', 'archived'],
               example: 'published',
             },
             courseType: {
@@ -323,8 +323,8 @@ const options = {
             },
             status: {
               type: 'string',
-              enum: ['draft', 'pending', 'published', 'archived'],
-              example: 'draft',
+              enum: ['pending', 'published', 'archived'],
+              example: 'pending',
             },
             tags: {
               type: 'array',
@@ -394,6 +394,11 @@ const options = {
               type: 'string',
               example: 'https://video.lenfolk.vn/lesson2.mp4',
             },
+            video: {
+              type: 'string',
+              format: 'binary',
+              description: 'Optional video file uploaded to Cloudinary. Field name: `video`.',
+            },
             audioUrl: {
               type: 'string',
               example: 'https://audio.lenfolk.vn/lesson2.mp3',
@@ -403,7 +408,7 @@ const options = {
             status: {
               type: 'string',
               enum: ['draft', 'published'],
-              example: 'draft',
+              example: 'pending',
             },
             isFree: { type: 'boolean', example: false },
             transcript: {
@@ -837,6 +842,11 @@ const options = {
               example: 'https://cdn.lenfolk.vn/qr/sub_001.png',
               description: 'URL ảnh QR code chuyển khoản.',
             },
+            qrCode: {
+              type: 'string',
+              format: 'binary',
+              description: 'Optional QR code image uploaded to Cloudinary. Field name: `qrCode`.',
+            },
             isActive: { type: 'boolean', example: true },
           },
         },
@@ -1004,6 +1014,20 @@ const options = {
               nullable: true,
               example: 'https://video.lenfolk.vn/perf_001.mp4',
             },
+            documents: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', example: 'sheet-music.pdf' },
+                  url: { type: 'string', example: 'https://res.cloudinary.com/demo/raw/upload/v1/lenfolk/performance-documents/sheet-music.pdf' },
+                  publicId: { type: 'string', nullable: true },
+                  format: { type: 'string', nullable: true, example: 'pdf' },
+                  resourceType: { type: 'string', example: 'raw' },
+                  bytes: { type: 'number', nullable: true, example: 204800 },
+                },
+              },
+            },
             isFree: {
               type: 'boolean',
               description:
@@ -1071,6 +1095,11 @@ const options = {
               type: 'string',
               example: 'https://video.lenfolk.vn/perf_002.mp4',
             },
+            documents: {
+              type: 'array',
+              items: { type: 'string', format: 'binary' },
+              description: 'Optional document files uploaded to Cloudinary. Field name: `documents`.',
+            },
             isFree: { type: 'boolean', example: false },
             genre: { type: 'string', example: 'Jazz' },
             duration: { type: 'integer', minimum: 0, example: 300 },
@@ -1137,6 +1166,11 @@ const options = {
             description: { type: 'string' },
             thumbnail: { type: 'string' },
             videoUrl: { type: 'string' },
+            documents: {
+              type: 'array',
+              items: { type: 'string', format: 'binary' },
+              description: 'Optional new document files. Uploaded files are appended to existing documents.',
+            },
             isFree: { type: 'boolean' },
             genre: { type: 'string' },
             duration: { type: 'integer', minimum: 0 },
@@ -1201,7 +1235,7 @@ const options = {
             actorId: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c3' },
             actorRole: {
               type: 'string',
-              enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'],
+              enum: ['admin', 'instructor', 'learner', 'guest'],
               example: 'admin',
             },
             action: { type: 'string', example: 'DELETE_USER' },
@@ -1223,7 +1257,7 @@ const options = {
             actorId: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c3' },
             actorRole: {
               type: 'string',
-              enum: ['admin', 'instructor', 'moderator', 'learner', 'guest'],
+              enum: ['admin', 'instructor', 'learner', 'guest'],
               example: 'admin',
             },
             action: { type: 'string', example: 'UPDATE_USER_ROLE' },
@@ -1232,78 +1266,6 @@ const options = {
             before: { type: 'object', example: { role: 'guest' } },
             after: { type: 'object', example: { role: 'instructor' } },
             ipAddress: { type: 'string', example: '10.0.0.1' },
-          },
-        },
-
-        // ── ModeratorLog ─────────────────────────────────────────────────
-        ModeratorLog: {
-          type: 'object',
-          properties: {
-            _id: { type: 'string', example: '70c1ecb5d74b8c3b44b8bbbb' },
-            moderatorId: {
-              type: 'string',
-              example: '60d5dbf5d74b8c3b44b8b4c6',
-            },
-            action: {
-              type: 'string',
-              enum: [
-                'approve_comment',
-                'delete_comment',
-                'warn_user',
-                'ban_user',
-                'unban_user',
-                'resolve_report',
-                'dismiss_report',
-              ],
-              example: 'ban_user',
-            },
-            targetType: {
-              type: 'string',
-              enum: ['user', 'comment', 'report', 'course', 'lesson'],
-              example: 'user',
-            },
-            targetId: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c7' },
-            reason: {
-              type: 'string',
-              example: 'Vi phạm điều khoản: đăng nội dung xấu.',
-            },
-            note: { type: 'string', example: 'Đã cảnh báo 2 lần trước đó.' },
-            createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
-          },
-        },
-        CreateModeratorLogInput: {
-          type: 'object',
-          required: ['moderatorId', 'action', 'targetType', 'targetId'],
-          properties: {
-            moderatorId: {
-              type: 'string',
-              example: '60d5dbf5d74b8c3b44b8b4c6',
-            },
-            action: {
-              type: 'string',
-              enum: [
-                'approve_comment',
-                'delete_comment',
-                'warn_user',
-                'ban_user',
-                'unban_user',
-                'resolve_report',
-                'dismiss_report',
-              ],
-              example: 'warn_user',
-            },
-            targetType: {
-              type: 'string',
-              enum: ['user', 'comment', 'report', 'course', 'lesson'],
-              example: 'user',
-            },
-            targetId: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c7' },
-            reason: {
-              type: 'string',
-              example: 'Ngôn ngữ không phù hợp trong bình luận.',
-            },
-            note: { type: 'string', example: 'Lần cảnh báo đầu tiên.' },
           },
         },
         // ── Coupon ──────────────────────────────────────────────────────
@@ -1427,7 +1389,6 @@ const options = {
       },
       { name: 'Permissions', description: '🔒 Phân quyền — Admin only' },
       { name: 'AuditLogs', description: '📝 Nhật ký hành động — Admin only' },
-      { name: 'ModeratorLogs', description: '🛡️ Nhật ký kiểm duyệt' },
       { name: 'Coupons', description: '🎟️ Mã giảm giá — Admin only (CRUD)' },
       { name: 'Wallets', description: '💰 Ví Instructor — Xem số dư, rút tiền, Admin duyệt payout' },
     ],
@@ -1816,7 +1777,6 @@ const options = {
                       enum: [
                         'admin',
                         'instructor',
-                        'moderator',
                         'learner',
                         'guest',
                       ],
@@ -2140,7 +2100,7 @@ const options = {
           tags: ['Lessons'],
           summary: 'Lấy danh sách bài học — Cần đăng nhập',
           description:
-            'Mặc định chỉ trả về bài học `status: published`. Admin và Instructor có thể xem cả `draft`. Kết quả được sắp xếp theo `order` tăng dần.',
+            'Mặc định chỉ trả về bài học `status: published`. Admin và Instructor có thể xem cả bài chưa published. Kết quả được sắp xếp theo `order` tăng dần.',
           security: [{ bearerAuth: [] }],
           parameters: [
             {
@@ -2202,6 +2162,9 @@ const options = {
             required: true,
             content: {
               'application/json': {
+                schema: { $ref: '#/components/schemas/CreateLessonInput' },
+              },
+              'multipart/form-data': {
                 schema: { $ref: '#/components/schemas/CreateLessonInput' },
               },
             },
@@ -2321,6 +2284,9 @@ const options = {
             required: true,
             content: {
               'application/json': {
+                schema: { $ref: '#/components/schemas/CreateLessonInput' },
+              },
+              'multipart/form-data': {
                 schema: { $ref: '#/components/schemas/CreateLessonInput' },
               },
             },
@@ -3578,6 +3544,11 @@ const options = {
                   $ref: '#/components/schemas/CreateSubscriptionInput',
                 },
               },
+              'multipart/form-data': {
+                schema: {
+                  $ref: '#/components/schemas/CreateSubscriptionInput',
+                },
+              },
             },
           },
           responses: {
@@ -3659,6 +3630,11 @@ const options = {
             required: true,
             content: {
               'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/CreateSubscriptionInput',
+                },
+              },
+              'multipart/form-data': {
                 schema: {
                   $ref: '#/components/schemas/CreateSubscriptionInput',
                 },
@@ -3856,6 +3832,9 @@ const options = {
             required: true,
             content: {
               'application/json': {
+                schema: { $ref: '#/components/schemas/CreatePerformanceInput' },
+              },
+              'multipart/form-data': {
                 schema: { $ref: '#/components/schemas/CreatePerformanceInput' },
               },
             },
@@ -4104,6 +4083,9 @@ const options = {
             required: true,
             content: {
               'application/json': {
+                schema: { $ref: '#/components/schemas/UpdatePerformanceInput' },
+              },
+              'multipart/form-data': {
                 schema: { $ref: '#/components/schemas/UpdatePerformanceInput' },
               },
             },
@@ -4358,9 +4340,9 @@ const options = {
         },
         post: {
           tags: ['TransactionRecords'],
-          summary: 'Tạo bản ghi giao dịch thủ công — Cần đăng nhập',
+          summary: 'Tạo bản ghi giao dịch thủ công — Không hỗ trợ',
           description:
-            'Thông thường TransactionRecord được tạo tự động qua `/subscriptions/:id/purchase`. API này dùng cho mục đích thủ công/internal.',
+            'TransactionRecord chỉ được tạo qua purchase flow; endpoint này trả 403.',
           security: [{ bearerAuth: [] }],
           requestBody: {
             required: true,
@@ -5015,139 +4997,6 @@ const options = {
               in: 'path',
               required: true,
               schema: { type: 'string', example: '69b1ecb5d74b8c3b44b8baaa' },
-            },
-          ],
-          responses: { 204: { description: 'Đã xóa' } },
-        },
-      },
-
-      // ─── MODERATOR LOGS ──────────────────────────────────────────────────
-      '/moderator-logs': {
-        get: {
-          tags: ['ModeratorLogs'],
-          summary: 'Xem danh sách moderator log — Admin only',
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: 'moderatorId',
-              in: 'query',
-              schema: { type: 'string', example: '60d5dbf5d74b8c3b44b8b4c6' },
-            },
-            {
-              name: 'action',
-              in: 'query',
-              schema: {
-                type: 'string',
-                enum: [
-                  'approve_comment',
-                  'delete_comment',
-                  'warn_user',
-                  'ban_user',
-                  'unban_user',
-                  'resolve_report',
-                  'dismiss_report',
-                ],
-              },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Danh sách moderator log',
-              content: {
-                'application/json': {
-                  schema: {
-                    allOf: [
-                      { $ref: '#/components/schemas/PaginationMeta' },
-                      {
-                        type: 'object',
-                        properties: {
-                          data: {
-                            type: 'array',
-                            items: {
-                              $ref: '#/components/schemas/ModeratorLog',
-                            },
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            },
-          },
-        },
-        post: {
-          tags: ['ModeratorLogs'],
-          summary: 'Tạo moderator log — Cần đăng nhập (Moderator/Admin)',
-          security: [{ bearerAuth: [] }],
-          requestBody: {
-            required: true,
-            content: {
-              'application/json': {
-                schema: {
-                  $ref: '#/components/schemas/CreateModeratorLogInput',
-                },
-              },
-            },
-          },
-          responses: {
-            201: {
-              description: 'Log được tạo',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean', example: true },
-                      data: { $ref: '#/components/schemas/ModeratorLog' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      '/moderator-logs/{id}': {
-        get: {
-          tags: ['ModeratorLogs'],
-          summary: 'Xem chi tiết moderator log — Cần đăng nhập',
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', example: '70c1ecb5d74b8c3b44b8bbbb' },
-            },
-          ],
-          responses: {
-            200: {
-              description: 'Chi tiết log',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'object',
-                    properties: {
-                      success: { type: 'boolean', example: true },
-                      data: { $ref: '#/components/schemas/ModeratorLog' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        delete: {
-          tags: ['ModeratorLogs'],
-          summary: 'Xóa moderator log — Admin only',
-          security: [{ bearerAuth: [] }],
-          parameters: [
-            {
-              name: 'id',
-              in: 'path',
-              required: true,
-              schema: { type: 'string', example: '70c1ecb5d74b8c3b44b8bbbb' },
             },
           ],
           responses: { 204: { description: 'Đã xóa' } },

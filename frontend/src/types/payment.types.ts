@@ -22,18 +22,6 @@ export interface TransactionRecord {
   updatedAt?: string;
 }
 
-/** Body dùng để tạo bản ghi giao dịch thủ công (POST /transaction-records) */
-export interface CreateTransactionRecordInput {
-  userId: string;
-  userSubscriptionId: string;
-  amount: number;
-  currency?: Currency;
-  paymentMethod: string;
-  gatewayTxId?: string;
-  status?: TransactionStatus;
-  gatewayProvider?: string;
-}
-
 /** Body dùng để Admin cập nhật trạng thái giao dịch (PATCH /transaction-records/:id) */
 export interface UpdateTransactionRecordInput {
   status?: TransactionStatus;

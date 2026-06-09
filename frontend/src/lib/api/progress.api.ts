@@ -34,7 +34,7 @@ export const progressApi = {
 
   /** DELETE /progress/:id — Xóa bản ghi tiến độ (cần đăng nhập, chỉ record của mình) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/progress/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/progress/${id}`);
     return res.data;
   },
 };

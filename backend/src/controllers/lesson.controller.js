@@ -45,13 +45,21 @@ exports.getOne = async (req, res, next) => {
 
     // Privileged roles bypass subscription check
     const isPrivileged =
-      req.user.role === 'admin' || req.user.role === 'instructor';
+      req.user && (req.user.role === 'admin' || req.user.role === 'instructor');
 
     if (!isPrivileged) {
-      const course = await Course.findById(lesson.courseId).select('isFree');
+      const course = await Course.findById(lesson.courseId).select('isFree status');
       if (!course) return res.status(404).json({ success: false, message: 'Parent course not found' });
 
+      if (lesson.status !== 'published' || course.status !== 'published') {
+        return res.status(404).json({ success: false, message: 'No lesson found with that ID' });
+      }
+
       if (!course.isFree) {
+        if (!req.user) {
+          return res.status(401).json({ success: false, message: 'Please log in to access this premium lesson.' });
+        }
+
         // 1. Kiểm tra enrolledCourses (mua đứt)
         const User = require('../models/User');
 
@@ -90,6 +98,10 @@ exports.getOne = async (req, res, next) => {
 // Verify instructor owns the course before creating a lesson; update totalLessons
 exports.createOne = async (req, res, next) => {
   try {
+    if (req.file) {
+      req.body.videoUrl = req.file.path;
+    }
+
     const course = await Course.findById(req.body.courseId);
     if (!course) return res.status(404).json({ success: false, message: 'No course found with that ID' });
 
@@ -121,6 +133,10 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
+    if (req.file) {
+      req.body.videoUrl = req.file.path;
+    }
+
     const doc = await Lesson.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
     res.status(200).json({ success: true, message: 'Cập nhật bài học thành công', data: doc });

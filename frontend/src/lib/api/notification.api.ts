@@ -34,7 +34,7 @@ export const notificationApi = {
 
   /** DELETE /notifications/:id — Xóa thông báo (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/notifications/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/notifications/${id}`);
     return res.data;
   },
 };

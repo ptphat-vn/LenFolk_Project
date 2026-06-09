@@ -11,6 +11,11 @@ const optionalUrl = optionalString.refine(
   'URL phải bắt đầu bằng http:// hoặc https://',
 );
 
+const fileSchema = z.custom<File>(
+  (value) => typeof File !== 'undefined' && value instanceof File,
+  'Vui lòng chọn file hợp lệ',
+);
+
 const nonNegativeNumber = z.coerce
   .number({ error: 'Vui lòng nhập số hợp lệ' })
   .min(0, 'Giá trị không được âm');
@@ -33,7 +38,6 @@ const mongoId = z
 export const roleSchema = z.enum([
   'admin',
   'instructor',
-  'moderator',
   'learner',
   'guest',
 ]);
@@ -66,7 +70,7 @@ export const courseSchema = z
     description: optionalString,
     thumbnail: optionalUrl,
     level: z.enum(['beginner', 'intermediate', 'advanced']),
-    status: z.enum(['draft', 'pending', 'published', 'archived']).optional(),
+    status: z.enum(['pending', 'published', 'archived']).optional(),
     courseType: optionalString,
     isFree: z.boolean().optional(),
     price: optionalNonNegativeNumber,
@@ -87,6 +91,7 @@ export const lessonSchema = z.object({
   title: z.string().trim().min(1, 'Vui lòng nhập tên bài học').max(200, 'Tên bài học tối đa 200 ký tự'),
   description: optionalString,
   videoUrl: optionalUrl,
+  video: fileSchema.optional(),
   audioUrl: optionalUrl,
   order: z.coerce.number({ error: 'Thứ tự phải là số' }).int('Thứ tự phải là số nguyên').min(1, 'Thứ tự tối thiểu là 1'),
   duration: optionalNonNegativeNumber,
@@ -101,6 +106,7 @@ const basePerformanceSchema = z.object({
   description: optionalString,
   thumbnail: optionalUrl,
   videoUrl: optionalUrl,
+  documents: z.array(fileSchema).optional(),
   isFree: z.boolean().optional(),
   genre: optionalString,
   duration: optionalNonNegativeNumber,
@@ -169,6 +175,7 @@ export const subscriptionSchema = z
     billingCycle: z.enum(['monthly', 'quarterly', 'yearly']),
     features: z.array(z.string().trim().min(1)).optional(),
     qrCodeUrl: optionalUrl,
+    qrCode: fileSchema.optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => data.itemType !== 'course' || Boolean(data.courseId), {

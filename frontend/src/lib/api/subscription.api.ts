@@ -5,6 +5,11 @@ import {
   CreateSubscriptionInput,
   RequestSubscriptionResponse,
 } from '@/types/subscription.types';
+import { hasFileValue, toFormData } from './form-data';
+
+function subscriptionPayload(body: Partial<CreateSubscriptionInput>) {
+  return hasFileValue(body) ? toFormData(body) : body;
+}
 
 export const subscriptionApi = {
   /** GET /subscriptions — Xem danh sách gói đăng ký (Public, chỉ trả gói isActive: true) */
@@ -15,7 +20,10 @@ export const subscriptionApi = {
 
   /** POST /subscriptions — Tạo gói đăng ký mới (Admin only) */
   create: async (body: CreateSubscriptionInput) => {
-    const res = await axiosInstance.post<APIResponse<Subscription>>('/subscriptions', body);
+    const res = await axiosInstance.post<APIResponse<Subscription>>(
+      '/subscriptions',
+      subscriptionPayload(body),
+    );
     return res.data;
   },
 
@@ -27,13 +35,16 @@ export const subscriptionApi = {
 
   /** PATCH /subscriptions/:id — Cập nhật gói đăng ký (Admin only) */
   update: async (id: string, body: Partial<CreateSubscriptionInput>) => {
-    const res = await axiosInstance.patch<APIResponse<Subscription>>(`/subscriptions/${id}`, body);
+    const res = await axiosInstance.patch<APIResponse<Subscription>>(
+      `/subscriptions/${id}`,
+      subscriptionPayload(body),
+    );
     return res.data;
   },
 
   /** DELETE /subscriptions/:id — Xóa gói đăng ký (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/subscriptions/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/subscriptions/${id}`);
     return res.data;
   },
 

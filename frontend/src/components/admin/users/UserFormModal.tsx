@@ -16,13 +16,12 @@ type UserFormErrors = Partial<Record<UserFormField, string>>;
 
 const ROLE_STYLE: Record<Role, { label: string; cls: string }> = {
   admin: { label: 'Admin', cls: 'bg-[#1a3a2a] text-white' },
-  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
-  moderator: { label: 'Moderator', cls: 'bg-amber-100 text-amber-700' },
+  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
   learner: { label: 'Học viên', cls: 'bg-blue-100 text-blue-700' },
   guest: { label: 'Khách', cls: 'bg-gray-100 text-gray-500' },
 };
 
-const ROLES: Role[] = ['admin', 'instructor', 'moderator', 'learner', 'guest'];
+const ROLES: Role[] = ['admin', 'instructor', 'learner', 'guest'];
 
 export function UserFormModal({
   open,
