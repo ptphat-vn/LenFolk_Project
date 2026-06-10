@@ -16,8 +16,10 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Eye,
 } from 'lucide-react';
 import { couponApi } from '@/lib/api/coupon.api';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import {
   Coupon,
   CreateCouponInput,
@@ -48,8 +50,8 @@ function isExpired(validTo?: string | null) {
 }
 
 const APPLICABLE_LABEL: Record<CouponApplicableTo, string> = {
-  subscription: 'Gói đăng ký',
   course: 'Khoá học',
+  performance: 'Tiết mục',
   all: 'Tất cả',
 };
 
@@ -257,32 +259,36 @@ export default function PromotionsPage() {
       header: 'Hành động',
       className: 'text-right',
       render: (coupon) => (
-        <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={() => {
-              setEditTarget(coupon);
-              setFormOpen(true);
-            }}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleToggle(coupon)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors"
-          >
-            {coupon.isActive ? (
-              <ToggleLeft className="w-3.5 h-3.5" />
-            ) : (
-              <ToggleRight className="w-3.5 h-3.5" />
-            )}
-          </button>
-          <button
-            onClick={() => setDeleteTarget(coupon)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/business/promotions/${coupon._id}`,
+              },
+              {
+                label: 'Chỉnh sửa',
+                icon: Pencil,
+                onClick: () => {
+                  setEditTarget(coupon);
+                  setFormOpen(true);
+                },
+              },
+              {
+                label: coupon.isActive ? 'Tạm tắt' : 'Kích hoạt',
+                icon: coupon.isActive ? ToggleLeft : ToggleRight,
+                onClick: () => handleToggle(coupon),
+              },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                onClick: () => setDeleteTarget(coupon),
+              },
+            ]}
+          />
         </div>
       ),
     },

@@ -13,7 +13,6 @@ interface InstructorLayoutClientProps {
 export default function InstructorLayoutClient({
   children,
 }: InstructorLayoutClientProps) {
-  const [isMounted, setIsMounted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('instructor-sidebar-collapsed') === 'true';
@@ -21,20 +20,18 @@ export default function InstructorLayoutClient({
 
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const router = useRouter();
 
+  // Chỉ điều hướng SAU khi persist khôi phục xong (tránh văng ra /login do race)
   useEffect(() => {
-    const t = setTimeout(() => setIsMounted(true), 0);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted && (!token || !user)) {
-      router.push('/login');
+    if (!hasHydrated) return;
+    if (!token || !user) {
+      router.replace('/login');
+    } else if (user.role !== 'instructor' && user.role !== 'admin') {
+      router.replace('/');
     }
-    // Could also add a role check here if needed:
-    // if (isMounted && user && user.role !== 'INSTRUCTOR') router.push('/');
-  }, [isMounted, token, user, router]);
+  }, [hasHydrated, token, user, router]);
 
   const toggleSidebar = () => {
     setIsCollapsed((prev) => {
@@ -44,7 +41,12 @@ export default function InstructorLayoutClient({
     });
   };
 
-  if (!isMounted || !token || !user) {
+  if (
+    !hasHydrated ||
+    !token ||
+    !user ||
+    (user.role !== 'instructor' && user.role !== 'admin')
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">

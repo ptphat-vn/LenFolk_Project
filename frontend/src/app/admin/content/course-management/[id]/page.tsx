@@ -25,6 +25,12 @@ import { ActionButton } from '@/common/button/ActionButton';
 import { formatCurrency } from '@/lib/utils';
 import Link from 'next/link';
 
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'tháng',
+  quarterly: 'quý',
+  yearly: 'năm',
+};
+
 const container: Variants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -200,7 +206,11 @@ export default function CourseDetailPage() {
             <div className="flex justify-between items-center text-[14px] pt-2 border-t border-gray-200">
               <span className="text-gray-500">Giá bán</span>
               <span className="font-bold text-[#2d6a4f] text-base">
-                {course.isFree ? 'Miễn phí' : course.price ? formatCurrency(course.price) : 'Chưa cập nhật'}
+                {course.isFree
+                  ? 'Miễn phí'
+                  : course.plan
+                    ? `${formatCurrency(course.plan.price)} / ${CYCLE_LABELS[course.plan.billingCycle] ?? course.plan.billingCycle}`
+                    : 'Chưa đặt giá'}
               </span>
             </div>
           </div>

@@ -25,7 +25,8 @@ const positiveNumber = z.coerce
   .positive('Giá trị phải lớn hơn 0');
 
 const optionalNonNegativeNumber = z.preprocess(
-  (value) => (value === '' || value === null || value === undefined ? undefined : value),
+  (value) =>
+    value === '' || value === null || value === undefined ? undefined : value,
   nonNegativeNumber.optional(),
 );
 
@@ -35,17 +36,23 @@ const mongoId = z
   .min(1, 'Vui lòng chọn dữ liệu')
   .regex(/^[a-f\d]{24}$/i, 'ID không đúng định dạng MongoDB');
 
-export const roleSchema = z.enum([
-  'admin',
-  'instructor',
-  'learner',
-  'guest',
-]);
+export const roleSchema = z.enum(['admin', 'instructor', 'user']);
 
 export const createUserSchema = z.object({
-  name: z.string().trim().min(1, 'Vui lòng nhập họ tên').max(100, 'Họ tên tối đa 100 ký tự'),
-  email: z.string().trim().min(1, 'Vui lòng nhập email').email('Email không đúng định dạng'),
-  passwordHash: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').max(100, 'Mật khẩu tối đa 100 ký tự'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập họ tên')
+    .max(100, 'Họ tên tối đa 100 ký tự'),
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập email')
+    .email('Email không đúng định dạng'),
+  passwordHash: z
+    .string()
+    .min(6, 'Mật khẩu tối thiểu 6 ký tự')
+    .max(100, 'Mật khẩu tối đa 100 ký tự'),
   role: roleSchema,
   phoneNumber: optionalString.refine(
     (value) => !value || /^[0-9+\-\s()]{8,20}$/.test(value),
@@ -64,36 +71,50 @@ export const instructorProfileSchema = z.object({
   websiteUrl: optionalUrl,
 });
 
-export const courseSchema = z
-  .object({
-    title: z.string().trim().min(1, 'Vui lòng nhập tên khóa học').max(200, 'Tên khóa học tối đa 200 ký tự'),
-    description: optionalString,
-    thumbnail: optionalUrl,
-    level: z.enum(['beginner', 'intermediate', 'advanced']),
-    status: z.enum(['pending', 'published', 'archived']).optional(),
-    courseType: optionalString,
-    isFree: z.boolean().optional(),
-    price: optionalNonNegativeNumber,
-    adminCommissionPercentage: optionalNonNegativeNumber.refine(
-      (value) => value === undefined || value <= 100,
-      'Hoa hồng tối đa 100%',
-    ),
-    tags: z.array(z.string().trim().min(1)).optional(),
-    isFeatured: z.boolean().optional(),
-  })
-  .refine((data) => data.isFree !== false || (data.price !== undefined && data.price > 0), {
-    path: ['price'],
-    message: 'Vui lòng nhập giá cho khóa học trả phí',
-  });
+// Course KHÔNG có giá — giá đặt riêng qua coursePlanSchema (PUT /courses/:id/plan)
+export const courseSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập tên khoá học')
+    .max(200, 'Tên khoá học tối đa 200 ký tự'),
+  description: optionalString,
+  thumbnail: optionalUrl,
+  level: z.enum(['beginner', 'intermediate', 'advanced']),
+  status: z.enum(['pending', 'published', 'archived']).optional(),
+  courseType: optionalString,
+  isFree: z.boolean().optional(),
+  adminCommissionPercentage: optionalNonNegativeNumber.refine(
+    (value) => value === undefined || value <= 100,
+    'Hoa hồng tối đa 100%',
+  ),
+  tags: z.array(z.string().trim().min(1)).optional(),
+  isFeatured: z.boolean().optional(),
+});
+
+// Gói giá của course (PUT /courses/:id/plan)
+export const coursePlanSchema = z.object({
+  price: positiveNumber,
+  billingCycle: z.enum(['monthly', 'quarterly', 'yearly']),
+  name: optionalString,
+  description: optionalString,
+});
 
 export const lessonSchema = z.object({
   courseId: mongoId,
-  title: z.string().trim().min(1, 'Vui lòng nhập tên bài học').max(200, 'Tên bài học tối đa 200 ký tự'),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập tên bài học')
+    .max(200, 'Tên bài học tối đa 200 ký tự'),
   description: optionalString,
   videoUrl: optionalUrl,
   video: fileSchema.optional(),
   audioUrl: optionalUrl,
-  order: z.coerce.number({ error: 'Thứ tự phải là số' }).int('Thứ tự phải là số nguyên').min(1, 'Thứ tự tối thiểu là 1'),
+  order: z.coerce
+    .number({ error: 'Thứ tự phải là số' })
+    .int('Thứ tự phải là số nguyên')
+    .min(1, 'Thứ tự tối thiểu là 1'),
   duration: optionalNonNegativeNumber,
   status: z.enum(['draft', 'published']).optional(),
   isFree: z.boolean().optional(),
@@ -102,7 +123,11 @@ export const lessonSchema = z.object({
 });
 
 const basePerformanceSchema = z.object({
-  title: z.string().trim().min(1, 'Vui lòng nhập tên tiết mục').max(200, 'Tên tiết mục tối đa 200 ký tự'),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập tên tiết mục')
+    .max(200, 'Tên tiết mục tối đa 200 ký tự'),
   description: optionalString,
   thumbnail: optionalUrl,
   videoUrl: optionalUrl,
@@ -117,16 +142,14 @@ const basePerformanceSchema = z.object({
   ),
   tags: z.array(z.string().trim().min(1)).optional(),
   isFeatured: z.boolean().optional(),
+  // Giá nằm thẳng trên tiết mục — mua đứt 1 lần (không có chu kỳ)
   price: optionalNonNegativeNumber,
-  billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
 });
 
 export const performanceSchema = basePerformanceSchema.refine(
-  (data) => data.isFree !== false || (data.price !== undefined && data.price > 0),
+  (data) =>
+    data.isFree !== false || (data.price !== undefined && data.price > 0),
   { path: ['price'], message: 'Vui lòng nhập giá cho tiết mục trả phí' },
-).refine(
-  (data) => data.isFree !== false || Boolean(data.billingCycle),
-  { path: ['billingCycle'], message: 'Vui lòng chọn chu kỳ thanh toán' },
 );
 
 export const instructorPerformanceSchema = performanceSchema.refine(
@@ -150,46 +173,53 @@ export const couponSchema = z
       z.coerce.number().int().min(1, 'Lượt dùng tối thiểu là 1').nullable(),
     ),
     validFrom: z.string().min(1, 'Vui lòng chọn ngày bắt đầu'),
-    validTo: z.preprocess((value) => (value === '' ? null : value), z.string().nullable()),
+    validTo: z.preprocess(
+      (value) => (value === '' ? null : value),
+      z.string().nullable(),
+    ),
     isActive: z.boolean().optional(),
-    applicableTo: z.enum(['subscription', 'course', 'all']).optional(),
+    applicableTo: z.enum(['course', 'performance', 'all']).optional(),
   })
-  .refine((data) => data.discountType !== 'percent' || data.discountValue <= 100, {
-    path: ['discountValue'],
-    message: 'Giảm theo phần trăm tối đa 100%',
-  })
-  .refine((data) => !data.validTo || new Date(data.validTo) >= new Date(data.validFrom), {
-    path: ['validTo'],
-    message: 'Ngày hết hạn phải sau ngày bắt đầu',
-  });
+  .refine(
+    (data) => data.discountType !== 'percent' || data.discountValue <= 100,
+    {
+      path: ['discountValue'],
+      message: 'Giảm theo phần trăm tối đa 100%',
+    },
+  )
+  .refine(
+    (data) =>
+      !data.validTo || new Date(data.validTo) >= new Date(data.validFrom),
+    {
+      path: ['validTo'],
+      message: 'Ngày hết hạn phải sau ngày bắt đầu',
+    },
+  );
 
-export const subscriptionSchema = z
-  .object({
-    name: z.string().trim().min(1, 'Vui lòng nhập tên gói').max(150, 'Tên gói tối đa 150 ký tự'),
-    itemType: z.enum(['course', 'performance']).optional(),
-    courseId: z.string().trim().optional(),
-    performanceId: z.string().trim().optional(),
-    description: optionalString,
-    price: nonNegativeNumber,
-    currency: z.enum(['VND', 'USD']).optional(),
-    billingCycle: z.enum(['monthly', 'quarterly', 'yearly']),
-    features: z.array(z.string().trim().min(1)).optional(),
-    qrCodeUrl: optionalUrl,
-    qrCode: fileSchema.optional(),
-    isActive: z.boolean().optional(),
-  })
-  .refine((data) => data.itemType !== 'course' || Boolean(data.courseId), {
-    path: ['courseId'],
-    message: 'Vui lòng chọn khóa học',
-  })
-  .refine((data) => data.itemType !== 'performance' || Boolean(data.performanceId), {
-    path: ['performanceId'],
-    message: 'Vui lòng chọn tiết mục',
-  });
+// Cấu hình thanh toán hệ thống (PUT /system-settings) — 1 QR cố định + bank dùng chung
+export const systemSettingSchema = z.object({
+  qrCode: fileSchema.optional(),
+  bankName: optionalString,
+  bankAccountNumber: optionalString,
+  bankAccountName: optionalString,
+  transferNote: optionalString,
+  defaultCommissionPercentage: optionalNonNegativeNumber.refine(
+    (value) => value === undefined || value <= 100,
+    'Hoa hồng tối đa 100%',
+  ),
+});
 
 export const bankInfoSchema = z.object({
-  bankName: z.string().trim().min(1, 'Vui lòng nhập tên ngân hàng').max(100, 'Tên ngân hàng tối đa 100 ký tự'),
-  accountName: z.string().trim().min(1, 'Vui lòng nhập tên chủ tài khoản').max(100, 'Tên chủ tài khoản tối đa 100 ký tự'),
+  bankName: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập tên ngân hàng')
+    .max(100, 'Tên ngân hàng tối đa 100 ký tự'),
+  accountName: z
+    .string()
+    .trim()
+    .min(1, 'Vui lòng nhập tên chủ tài khoản')
+    .max(100, 'Tên chủ tài khoản tối đa 100 ký tự'),
   accountNumber: z
     .string()
     .trim()

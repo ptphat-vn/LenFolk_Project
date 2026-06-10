@@ -23,14 +23,14 @@ import { paymentApi } from '@/lib/api/payment.api';
 import { courseApi } from '@/lib/api/course.api';
 import { practiceSessionApi } from '@/lib/api/practice-session.api';
 import { instructorApi } from '@/lib/api/instructor.api';
-import { subscriptionApi } from '@/lib/api/subscription.api';
+import { enrollmentApi } from '@/lib/api/enrollment.api';
 import { User } from '@/types/user.types';
 import { Lesson } from '@/types/lesson.types';
 import { TransactionRecord } from '@/types/payment.types';
 import { Course } from '@/types/course.types';
 import { PracticeSession } from '@/types/practice-session.types';
 import { InstructorProfile } from '@/types/instructor.types';
-import { Subscription } from '@/types/subscription.types';
+import { Enrollment } from '@/types/enrollment.types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatCurrency(amount: number): string {
@@ -97,16 +97,14 @@ function getMonthlyRevenue(
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const roleStyle: Record<string, string> = {
-  learner: 'bg-blue-50 text-blue-700',
+  user: 'bg-blue-50 text-blue-700',
   instructor: 'bg-violet-50 text-violet-700',
   admin: 'bg-[#1a3a2a] text-white',
-  guest: 'bg-gray-100 text-gray-500',
 };
 const roleLabel: Record<string, string> = {
-  learner: 'Học viên',
+  user: 'Người dùng',
   instructor: 'Giảng viên',
   admin: 'Admin',
-  guest: 'Khách',
 };
 
 const txStatusStyle: Record<
@@ -203,7 +201,7 @@ export default function DashboardPage() {
   const [recentPayments, setRecentPayments] = useState<TransactionRecord[]>([]);
   const [recentLessons, setRecentLessons] = useState<Lesson[]>([]);
   const [recentCourses, setRecentCourses] = useState<Course[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
 
   // Derived
   const [chartData, setChartData] = useState<
@@ -234,7 +232,7 @@ export default function DashboardPage() {
           courseApi.getAll({ limit: 200 }),
           practiceSessionApi.getAll(),
           instructorApi.getAll(),
-          subscriptionApi.getAll(),
+          enrollmentApi.getAll(),
         ]);
 
         // Users
@@ -357,12 +355,12 @@ export default function DashboardPage() {
             : [];
         setTotalInstructors(instructorsData.length);
 
-        // Subscriptions
-        const subsData: Subscription[] =
+        // Enrollments (đăng ký gần đây)
+        const enrollData: Enrollment[] =
           subsRes.status === 'fulfilled' && Array.isArray(subsRes.value.data)
             ? subsRes.value.data
             : [];
-        setSubscriptions(subsData);
+        setEnrollments(enrollData);
       } catch (err) {
         console.error('[Dashboard] fetch error:', err);
       } finally {
@@ -388,7 +386,7 @@ export default function DashboardPage() {
     {
       label: 'Tổng người dùng',
       value: totalUsers.toLocaleString('vi-VN'),
-      sub: `${userRoleBreakdown.find((r) => r.role === 'learner')?.count ?? 0} học viên`,
+      sub: `${userRoleBreakdown.find((r) => r.role === 'user')?.count ?? 0} người dùng`,
       icon: Users,
       iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
@@ -624,46 +622,48 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Subscription plans */}
+        {/* Đăng ký gần đây */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="px-5 pt-5 pb-4 border-b border-gray-100">
             <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
-              Gói đăng ký
+              Đăng ký gần đây
             </h2>
             <p className="text-[12px] text-gray-400 mt-0.5">
-              {subscriptions.length} gói đang hoạt động
+              {enrollments.length} lượt đăng ký
             </p>
           </div>
           <div className="divide-y divide-gray-50">
-            {subscriptions.length > 0 ? (
-              subscriptions.map((sub) => (
-                <div
-                  key={sub._id}
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-gray-900 truncate">
-                      {sub.name || 'Gói không tên'}
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">
-                      {sub.billingCycle ?? '—'}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[13px] font-bold text-[#2d6a4f]">
-                      {sub.price ? formatCurrency(sub.price) : 'Free'}
-                    </p>
+            {enrollments.length > 0 ? (
+              enrollments.slice(0, 6).map((en) => {
+                const item =
+                  en.itemType === 'course'
+                    ? (typeof en.courseId === 'object' ? en.courseId?.title : undefined)
+                    : (typeof en.performanceId === 'object' ? en.performanceId?.title : undefined);
+                const ACTIVE = en.status === 'active';
+                return (
+                  <div
+                    key={en._id}
+                    className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-gray-900 truncate">
+                        {item || (en.itemType === 'course' ? 'Khóa học' : 'Tiết mục')}
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {en.itemType === 'course' ? 'Khóa học' : 'Tiết mục'}
+                      </p>
+                    </div>
                     <span
-                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${sub.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${ACTIVE ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-600'}`}
                     >
-                      {sub.isActive ? 'Hoạt động' : 'Tắt'}
+                      {ACTIVE ? 'Đã kích hoạt' : 'Chờ duyệt'}
                     </span>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <EmptyState label="Chưa có gói đăng ký" />
+              <EmptyState label="Chưa có lượt đăng ký" />
             )}
           </div>
         </div>
@@ -762,7 +762,7 @@ export default function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-gray-900 truncate">
                         {tx.paymentMethod ?? 'Giao dịch'} ·{' '}
-                        {tx.gatewayProvider ?? '—'}
+                        {tx.transactionType ?? '—'}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {timeAgo(tx.paidAt || tx.createdAt)}

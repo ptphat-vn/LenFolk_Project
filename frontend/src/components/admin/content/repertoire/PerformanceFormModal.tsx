@@ -34,7 +34,6 @@ type PerformanceFormField =
   | 'genre'
   | 'duration'
   | 'price'
-  | 'billingCycle'
   | 'documents';
 type PerformanceFormErrors = Partial<Record<PerformanceFormField, string>>;
 
@@ -58,7 +57,6 @@ const EMPTY_FORM: CreatePerformanceInput = {
   isFeatured: false,
   documents: undefined,
   price: undefined,
-  billingCycle: undefined,
 };
 
 export function PerformanceFormModal({
@@ -86,9 +84,8 @@ export function PerformanceFormModal({
         tags: performance.tags ?? [],
         isFeatured: performance.isFeatured ?? false,
         documents: undefined,
-        // Pre-populate giá từ Subscription liên kết
-        price: performance.subscription?.price ?? undefined,
-        billingCycle: (performance.subscription?.billingCycle as CreatePerformanceInput['billingCycle']) ?? undefined,
+        // Giá nằm thẳng trên tiết mục (mua đứt)
+        price: performance.price ?? undefined,
       });
       setTagsInput((performance.tags ?? []).join(', '));
       setFieldErrors({});
@@ -127,10 +124,6 @@ export function PerformanceFormModal({
       setFieldErrors({ price: 'Vui lòng nhập giá cho tiết mục trả phí' });
       return;
     }
-    if (!form.isFree && !form.billingCycle) {
-      setFieldErrors({ billingCycle: 'Vui lòng chọn chu kỳ thanh toán' });
-      return;
-    }
     const tags = tagsInput
       .split(',')
       .map((t) => t.trim())
@@ -145,7 +138,6 @@ export function PerformanceFormModal({
     const payload: CreatePerformanceInput = parsed.data;
     if (payload.isFree) {
       delete payload.price;
-      delete payload.billingCycle;
     }
     onSave(payload);
   };
@@ -196,7 +188,6 @@ export function PerformanceFormModal({
                   set('isFree', v === 'free');
                   if (v === 'free') {
                     set('price', undefined);
-                    set('billingCycle', undefined);
                   }
                 }}
               >
@@ -210,42 +201,21 @@ export function PerformanceFormModal({
               </Select>
             </div>
 
-            {/* Hiện giá & chu kỳ chỉ khi trả phí */}
+            {/* Giá chỉ khi trả phí — tiết mục bán mua đứt 1 lần */}
             {!form.isFree && (
-              <>
-                <div className="space-y-1.5">
-                  <Label>Giá (VND) *</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.price ?? ''}
-                    onChange={(e) =>
-                      set('price', e.target.value ? Number(e.target.value) : undefined)
-                    }
-                    placeholder="50000"
-                  />
-                  {renderFieldError('price')}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Chu kỳ thanh toán *</Label>
-                  <Select
-                    value={form.billingCycle ?? ''}
-                    onValueChange={(v) =>
-                      set('billingCycle', v as CreatePerformanceInput['billingCycle'])
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Chọn chu kỳ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Theo tháng</SelectItem>
-                      <SelectItem value="quarterly">Theo quý</SelectItem>
-                      <SelectItem value="yearly">Theo năm</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {renderFieldError('billingCycle')}
-                </div>
-              </>
+              <div className="space-y-1.5">
+                <Label>Giá mua đứt (VND) *</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.price ?? ''}
+                  onChange={(e) =>
+                    set('price', e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  placeholder="50000"
+                />
+                {renderFieldError('price')}
+              </div>
             )}
 
             <div className="space-y-1.5">

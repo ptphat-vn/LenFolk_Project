@@ -20,6 +20,9 @@ export interface Performance {
   isFree: boolean;
   genre?: string;
   duration?: number;
+  /** Giá nằm thẳng trên tiết mục — mua đứt 1 lần */
+  price?: number;
+  currency?: 'VND' | 'USD';
   adminCommissionPercentage?: number;
   status: PerformanceStatus;
   tags?: string[];
@@ -27,15 +30,6 @@ export interface Performance {
   publishedAt?: string;
   createdAt?: string;
   updatedAt?: string;
-  /** Subscription plan liên kết — có trong cả getAll và getOne */
-  subscription?: {
-    _id: string;
-    price: number;
-    currency: string;
-    billingCycle: string;
-    name: string;
-    isActive: boolean;
-  } | null;
 }
 
 export interface CreatePerformanceInput {
@@ -51,10 +45,9 @@ export interface CreatePerformanceInput {
   adminCommissionPercentage?: number;
   tags?: string[];
   isFeatured?: boolean;
-  /** Giá tiết mục — BE dùng để tạo/cập nhật Subscription plan tự động */
+  /** Giá tiết mục — lưu thẳng trên Performance (mua đứt) */
   price?: number;
-  /** Chu kỳ thanh toán — bắt buộc khi có price */
-  billingCycle?: 'monthly' | 'quarterly' | 'yearly';
+  currency?: 'VND' | 'USD';
 }
 
 export interface ApprovePerformanceInput {

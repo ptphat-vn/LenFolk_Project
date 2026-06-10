@@ -7,6 +7,7 @@ import {
   CourseLevel,
   CourseStatus,
   CreateCourseInput,
+  UpsertCoursePlanInput,
 } from '@/types/course.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,15 +40,17 @@ import {
   TrendingUp,
   Loader2,
   Eye,
+  CircleDollarSign,
 } from 'lucide-react';
-import Link from 'next/link';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
 import { useDebounce } from '@/hooks/useDebounce';
-import { courseSchema, zodFieldErrors } from '@/schema/form.schema';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
+import { courseSchema, coursePlanSchema, zodFieldErrors, firstZodError } from '@/schema/form.schema';
+import type { BillingCycle } from '@/types/course.types';
 
 const LEVEL_LABELS: Record<CourseLevel, string> = {
   beginner: 'Cơ bản',
@@ -56,10 +59,15 @@ const LEVEL_LABELS: Record<CourseLevel, string> = {
 };
 
 const STATUS_LABELS: Record<CourseStatus, string> = {
-  draft: 'Nháp',
   pending: 'Chờ duyệt',
   published: 'Xuất bản',
   archived: 'Lưu trữ',
+};
+
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'tháng',
+  quarterly: 'quý',
+  yearly: 'năm',
 };
 
 const LEVEL_COLORS: Record<CourseLevel, string> = {
@@ -74,12 +82,10 @@ type CourseFormField =
   | 'thumbnail'
   | 'level'
   | 'status'
-  | 'courseType'
-  | 'price';
+  | 'courseType';
 type CourseFormErrors = Partial<Record<CourseFormField, string>>;
 
 const STATUS_COLORS: Record<CourseStatus, string> = {
-  draft: 'bg-gray-100 text-gray-600',
   pending: 'bg-amber-100 text-amber-700',
   published: 'bg-emerald-100 text-emerald-700',
   archived: 'bg-red-100 text-red-600',
@@ -93,6 +99,9 @@ export default function CourseManagementPage() {
   const [levelFilter, setLevelFilter] = useState<CourseLevel | 'all'>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Course | null>(null);
+  const [planTarget, setPlanTarget] = useState<Course | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -147,6 +156,26 @@ export default function CourseManagementPage() {
   const handleCreate = () => {
     setEditTarget(null);
     setFormOpen(true);
+  };
+
+  const handleSetPlan = (course: Course) => {
+    setPlanTarget(course);
+    setPlanOpen(true);
+  };
+
+  const handleSavePlan = async (data: UpsertCoursePlanInput) => {
+    if (!planTarget) return;
+    try {
+      setIsSavingPlan(true);
+      await courseApi.setPlan(planTarget._id, data);
+      toast.success('Đã cập nhật giá khóa học');
+      setPlanOpen(false);
+      fetchCourses();
+    } catch {
+      toast.error('Lỗi khi cập nhật giá');
+    } finally {
+      setIsSavingPlan(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -239,13 +268,21 @@ export default function CourseManagementPage() {
       ),
     },
     {
-      header: 'Giá',
+      header: 'Giá / Gói',
       className: 'text-center',
-      render: (course) => (
-        <span className="text-gray-600">
-          {course.isFree ? '—' : course.price ? `${course.price.toLocaleString('vi-VN')}đ` : '—'}
-        </span>
-      ),
+      render: (course) =>
+        course.isFree ? (
+          <span className="text-gray-400">Miễn phí</span>
+        ) : course.plan ? (
+          <span className="text-gray-700 font-medium">
+            {course.plan.price.toLocaleString('vi-VN')}đ
+            <span className="text-gray-400 font-normal">
+              {' '}/{CYCLE_LABELS[course.plan.billingCycle] ?? course.plan.billingCycle}
+            </span>
+          </span>
+        ) : (
+          <span className="text-amber-600 text-[11px]">Chưa đặt giá</span>
+        ),
     },
     {
       header: 'Bài học',
@@ -261,32 +298,31 @@ export default function CourseManagementPage() {
       header: 'Hành động',
       className: 'text-right',
       render: (course) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <Link
-            href={`/admin/content/course-management/${course._id}`}
-            className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
-            title="Xem chi tiết"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </Link>
-          <button
-            onClick={() => handleEdit(course)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-            title="Chỉnh sửa"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(course._id)}
-            disabled={isDeleting === course._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeleting === course._id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/content/course-management/${course._id}`,
+              },
+              {
+                label: 'Đặt giá / gói',
+                icon: CircleDollarSign,
+                hidden: course.isFree,
+                onClick: () => handleSetPlan(course),
+              },
+              { label: 'Chỉnh sửa', icon: Pencil, onClick: () => handleEdit(course) },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                disabled: isDeleting === course._id,
+                onClick: () => handleDelete(course._id),
+              },
+            ]}
+          />
         </div>
       ),
     },
@@ -444,7 +480,122 @@ export default function CourseManagementPage() {
         isSaving={isSaving}
         onSave={handleSave}
       />
+
+      {/* Plan (giá) Dialog */}
+      <CoursePlanDialog
+        open={planOpen}
+        onOpenChange={setPlanOpen}
+        course={planTarget}
+        isSaving={isSavingPlan}
+        onSave={handleSavePlan}
+      />
     </div>
+  );
+}
+
+/* ─── Course Plan (giá) Dialog ─── */
+interface CoursePlanDialogProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  course: Course | null;
+  isSaving: boolean;
+  onSave: (data: UpsertCoursePlanInput) => void;
+}
+
+function CoursePlanDialog({
+  open,
+  onOpenChange,
+  course,
+  isSaving,
+  onSave,
+}: CoursePlanDialogProps) {
+  const [price, setPrice] = useState<string>('');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (course?.plan) {
+      setPrice(String(course.plan.price ?? ''));
+      setBillingCycle((course.plan.billingCycle as BillingCycle) ?? 'monthly');
+    } else {
+      setPrice('');
+      setBillingCycle('monthly');
+    }
+    setError(null);
+  }, [course, open]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = coursePlanSchema.safeParse({
+      price: price === '' ? undefined : Number(price),
+      billingCycle,
+    });
+    if (!parsed.success) {
+      setError(firstZodError(parsed.error));
+      return;
+    }
+    onSave({ price: parsed.data.price, billingCycle: parsed.data.billingCycle });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CircleDollarSign className="w-4 h-4 text-amber-600" />
+            Đặt giá khóa học
+          </DialogTitle>
+        </DialogHeader>
+        {course && (
+          <p className="text-[13px] text-gray-500 -mt-1">
+            <span className="font-medium text-gray-700">{course.title}</span> — bán theo gói chu kỳ.
+          </p>
+        )}
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label>Giá (VNĐ) *</Label>
+            <Input
+              type="number"
+              min={0}
+              step={1000}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="VD: 199000"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Chu kỳ thanh toán *</Label>
+            <Select
+              value={billingCycle}
+              onValueChange={(v) => setBillingCycle(v as BillingCycle)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Hàng tháng</SelectItem>
+                <SelectItem value="quarterly">Hàng quý (3 tháng)</SelectItem>
+                <SelectItem value="yearly">Hàng năm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {error && <p className="text-[11px] font-medium text-red-500">{error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSaving}
+              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSaving ? 'Đang lưu...' : 'Lưu giá'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -469,10 +620,9 @@ function CourseFormDialog({
     description: '',
     thumbnail: '',
     level: 'beginner',
-    status: 'draft',
+    status: 'pending',
     courseType: '',
     isFree: true,
-    price: undefined,
     tags: [],
     isFeatured: false,
   });
@@ -489,7 +639,6 @@ function CourseFormDialog({
         status: course.status,
         courseType: course.courseType ?? '',
         isFree: course.isFree,
-        price: course.price,
         tags: course.tags ?? [],
         isFeatured: course.isFeatured ?? false,
       });
@@ -501,10 +650,9 @@ function CourseFormDialog({
         description: '',
         thumbnail: '',
         level: 'beginner',
-        status: 'draft',
+        status: 'pending',
         courseType: '',
         isFree: true,
-        price: undefined,
         tags: [],
         isFeatured: false,
       });
@@ -595,7 +743,6 @@ function CourseFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
                   <SelectItem value="pending">Chờ duyệt</SelectItem>
                   <SelectItem value="published">Xuất bản</SelectItem>
                   <SelectItem value="archived">Lưu trữ</SelectItem>
@@ -626,21 +773,13 @@ function CourseFormDialog({
               />
             </div>
             {!form.isFree && (
-              <div className="col-span-2 space-y-1.5">
-                <Label>Giá (VNĐ)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.price ?? ''}
-                  onChange={(e) =>
-                    set(
-                      'price',
-                      e.target.value ? Number(e.target.value) : undefined,
-                    )
-                  }
-                  placeholder="0"
-                />
-                {renderFieldError('price')}
+              <div className="col-span-2 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2">
+                <CircleDollarSign className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-amber-700">
+                  Giá khóa học trả phí được đặt riêng bằng nút{' '}
+                  <span className="font-semibold">Đặt giá</span> (biểu tượng $) ở
+                  bảng danh sách, theo gói chu kỳ tháng/quý/năm.
+                </p>
               </div>
             )}
             <div className="col-span-2 space-y-1.5">

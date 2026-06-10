@@ -85,7 +85,7 @@ const NAV_GROUPS = [
         icon: BarChart2,
       },
       {
-        label: 'Gói đăng ký',
+        label: 'Cấu hình thanh toán',
         href: '/admin/business/subscriptions',
         icon: Zap,
       },

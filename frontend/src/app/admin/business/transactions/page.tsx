@@ -16,6 +16,7 @@ import {
 import { useDebounce } from '@/hooks/useDebounce';
 import { ProofModal } from '@/components/admin/transactions/ProofModal';
 import { TransactionRejectModal } from '@/components/admin/transactions/TransactionRejectModal';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { paymentApi } from '@/lib/api/payment.api';
 import { TransactionRecord, TransactionStatus } from '@/types/payment.types';
 import { FilterInput } from '@/common/filter/FilterInput';
@@ -147,7 +148,9 @@ export default function TransactionsPage() {
       if (
         debouncedSearch &&
         !t._id.includes(debouncedSearch) &&
-        !(t.paymentMethod ?? '').toLowerCase().includes(debouncedSearch.toLowerCase())
+        !(t.paymentMethod ?? '')
+          .toLowerCase()
+          .includes(debouncedSearch.toLowerCase())
       )
         return false;
       return true;
@@ -235,7 +238,11 @@ export default function TransactionsPage() {
             {tx.paymentMethod ?? 'N/A'}
           </p>
           <p className="text-[11px] text-gray-400">
-            {tx.gatewayProvider ?? '—'}
+            {tx.transactionType === 'course'
+              ? 'Khoá học'
+              : tx.transactionType === 'performance'
+                ? 'Tiết mục'
+                : '—'}
           </p>
         </>
       ),
@@ -295,28 +302,38 @@ export default function TransactionsPage() {
     },
     {
       header: 'Hành động',
+      className: 'text-right',
       render: (tx) => {
         const isActionable = tx.status === 'reviewing';
         const isBusy = actionLoading === tx._id;
-        return isActionable ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => handleApprove(tx)}
-              disabled={isBusy}
-              className="h-7 px-3 rounded-lg text-[12px] font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50"
-            >
-              {isBusy ? '...' : 'Duyệt'}
-            </button>
-            <button
-              onClick={() => setRejectTarget(tx)}
-              disabled={isBusy}
-              className="h-7 px-3 rounded-lg text-[12px] font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-colors disabled:opacity-50"
-            >
-              Từ chối
-            </button>
+        return (
+          <div className="flex justify-end">
+            <RowActionsMenu
+              actions={[
+                {
+                  label: 'Xem chi tiết',
+                  icon: Eye,
+                  href: `/admin/business/transactions/${tx._id}`,
+                },
+                {
+                  label: 'Duyệt',
+                  icon: CheckCircle2,
+                  hidden: !isActionable,
+                  disabled: isBusy,
+                  separatorBefore: true,
+                  onClick: () => handleApprove(tx),
+                },
+                {
+                  label: 'Từ chối',
+                  icon: XCircle,
+                  variant: 'destructive',
+                  hidden: !isActionable,
+                  disabled: isBusy,
+                  onClick: () => setRejectTarget(tx),
+                },
+              ]}
+            />
           </div>
-        ) : (
-          <span className="text-[12px] text-gray-300">—</span>
         );
       },
     },
@@ -412,7 +429,7 @@ export default function TransactionsPage() {
             activeTab={activeTab}
             onTabChange={(id) => setActiveTab(id as TransactionStatus | 'all')}
             getBadgeClass={getBadgeClass}
-            className="flex-1 min-w-[300px]"
+            className="flex-1 min-w-75"
           />
           <div className="px-4 py-2 shrink-0">
             <FilterInput

@@ -40,6 +40,8 @@ import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
+import { Eye } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { lessonSchema, zodFieldErrors } from '@/schema/form.schema';
 
@@ -243,24 +245,25 @@ export default function LessonManagementPage() {
       header: 'Hành động',
       className: 'text-right',
       render: (lesson) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <button
-            onClick={() => handleEdit(lesson)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(lesson._id)}
-            disabled={isDeleting === lesson._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeleting === lesson._id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/content/lesson-management/${lesson._id}`,
+              },
+              { label: 'Chỉnh sửa', icon: Pencil, onClick: () => handleEdit(lesson) },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                disabled: isDeleting === lesson._id,
+                onClick: () => handleDelete(lesson._id),
+              },
+            ]}
+          />
         </div>
       ),
     },
