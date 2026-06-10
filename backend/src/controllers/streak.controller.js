@@ -1,4 +1,5 @@
 const Streak = require('../models/Streak');
+const { evaluateBadges } = require('../utils/badge');
 
 // Only return the current user's streak records
 exports.getAll = async (req, res, next) => {
@@ -27,6 +28,8 @@ exports.getOne = async (req, res, next) => {
 exports.createOne = async (req, res, next) => {
   try {
     const doc = await Streak.create({ ...req.body, userId: req.user._id });
+    // Trao badge streak nếu đạt ngưỡng (best-effort, không chặn response)
+    await evaluateBadges(req.user._id, 'streak_days', doc.currentStreak);
     res.status(201).json({ success: true, data: doc });
   } catch (err) {
     next(err);
@@ -46,6 +49,7 @@ exports.updateOne = async (req, res, next) => {
       new: true,
       runValidators: true,
     });
+    await evaluateBadges(updated.userId, 'streak_days', updated.currentStreak);
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     next(err);

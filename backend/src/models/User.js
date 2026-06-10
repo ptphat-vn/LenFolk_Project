@@ -39,12 +39,19 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'instructor', 'learner', 'guest'],
-      default: 'guest',
+      enum: ['admin', 'instructor', 'user'],
+      default: 'user',
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    // Cờ xác nhận user đã đăng ký (mua) ít nhất 1 course/tiết mục thành công.
+    // Set true khi admin approve giao dịch. Xem chi tiết "đã đăng ký gì" qua
+    // GET /api/enrollments/me.
+    isSubscribed: {
+      type: Boolean,
+      default: false,
     },
     isVerified: {
       type: Boolean,
@@ -63,17 +70,6 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    currentSubscription: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserSubscription',
-      default: null,
-    },
-    enrolledCourses: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course',
-      },
-    ],
   },
   { timestamps: true },
 );

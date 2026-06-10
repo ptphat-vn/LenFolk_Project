@@ -1,7 +1,5 @@
 const Coupon = require('../models/Coupon');
-
-
-
+const { writeAuditLog } = require('../utils/audit');
 
 
 
@@ -33,6 +31,7 @@ exports.createOne = async (req, res, next) => {
     req.body.code = req.body.code.toUpperCase();
   }
   const doc = await Coupon.create(req.body);
+  await writeAuditLog(req, { action: 'CREATE', resource: 'Coupon', resourceId: doc._id, after: doc.toObject() });
   res.status(201).json({
     success: true,
     message: 'Tạo mã giảm giá thành công',
@@ -45,6 +44,7 @@ exports.updateOne = async (req, res, next) => {
   try {
   const doc = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  await writeAuditLog(req, { action: 'UPDATE', resource: 'Coupon', resourceId: doc._id, after: doc.toObject() });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });
   } catch (err) { next(err); }
 };
@@ -53,6 +53,7 @@ exports.deleteOne = async (req, res, next) => {
   try {
   const doc = await Coupon.findByIdAndDelete(req.params.id);
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  await writeAuditLog(req, { action: 'DELETE', resource: 'Coupon', resourceId: doc._id, before: doc.toObject() });
   res.status(200).json({ success: true, message: 'Xóa thành công', data: null });
   } catch (err) { next(err); }
 };

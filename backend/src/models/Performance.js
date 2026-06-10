@@ -88,10 +88,18 @@ const performanceSchema = new mongoose.Schema(
       enum: ['pending', 'published', 'archived'],
       default: 'pending',
     },
-    // LƯU Ý: Giá (price) & chu kỳ (billingCycle) KHÔNG lưu trên Performance.
-    // Instructor nhập price/billingCycle khi tạo → BE tự tạo một Subscription
-    // liên kết (itemType='performance', performanceId). Subscription là nguồn
-    // giá chính thức — đọc giá qua Subscription.findOne({ performanceId }).
+    // Giá NẰM THẲNG trên tiết mục: instructor nhập khi đăng bài.
+    // Tiết mục bán MUA ĐỨT 1 lần (không chu kỳ). isFree=true thì bỏ qua giá.
+    price: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    currency: {
+      type: String,
+      enum: ['VND', 'USD'],
+      default: 'VND',
+    },
     tags: {
       type: [String],
       default: [],

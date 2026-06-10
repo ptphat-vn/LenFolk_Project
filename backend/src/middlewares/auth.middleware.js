@@ -36,8 +36,8 @@ const verifyInstructor = (req, res, next) => {
   }
   next();
 };
-const verifyLearner = (req, res, next) => {
-  if (req.user.role !== 'learner') {
+const verifyUser = (req, res, next) => {
+  if (req.user.role !== 'user') {
     return res.status(403).json({ message: 'Access denied' });
   }
   next();
@@ -75,5 +75,5 @@ module.exports = {
   verifyAdmin,
   verifyInstructor,
   verifyInstructorOrAdmin,
-  verifyLearner,
+  verifyUser,
 };
