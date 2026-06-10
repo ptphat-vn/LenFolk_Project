@@ -1,6 +1,22 @@
 const { z } = require('zod');
 
 const mongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ObjectId');
+const booleanFromForm = z.preprocess((value) => {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+}, z.boolean());
+const stringArrayFromForm = z.preprocess((value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== 'string') return value;
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    // Fall back to comma-separated values below.
+  }
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
+}, z.array(z.string()));
 
 exports.createSubscriptionSchema = z.object({
   body: z
@@ -11,12 +27,12 @@ exports.createSubscriptionSchema = z.object({
       courseId: mongoId.optional(),
       performanceId: mongoId.optional(),
       description: z.string().optional(),
-      price: z.number(),
+      price: z.coerce.number(),
       currency: z.enum(['VND', 'USD']).optional(),
       billingCycle: z.enum(['monthly', 'quarterly', 'yearly']),
-      features: z.array(z.string()).optional(),
-      maxCourses: z.number().optional(),
-      isActive: z.boolean().optional(),
+      features: stringArrayFromForm.optional(),
+      maxCourses: z.coerce.number().optional(),
+      isActive: booleanFromForm.optional(),
       qrCodeUrl: z.string().url().optional(),
     })
     .refine(
@@ -43,12 +59,12 @@ exports.updateSubscriptionSchema = z.object({
     courseId: mongoId.optional(),
     performanceId: mongoId.optional(),
     description: z.string().optional(),
-    price: z.number().optional(),
+    price: z.coerce.number().optional(),
     currency: z.enum(['VND', 'USD']).optional(),
     billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
-    features: z.array(z.string()).optional(),
-    maxCourses: z.number().optional(),
-    isActive: z.boolean().optional(),
+    features: stringArrayFromForm.optional(),
+    maxCourses: z.coerce.number().optional(),
+    isActive: booleanFromForm.optional(),
     qrCodeUrl: z.string().url().nullable().optional(),
   })
   .refine(

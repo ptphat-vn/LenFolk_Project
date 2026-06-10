@@ -12,7 +12,6 @@
 | `guest`      | Mặc định khi đăng ký                  |
 | `learner`    | Sau khi subscription được admin duyệt |
 | `instructor` | Được admin gán                        |
-| `moderator`  | Được admin gán                        |
 | `admin`      | Quyền cao nhất                        |
 
 ---
@@ -190,16 +189,6 @@
 
 ---
 
-## 🛡️ Moderator Logs
-
-| Method   | Endpoint              | Mô tả                                                     | Role                 |
-| -------- | --------------------- | --------------------------------------------------------- | -------------------- |
-| `GET`    | `/moderator-logs`     | Danh sách moderator log (filter: `moderatorId`, `action`) | 🔒 Admin             |
-| `POST`   | `/moderator-logs`     | Tạo moderator log                                         | 🔒 Moderator / Admin |
-| `GET`    | `/moderator-logs/:id` | Chi tiết moderator log                                    | 🔒 Đã đăng nhập      |
-| `DELETE` | `/moderator-logs/:id` | Xóa moderator log                                         | 🔒 Admin             |
-
----
 
 ## 💰 Wallets
 
@@ -527,7 +516,6 @@ Admin từ chối:
 | `optionalAuth`            | Parse JWT nếu có, `req.user = null` nếu không có / lỗi — **không trả 401** |
 | `verifyAdmin`             | Yêu cầu `role === 'admin'`; trả `403` nếu không phải                       |
 | `verifyInstructorOrAdmin` | Yêu cầu `role === 'instructor'` hoặc `'admin'`                             |
-| `verifyModerator`         | Yêu cầu `role === 'moderator'`                                             |
 
 > `GET /courses` và `GET /courses/:id` dùng `optionalAuth` (không phải `verifyToken`) để phục vụ cả người chưa đăng nhập xem `foundation` courses.
 

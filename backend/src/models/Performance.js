@@ -29,6 +29,37 @@ const performanceSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    documents: {
+      type: [
+        {
+          name: {
+            type: String,
+            required: true,
+          },
+          url: {
+            type: String,
+            required: true,
+          },
+          publicId: {
+            type: String,
+            default: null,
+          },
+          format: {
+            type: String,
+            default: null,
+          },
+          resourceType: {
+            type: String,
+            default: 'raw',
+          },
+          bytes: {
+            type: Number,
+            default: null,
+          },
+        },
+      ],
+      default: [],
+    },
     // Tiết mục miễn phí hay không
     isFree: {
       type: Boolean,

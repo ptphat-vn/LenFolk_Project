@@ -44,8 +44,8 @@ const courseSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'pending', 'published', 'archived'],
-      default: 'draft',
+      enum: ['pending', 'published', 'archived'],
+      default: 'pending',
     },
     tags: {
       type: [String],

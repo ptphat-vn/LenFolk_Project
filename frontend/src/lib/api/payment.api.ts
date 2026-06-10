@@ -2,7 +2,6 @@ import axiosInstance from '../axios';
 import { APIResponse } from '@/types/response.type';
 import {
   TransactionRecord,
-  CreateTransactionRecordInput,
   UpdateTransactionRecordInput,
   RejectTransactionInput,
   GetTransactionRecordsQuery,
@@ -14,12 +13,6 @@ export const paymentApi = {
     const res = await axiosInstance.get<APIResponse<TransactionRecord[]>>('/transaction-records', {
       params: query,
     });
-    return res.data;
-  },
-
-  /** POST /transaction-records — Tạo bản ghi giao dịch thủ công (internal/admin) */
-  create: async (body: CreateTransactionRecordInput) => {
-    const res = await axiosInstance.post<APIResponse<TransactionRecord>>('/transaction-records', body);
     return res.data;
   },
 
@@ -40,7 +33,7 @@ export const paymentApi = {
 
   /** DELETE /transaction-records/:id — Xóa bản ghi giao dịch (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/transaction-records/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/transaction-records/${id}`);
     return res.data;
   },
 

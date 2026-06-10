@@ -1,4 +1,6 @@
-export const API_URL = "https://bookworm-app-backend-9ch4.onrender.com/api";
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
 
-// http://localhost:8080/api
-// https://bookworm-app-backend-9ch4.onrender.com/api
+export const AI_API_URL =
+  process.env.EXPO_PUBLIC_API_AI_URL ||
+  "http://localhost:4000/";

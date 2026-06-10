@@ -1,33 +1,89 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Image, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { useLogout } from "@/hooks/auth/use-logout";
+import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
+import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useAuthStore } from "@/store/authStore";
+import SafeScreen from "../../components/SafeScreen";
 
 export default function ProfileTabScreen() {
   const router = useRouter();
+  const scrollRef = useScrollToTopOnFocus();
   const [reminders, setReminders] = useState(true);
+  const logoutMutation = useLogout();
+  const logoutOffset = useSharedValue(0);
+  const user = useAuthStore((state) => state.user);
+  const displayName = user?.name?.trim() || "Bạn";
+  const avatarSource = user?.avatar
+    ? { uri: user.avatar }
+    : require("../../assets/images/Profile.png");
+  const profileScore = [
+    user?.name,
+    user?.email,
+    user?.avatar,
+    user?.phoneNumber,
+    user?.dateOfBirth,
+  ].filter(Boolean).length;
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSettled: () => router.replace("/(auth)"),
+    });
+  };
+
+  React.useEffect(() => {
+    logoutOffset.value = withRepeat(
+      withSequence(
+        withTiming(5, { duration: 450 }),
+        withTiming(0, { duration: 450 }),
+      ),
+      -1,
+    );
+
+    return () => cancelAnimation(logoutOffset);
+  }, [logoutOffset]);
+
+  const logoutAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: logoutOffset.value }],
+  }));
 
   return (
-    <View className="flex-1 bg-[#FDF8EA]">
+    <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <StatusBar style="dark" />
 
       {/* Main Scroll Container */}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
         {/* --- HEADER --- */}
-        <View className="px-6 pt-14 pb-4 flex-row justify-between items-center bg-[#FDF8EA]">
+        <AnimatedBlock variant="header" className="px-6 pt-2 pb-4 flex-row justify-between items-center bg-[#FDF8EA]">
           {/* Back Button */}
           <TouchableOpacity
             activeOpacity={0.8}
             className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={22} color="#10120C" />
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color="#10120C"
+              className="animate-arrow-left"
+            />
           </TouchableOpacity>
 
           {/* Title */}
@@ -46,13 +102,13 @@ export default function ProfileTabScreen() {
           >
             <Ionicons name="notifications" size={20} color="white" />
           </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
 
         {/* --- USER ACCOUNT CARD --- */}
-        <View className="bg-white rounded-[32px] p-5 mx-6 shadow-sm mb-6 mt-2 border border-gray-50">
+        <AnimatedBlock variant="card" delay={90} className="bg-white rounded-[32px] p-5 mx-6 shadow-sm mb-6 mt-2 border border-gray-50">
           <View className="flex-row items-center mb-4">
             <Image
-              source={require("../../assets/images/Profile.png")}
+              source={avatarSource}
               style={{ width: 64, height: 64, borderRadius: 32 }}
               className="mr-4 shadow border border-gray-100"
             />
@@ -61,21 +117,21 @@ export default function ProfileTabScreen() {
                 className="text-charcoal text-lg font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
-                Hoàng Minh
+                {displayName}
               </Text>
               <Text className="text-xs text-gray-400 font-bold mt-0.5">
-                nguyenhoangminh4455@gmail.com
+                {user?.email || "Chưa có email"}
               </Text>
               
               {/* Ratings and trophies */}
               <View className="flex-row items-center mt-2 gap-4">
                 <View className="flex-row items-center">
-                  <Text className="text-xs">⭐</Text>
-                  <Text className="text-xs font-bold text-charcoal/80 ml-1">2.980</Text>
+                  <Ionicons name="person-circle-outline" size={14} color="#8E9E6E" />
+                  <Text className="text-xs font-bold text-charcoal/80 ml-1">{profileScore}/5 hồ sơ</Text>
                 </View>
                 <View className="flex-row items-center">
-                  <Text className="text-xs">🏆</Text>
-                  <Text className="text-xs font-bold text-charcoal/80 ml-1">3</Text>
+                  <Ionicons name="shield-checkmark-outline" size={14} color="#8E9E6E" />
+                  <Text className="text-xs font-bold text-charcoal/80 ml-1">{user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}</Text>
                 </View>
               </View>
             </View>
@@ -93,10 +149,10 @@ export default function ProfileTabScreen() {
               Chỉnh sửa hồ sơ
             </Text>
           </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
 
         {/* --- SECTION: HỌC TẬP (LEARNING SETTINGS) --- */}
-        <View className="mx-6 mb-6">
+        <AnimatedBlock variant="listItem" delay={140} className="mx-6 mb-6">
           <Text
             className="text-base font-bold text-charcoal mb-3 px-1"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -117,7 +173,12 @@ export default function ProfileTabScreen() {
               </View>
               <View className="flex-row items-center">
                 <Text className="text-xs text-gray-500 font-bold mr-2">80</Text>
-                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="#6B7280"
+                  className="animate-arrow-right"
+                />
               </View>
             </TouchableOpacity>
 
@@ -151,7 +212,12 @@ export default function ProfileTabScreen() {
               </View>
               <View className="flex-row items-center">
                 <Text className="text-xs text-gray-500 font-bold mr-2">Bật</Text>
-                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="#6B7280"
+                  className="animate-arrow-right"
+                />
               </View>
             </TouchableOpacity>
 
@@ -167,14 +233,19 @@ export default function ProfileTabScreen() {
               </View>
               <View className="flex-row items-center">
                 <Text className="text-xs text-gray-500 font-bold mr-2">20 phút</Text>
-                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="#6B7280"
+                  className="animate-arrow-right"
+                />
               </View>
             </TouchableOpacity>
           </View>
-        </View>
+        </AnimatedBlock>
 
         {/* --- SECTION: CÀI ĐẶT (GENERAL SETTINGS) --- */}
-        <View className="mx-6 mb-6">
+        <AnimatedBlock variant="listItem" delay={190} className="mx-6 mb-6">
           <Text
             className="text-base font-bold text-charcoal mb-3 px-1"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -193,7 +264,12 @@ export default function ProfileTabScreen() {
                   Thông tin cá nhân
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color="#6B7280"
+                className="animate-arrow-right"
+              />
             </TouchableOpacity>
 
             {/* Item 2: Upgrade Premium */}
@@ -206,7 +282,12 @@ export default function ProfileTabScreen() {
                   Nâng cấp Premium
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color="#6B7280"
+                className="animate-arrow-right"
+              />
             </TouchableOpacity>
 
             {/* Item 3: Dark Mode */}
@@ -219,13 +300,18 @@ export default function ProfileTabScreen() {
                   Chế độ tối
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color="#6B7280"
+                className="animate-arrow-right"
+              />
             </TouchableOpacity>
           </View>
-        </View>
+        </AnimatedBlock>
 
         {/* --- SECTION: KHÁC (OTHER SETTINGS) --- */}
-        <View className="mx-6 mb-6">
+        <AnimatedBlock variant="listItem" delay={240} className="mx-6 mb-6">
           <Text
             className="text-base font-bold text-charcoal mb-3 px-1"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
@@ -244,26 +330,44 @@ export default function ProfileTabScreen() {
                   Chính sách bảo mật
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color="#6B7280"
+                className="animate-arrow-right"
+              />
             </TouchableOpacity>
           </View>
-        </View>
+        </AnimatedBlock>
 
         {/* --- LOGOUT BUTTON --- */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          className="mx-6 bg-[#E2E8D3] py-4 rounded-2xl flex-row justify-center items-center shadow-sm border border-gray-200/20 active:bg-white/10"
-          onPress={() => router.replace("/(auth)")}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#8E9E6E" className="mr-2" style={{ transform: [{ scaleX: -1 }] }} />
-          <Text
-            className="text-charcoal/80 text-base font-bold ml-2"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
+        <AnimatedBlock variant="button" delay={290}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            className={`mx-6 bg-[#DC2626] py-4 rounded-2xl flex-row justify-center items-center shadow-sm border border-[#B91C1C] active:bg-[#B91C1C] ${
+              logoutMutation.isPending ? "opacity-60" : ""
+            }`}
+            onPress={handleLogout}
+            disabled={logoutMutation.isPending}
           >
-            Đăng xuất
-          </Text>
-        </TouchableOpacity>
+            <Animated.View style={logoutAnimatedStyle}>
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color="white"
+                className="mr-2"
+                style={{ transform: [{ scaleX: -1 }] }}
+              />
+            </Animated.View>
+            <Text
+              className="text-white text-base font-bold ml-2"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              {logoutMutation.isPending ? "Đang đăng xuất..." : "Đăng xuất"}
+            </Text>
+          </TouchableOpacity>
+        </AnimatedBlock>
       </ScrollView>
-    </View>
+    </SafeScreen>
   );
 }

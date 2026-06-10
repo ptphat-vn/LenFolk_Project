@@ -24,6 +24,7 @@ export interface CreateLessonInput {
   title: string;
   description?: string;
   videoUrl?: string;
+  video?: File;
   audioUrl?: string;
   order: number;          // tối thiểu 1
   duration?: number;      // tối thiểu 0

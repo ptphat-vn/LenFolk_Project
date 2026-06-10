@@ -11,7 +11,6 @@ const Progress = require('./Progress');
 const { Subscription, UserSubscription } = require('./Subscription');
 const TransactionRecord = require('./TransactionRecord');
 const Notification = require('./Notification');
-const ModeratorLog = require('./ModeratorLog');
 const AuditLog = require('./AuditLog');
 const Coupon = require('./Coupon');
 const Wallet = require('./Wallet');
@@ -34,7 +33,6 @@ module.exports = {
   UserSubscription,
   TransactionRecord,
   Notification,
-  ModeratorLog,
   AuditLog,
   Coupon,
   Wallet,

@@ -9,6 +9,9 @@ exports.getAll = async (req, res, next) => {
   try {
   const queryObj = { ...req.query };
   ['page', 'sort', 'limit', 'fields'].forEach((f) => delete queryObj[f]);
+  if (req.user.role !== 'admin') {
+    queryObj.userId = req.user._id;
+  }
   let queryStr = JSON.stringify(queryObj).replace(/\b(gte|gt|lte|lt)\b/g, (m) => `$${m}`);
   const page = req.query.page * 1 || 1;
   const limit = req.query.limit * 1 || 100;
@@ -22,14 +25,19 @@ exports.getOne = async (req, res, next) => {
   try {
   const doc = await TransactionRecord.findById(req.params.id);
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (req.user.role !== 'admin' && !doc.userId.equals(req.user._id)) {
+    return res.status(403).json({ success: false, message: 'Forbidden: this transaction does not belong to you' });
+  }
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
 };
 
 exports.createOne = async (req, res, next) => {
   try {
-  const doc = await TransactionRecord.create(req.body);
-  res.status(201).json({ success: true, message: 'Tạo mới thành công', data: doc });
+  return res.status(403).json({
+    success: false,
+    message: 'Transaction records can only be created through the purchase flow.',
+  });
   } catch (err) { next(err); }
 };
 

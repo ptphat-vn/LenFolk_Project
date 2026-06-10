@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingVi
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { AnimatedBlock } from "@/components/AnimatedPage";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -29,14 +30,14 @@ export default function ResetPasswordScreen() {
         <StatusBar style="dark" />
 
         {/* Top Header Section */}
-        <View>
+        <AnimatedBlock variant="panel">
           {/* Header */}
-          <View className="flex-row items-center mb-10 mt-4">
+          <AnimatedBlock variant="header" className="flex-row items-center mb-10 mt-4">
             <TouchableOpacity
               className="p-2 rounded-full bg-gray-50 mr-4"
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={24} color="#10120C" />
+              <Ionicons name="arrow-back" size={24} color="#10120C" className="animate-arrow-left" />
             </TouchableOpacity>
             <Text
               className="text-2xl font-bold text-charcoal"
@@ -44,18 +45,20 @@ export default function ResetPasswordScreen() {
             >
               Tạo mật khẩu mới
             </Text>
-          </View>
+          </AnimatedBlock>
 
           {/* Prompt Description */}
-          <Text
-            className="text-base font-semibold text-charcoal/80 text-center mb-12"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
-          >
-            Tạo mật khẩu mới của bạn
-          </Text>
+          <AnimatedBlock variant="chip" delay={80}>
+            <Text
+              className="text-base font-semibold text-charcoal/80 text-center mb-12"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Tạo mật khẩu mới của bạn
+            </Text>
+          </AnimatedBlock>
 
           {/* Inputs Stack */}
-          <View className="gap-6 px-1">
+          <AnimatedBlock variant="card" delay={150} className="gap-6 px-1">
             {/* Password */}
             <View className="w-full flex-row items-center bg-white border border-primary rounded-2xl px-4 py-4.5 shadow-sm">
               <Feather name="lock" size={20} color="#8E9E6E" />
@@ -87,11 +90,11 @@ export default function ResetPasswordScreen() {
                 <Feather name={showConfirmPassword ? "eye" : "eye-off"} size={20} color="#8E9E6E" />
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </AnimatedBlock>
+        </AnimatedBlock>
 
         {/* Action Button "Tiếp tục" at bottom with white round right arrow */}
-        <View className="w-full mb-4">
+        <AnimatedBlock variant="button" delay={240} className="w-full mb-4">
           <TouchableOpacity
             activeOpacity={0.9}
             className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
@@ -104,10 +107,10 @@ export default function ResetPasswordScreen() {
               Tiếp tục
             </Text>
             <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
             </View>
           </TouchableOpacity>
-        </View>
+        </AnimatedBlock>
       </ScrollView>
     </KeyboardAvoidingView>
   );

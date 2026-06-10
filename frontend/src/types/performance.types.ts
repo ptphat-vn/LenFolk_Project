@@ -1,5 +1,14 @@
 export type PerformanceStatus = 'pending' | 'published' | 'archived';
 
+export interface PerformanceDocument {
+  name: string;
+  url: string;
+  publicId?: string | null;
+  format?: string | null;
+  resourceType?: string;
+  bytes?: number | null;
+}
+
 export interface Performance {
   _id: string;
   instructorId?: string | { _id: string; name?: string };
@@ -7,6 +16,7 @@ export interface Performance {
   description?: string;
   thumbnail?: string;
   videoUrl?: string;
+  documents?: PerformanceDocument[];
   isFree: boolean;
   genre?: string;
   duration?: number;
@@ -33,6 +43,7 @@ export interface CreatePerformanceInput {
   description?: string;
   thumbnail?: string;
   videoUrl?: string;
+  documents?: File[];
   isFree?: boolean;
   genre?: string;
   duration?: number;

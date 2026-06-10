@@ -3,6 +3,7 @@ const router = express.Router();
 
 const performanceController = require('../controllers/performance.controller');
 const purchaseController = require('../controllers/purchase.controller');
+const upload = require('../middlewares/upload.middleware');
 const {
   verifyToken,
   optionalAuth,
@@ -25,6 +26,7 @@ router
   .post(
     verifyToken,
     verifyInstructorOrAdmin,
+    upload.performanceDocuments.array('documents', 10),
     validate(createPerformanceSchema),
     performanceController.createOne,
   );
@@ -38,6 +40,7 @@ router
   .patch(
     verifyToken,
     verifyInstructorOrAdmin,
+    upload.performanceDocuments.array('documents', 10),
     validate(updatePerformanceSchema),
     performanceController.updateOne,
   )

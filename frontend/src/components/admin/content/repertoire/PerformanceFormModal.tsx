@@ -34,7 +34,8 @@ type PerformanceFormField =
   | 'genre'
   | 'duration'
   | 'price'
-  | 'billingCycle';
+  | 'billingCycle'
+  | 'documents';
 type PerformanceFormErrors = Partial<Record<PerformanceFormField, string>>;
 
 interface PerformanceFormModalProps {
@@ -55,6 +56,7 @@ const EMPTY_FORM: CreatePerformanceInput = {
   duration: undefined,
   tags: [],
   isFeatured: false,
+  documents: undefined,
   price: undefined,
   billingCycle: undefined,
 };
@@ -83,6 +85,7 @@ export function PerformanceFormModal({
         duration: performance.duration,
         tags: performance.tags ?? [],
         isFeatured: performance.isFeatured ?? false,
+        documents: undefined,
         // Pre-populate giá từ Subscription liên kết
         price: performance.subscription?.price ?? undefined,
         billingCycle: (performance.subscription?.billingCycle as CreatePerformanceInput['billingCycle']) ?? undefined,
@@ -277,6 +280,22 @@ export function PerformanceFormModal({
                 placeholder="https://..."
               />
               {renderFieldError('videoUrl')}
+            </div>
+
+            <div className="col-span-2 space-y-1.5">
+              <Label>Tài liệu đính kèm</Label>
+              <Input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip"
+                onChange={(e) => set('documents', Array.from(e.target.files || []))}
+              />
+              {performance?.documents && performance.documents.length > 0 && (
+                <p className="text-[11px] text-gray-500">
+                  Đã có {performance.documents.length} tài liệu. Upload mới sẽ được thêm vào danh sách.
+                </p>
+              )}
+              {renderFieldError('documents')}
             </div>
 
             <div className="col-span-2 space-y-1.5">

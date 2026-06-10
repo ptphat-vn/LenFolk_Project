@@ -15,6 +15,10 @@ exports.getAll = async (req, res, next) => {
 // Tạo gói subscription cho khóa học hoặc tiết mục
 exports.createOne = async (req, res, next) => {
   try {
+    if (req.file) {
+      req.body.qrCodeUrl = req.file.path;
+    }
+
     const { itemType, courseId, performanceId } = req.body;
 
     if (itemType === 'course') {
@@ -49,6 +53,10 @@ exports.getOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
+    if (req.file) {
+      req.body.qrCodeUrl = req.file.path;
+    }
+
     const doc = await Subscription.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
     res.status(200).json({ success: true, message: 'Cập nhật gói đăng ký thành công', data: doc });

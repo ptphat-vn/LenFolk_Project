@@ -30,7 +30,7 @@ export const courseApi = {
 
   /** DELETE /courses/:id — Xóa khóa học (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/courses/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/courses/${id}`);
     return res.data;
   },
 

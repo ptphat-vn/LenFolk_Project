@@ -45,6 +45,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
 
   const {
     register,
@@ -72,14 +73,18 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
   const onSubmit = async (data: CreatePerformanceInput) => {
     setIsSubmitting(true);
     setError('');
+    const payload: CreatePerformanceInput = {
+      ...data,
+      documents: documentFiles.length > 0 ? documentFiles : undefined,
+    };
     try {
       if (initialData) {
-        const res = await performanceApi.update(initialData._id, data);
+        const res = await performanceApi.update(initialData._id, payload);
         toast.success(res.message || 'Cập nhật tiết mục thành công');
         router.push('/instructor/performances');
         router.refresh();
       } else {
-        const res = await performanceApi.create(data);
+        const res = await performanceApi.create(payload);
         toast.success(res.message || 'Tạo tiết mục thành công');
         setSubmitted(true);
       }
@@ -246,6 +251,24 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
           </div>
           {errors.videoUrl && (
             <p className="text-xs text-red-500">{errors.videoUrl.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold text-gray-700">
+            Tài liệu đính kèm
+          </label>
+          <input
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip"
+            onChange={(e) => setDocumentFiles(Array.from(e.target.files || []))}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700"
+          />
+          {initialData?.documents && initialData.documents.length > 0 && (
+            <p className="text-[11px] text-gray-500">
+              Đã có {initialData.documents.length} tài liệu. Upload mới sẽ được thêm vào danh sách.
+            </p>
           )}
         </div>
 

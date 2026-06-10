@@ -29,7 +29,7 @@ export const streakApi = {
 
   /** DELETE /streaks/:id — Xóa streak (cần đăng nhập, chỉ record của mình) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/streaks/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/streaks/${id}`);
     return res.data;
   },
 };

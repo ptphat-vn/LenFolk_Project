@@ -3,6 +3,7 @@ const router = express.Router();
 
 const lessonController = require('../controllers/lesson.controller');
 const { verifyToken, verifyAdmin, optionalAuth } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 const validate = require('../middlewares/validate.middleware');
 const {
   createLessonSchema,
@@ -14,19 +15,31 @@ const {
 router
   .route('/')
   
-  .get(verifyToken, lessonController.getAll)
+  .get(optionalAuth, lessonController.getAll)
   
-  .post(verifyToken, verifyAdmin, validate(createLessonSchema), lessonController.createOne);
+  .post(
+    verifyToken,
+    verifyAdmin,
+    upload.lessonVideo.single('video'),
+    validate(createLessonSchema),
+    lessonController.createOne,
+  );
 
-// GET    /api/lessons/:id  - Auth required
+// GET    /api/lessons/:id  - Auth optional; public can view free published lessons
 // PATCH  /api/lessons/:id  - Admin only
 // DELETE /api/lessons/:id  - Admin only
 router
   .route('/:id')
   
-  .get(verifyToken, lessonController.getOne)
+  .get(optionalAuth, lessonController.getOne)
   
-  .patch(verifyToken, verifyAdmin, validate(updateLessonSchema), lessonController.updateOne)
+  .patch(
+    verifyToken,
+    verifyAdmin,
+    upload.lessonVideo.single('video'),
+    validate(updateLessonSchema),
+    lessonController.updateOne,
+  )
   
   .delete(verifyToken, verifyAdmin, lessonController.deleteOne);
 

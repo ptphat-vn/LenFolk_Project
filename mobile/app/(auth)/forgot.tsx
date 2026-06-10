@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { AnimatedBlock } from "@/components/AnimatedPage";
 
 export default function ForgotChoiceScreen() {
   const router = useRouter();
@@ -13,13 +14,13 @@ export default function ForgotChoiceScreen() {
       <StatusBar style="dark" />
 
       {/* Header Area */}
-      <View>
-        <View className="flex-row items-center mb-10">
+      <AnimatedBlock variant="panel">
+        <AnimatedBlock variant="header" className="flex-row items-center mb-10">
           <TouchableOpacity
             className="p-2 rounded-full bg-gray-50 mr-4"
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#10120C" />
+            <Ionicons name="arrow-back" size={24} color="#10120C" className="animate-arrow-left" />
           </TouchableOpacity>
           <Text
             className="text-2xl font-bold text-charcoal"
@@ -27,15 +28,17 @@ export default function ForgotChoiceScreen() {
           >
             Quên mật khẩu
           </Text>
-        </View>
+        </AnimatedBlock>
 
         {/* Info Description */}
-        <Text className="text-base text-gray-500 leading-7 text-center px-4 mb-10 mt-6">
-          Hãy chọn thông tin liên hệ mà chúng tôi sẽ sử dụng để đặt lại mật khẩu của bạn.
-        </Text>
+        <AnimatedBlock variant="chip" delay={80}>
+          <Text className="text-base text-gray-500 leading-7 text-center px-4 mb-10 mt-6">
+            Hãy chọn thông tin liên hệ mà chúng tôi sẽ sử dụng để đặt lại mật khẩu của bạn.
+          </Text>
+        </AnimatedBlock>
 
         {/* Choice Cards */}
-        <View className="gap-5">
+        <AnimatedBlock variant="card" delay={150} className="gap-5">
           {/* Email Option */}
           <TouchableOpacity
             activeOpacity={0.8}
@@ -71,11 +74,11 @@ export default function ForgotChoiceScreen() {
               SMS
             </Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </AnimatedBlock>
+      </AnimatedBlock>
 
       {/* Action Button at Bottom - styled exactly like the screenshot with "Đăng nhập" and a right arrow inside a white circle */}
-      <View className="w-full">
+      <AnimatedBlock variant="button" delay={240} className="w-full">
         <TouchableOpacity
           activeOpacity={0.9}
           className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
@@ -88,10 +91,10 @@ export default function ForgotChoiceScreen() {
             Đăng nhập
           </Text>
           <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
           </View>
         </TouchableOpacity>
-      </View>
+      </AnimatedBlock>
     </View>
   );
 }

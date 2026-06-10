@@ -3,7 +3,7 @@ const { z } = require('zod');
 exports.createAuditLogSchema = z.object({
   body: z.object({
   actorId: z.string(),
-  actorRole: z.enum(['admin', 'instructor', 'moderator', 'learner', 'guest']),
+  actorRole: z.enum(['admin', 'instructor', 'learner', 'guest']),
   action: z.string(),
   resource: z.string(),
   resourceId: z.string().optional(),
@@ -16,7 +16,7 @@ exports.createAuditLogSchema = z.object({
 exports.updateAuditLogSchema = z.object({
   body: z.object({
   actorId: z.string().optional(),
-  actorRole: z.enum(['admin', 'instructor', 'moderator', 'learner', 'guest']).optional(),
+  actorRole: z.enum(['admin', 'instructor', 'learner', 'guest']).optional(),
   action: z.string().optional(),
   resource: z.string().optional(),
   resourceId: z.string().optional(),

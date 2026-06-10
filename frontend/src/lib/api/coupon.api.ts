@@ -32,7 +32,7 @@ export const couponApi = {
 
   /** DELETE /coupons/:id — Xóa coupon (Admin only) */
   delete: async (id: string) => {
-    const res = await axiosInstance.delete<void>(`/coupons/${id}`);
+    const res = await axiosInstance.delete<APIResponse<null>>(`/coupons/${id}`);
     return res.data;
   },
 };

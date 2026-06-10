@@ -100,14 +100,12 @@ const roleStyle: Record<string, string> = {
   learner: 'bg-blue-50 text-blue-700',
   instructor: 'bg-violet-50 text-violet-700',
   admin: 'bg-[#1a3a2a] text-white',
-  moderator: 'bg-amber-50 text-amber-700',
   guest: 'bg-gray-100 text-gray-500',
 };
 const roleLabel: Record<string, string> = {
   learner: 'Học viên',
   instructor: 'Giảng viên',
   admin: 'Admin',
-  moderator: 'Moderator',
   guest: 'Khách',
 };
 

@@ -38,7 +38,6 @@ router.use('/subscriptions', require('./subscription.route'));
 router.use('/transaction-records', require('./transaction-record.route'));
 router.use('/permissions', require('./permission.route'));
 router.use('/audit-logs', require('./audit-log.route'));
-router.use('/moderator-logs', require('./moderator-log.route'));
 router.use('/coupons', require('./coupon.route'));
 router.use('/wallets', require('./wallet.route'));
 // /payments (ZaloPay) — removed; use POST /subscriptions/:id/request + /transaction-records/:id/{upload-proof|approve|reject}
