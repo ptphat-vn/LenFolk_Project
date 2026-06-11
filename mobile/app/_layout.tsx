@@ -58,6 +58,8 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="lesson/[id]" />
+          <Stack.Screen name="practice/[lessonId]" />
         </Stack>
         <StatusBar style="dark" />
       </SafeAreaProvider>

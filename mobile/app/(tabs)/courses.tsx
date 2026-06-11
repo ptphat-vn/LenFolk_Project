@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -12,87 +12,7 @@ import Animated, {
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import SafeScreen from "../../components/SafeScreen";
-
-const allLessons = [
-  {
-    id: 1,
-    category: "Cơ bản",
-    title: "Bài 1: Làm quen với sáo trúc",
-    duration: "5:00",
-    status: "completed",
-  },
-  {
-    id: 2,
-    category: "Cơ bản",
-    title: "Bài 2: Kỹ thuật thổi cơ bản",
-    duration: "15:00",
-    status: "completed",
-  },
-  {
-    id: 3,
-    category: "Cơ bản",
-    title: "Bài 3: Luyện tập hơi thở",
-    duration: "8:00",
-    status: "in_progress",
-    progress: 0.6, // 60% progress
-  },
-  {
-    id: 4,
-    category: "Cơ bản",
-    title: "Bài 4: Lấy hơi cơ bản",
-    duration: "8:00",
-    status: "not_started",
-  },
-  {
-    id: 5,
-    category: "Trung cấp",
-    title: "Bài 5: Các nốt cao",
-    duration: "15:00",
-    status: "not_started",
-  },
-  {
-    id: 6,
-    category: "Trung cấp",
-    title: "Bài 6: Đi ngón nâng cao",
-    duration: "20:00",
-    status: "not_started",
-  },
-  {
-    id: 7,
-    category: "Trung cấp",
-    title: "Bài 7: Rung âm cơ bản",
-    duration: "15:00",
-    status: "not_started",
-  },
-  {
-    id: 8,
-    category: "Trung cấp",
-    title: "Bài 8: Đuổi hơi cấp tốc",
-    duration: "15:00",
-    status: "not_started",
-  },
-  {
-    id: 9,
-    category: "Nâng cao",
-    title: "Bài 9: Kỹ thuật réo nhạc",
-    duration: "15:00",
-    status: "not_started",
-  },
-  {
-    id: 10,
-    category: "Nâng cao",
-    title: "Bài 10: Xử lý tác phẩm",
-    duration: "15:00",
-    status: "not_started",
-  },
-  {
-    id: 11,
-    category: "Nâng cao",
-    title: "Bài 11: Biểu diễn sân khấu",
-    duration: "15:00",
-    status: "not_started",
-  },
-];
+import { lessons as allLessons } from "@/constants/lessons";
 
 export default function CoursesScreen() {
   const router = useRouter();
@@ -252,6 +172,12 @@ export default function CoursesScreen() {
                 <TouchableOpacity
                   key={lesson.id}
                   activeOpacity={0.9}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/lesson/[id]",
+                      params: { id: String(lesson.id) },
+                    } as unknown as Href)
+                  }
                   className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
                 >
                   {/* Left Column: Icon Status badge + Title & Category */}

@@ -34,7 +34,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Cho phép LenFolk sử dụng micro để ghi âm và phân tích nốt sáo của bạn."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
