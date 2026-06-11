@@ -7,47 +7,31 @@ import {
   CourseLevel,
   CourseStatus,
   CreateCourseInput,
+  UpsertCoursePlanInput,
 } from '@/types/course.types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   BookOpen,
+  CircleDollarSign,
   Clock,
-  Layers,
+  Eye,
   Pencil,
   Plus,
   Star,
   Trash2,
   TrendingUp,
-  Loader2,
-  Eye,
 } from 'lucide-react';
-import Link from 'next/link';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
 import { useDebounce } from '@/hooks/useDebounce';
-import { courseSchema, zodFieldErrors } from '@/schema/form.schema';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
+import { ConfirmDeleteDialog } from '@/components/admin/ConfirmDeleteDialog';
+import { CourseFormDialog } from '@/components/admin/course-management/CourseFormDialog';
+import { CoursePlanDialog } from '@/components/admin/course-management/CoursePlanDialog';
 
 const LEVEL_LABELS: Record<CourseLevel, string> = {
   beginner: 'Cơ bản',
@@ -56,10 +40,15 @@ const LEVEL_LABELS: Record<CourseLevel, string> = {
 };
 
 const STATUS_LABELS: Record<CourseStatus, string> = {
-  draft: 'Nháp',
   pending: 'Chờ duyệt',
   published: 'Xuất bản',
   archived: 'Lưu trữ',
+};
+
+const CYCLE_LABELS: Record<string, string> = {
+  monthly: 'tháng',
+  quarterly: 'quý',
+  yearly: 'năm',
 };
 
 const LEVEL_COLORS: Record<CourseLevel, string> = {
@@ -68,18 +57,7 @@ const LEVEL_COLORS: Record<CourseLevel, string> = {
   advanced: 'bg-purple-100 text-purple-700',
 };
 
-type CourseFormField =
-  | 'title'
-  | 'description'
-  | 'thumbnail'
-  | 'level'
-  | 'status'
-  | 'courseType'
-  | 'price';
-type CourseFormErrors = Partial<Record<CourseFormField, string>>;
-
 const STATUS_COLORS: Record<CourseStatus, string> = {
-  draft: 'bg-gray-100 text-gray-600',
   pending: 'bg-amber-100 text-amber-700',
   published: 'bg-emerald-100 text-emerald-700',
   archived: 'bg-red-100 text-red-600',
@@ -93,9 +71,13 @@ export default function CourseManagementPage() {
   const [levelFilter, setLevelFilter] = useState<CourseLevel | 'all'>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Course | null>(null);
+  const [planTarget, setPlanTarget] = useState<Course | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Course | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -149,17 +131,38 @@ export default function CourseManagementPage() {
     setFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa khóa học này?')) return;
+  const handleSetPlan = (course: Course) => {
+    setPlanTarget(course);
+    setPlanOpen(true);
+  };
+
+  const handleSavePlan = async (data: UpsertCoursePlanInput) => {
+    if (!planTarget) return;
     try {
-      setIsDeleting(id);
-      await courseApi.delete(id);
+      setIsSavingPlan(true);
+      await courseApi.setPlan(planTarget._id, data);
+      toast.success('Đã cập nhật giá khóa học');
+      setPlanOpen(false);
+      fetchCourses();
+    } catch {
+      toast.error('Lỗi khi cập nhật giá');
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      setIsDeleting(true);
+      await courseApi.delete(deleteTarget._id);
       toast.success('Đã xóa khóa học');
+      setDeleteTarget(null);
       fetchCourses();
     } catch {
       toast.error('Lỗi khi xóa khóa học');
     } finally {
-      setIsDeleting(null);
+      setIsDeleting(false);
     }
   };
 
@@ -188,17 +191,13 @@ export default function CourseManagementPage() {
       render: (course) => (
         <>
           <div className="flex items-center gap-2">
-            <p className="font-medium text-gray-900 truncate max-w-52">
-              {course.title}
-            </p>
+            <p className="font-medium text-gray-900 truncate max-w-52">{course.title}</p>
             {course.isFeatured && (
               <Star className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
             )}
           </div>
           {course.courseType && (
-            <p className="text-gray-400 text-[11px] mt-0.5">
-              {course.courseType}
-            </p>
+            <p className="text-gray-400 text-[11px] mt-0.5">{course.courseType}</p>
           )}
         </>
       ),
@@ -239,13 +238,21 @@ export default function CourseManagementPage() {
       ),
     },
     {
-      header: 'Giá',
+      header: 'Giá / Gói',
       className: 'text-center',
-      render: (course) => (
-        <span className="text-gray-600">
-          {course.isFree ? '—' : course.price ? `${course.price.toLocaleString('vi-VN')}đ` : '—'}
-        </span>
-      ),
+      render: (course) =>
+        course.isFree ? (
+          <span className="text-gray-400">Miễn phí</span>
+        ) : course.plan ? (
+          <span className="text-gray-700 font-medium">
+            {course.plan.price.toLocaleString('vi-VN')}đ
+            <span className="text-gray-400 font-normal">
+              {' '}/{CYCLE_LABELS[course.plan.billingCycle] ?? course.plan.billingCycle}
+            </span>
+          </span>
+        ) : (
+          <span className="text-amber-600 text-[11px]">Chưa đặt giá</span>
+        ),
     },
     {
       header: 'Bài học',
@@ -261,32 +268,34 @@ export default function CourseManagementPage() {
       header: 'Hành động',
       className: 'text-right',
       render: (course) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <Link
-            href={`/admin/content/course-management/${course._id}`}
-            className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
-            title="Xem chi tiết"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </Link>
-          <button
-            onClick={() => handleEdit(course)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-            title="Chỉnh sửa"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(course._id)}
-            disabled={isDeleting === course._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeleting === course._id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/content/course-management/${course._id}`,
+              },
+              {
+                label: 'Đặt giá / gói',
+                icon: CircleDollarSign,
+                hidden: course.isFree,
+                onClick: () => handleSetPlan(course),
+              },
+              {
+                label: 'Chỉnh sửa',
+                icon: Pencil,
+                onClick: () => handleEdit(course),
+              },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                onClick: () => setDeleteTarget(course),
+              },
+            ]}
+          />
         </div>
       ),
     },
@@ -364,12 +373,8 @@ export default function CourseManagementPage() {
                     <Icon className={`w-4 h-4 ${s.iconColor}`} />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900 leading-none">
-                      {s.value}
-                    </p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">
-                      {s.label}
-                    </p>
+                    <p className="text-lg font-bold text-gray-900 leading-none">{s.value}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
                   </div>
                 </div>
               );
@@ -407,9 +412,7 @@ export default function CourseManagementPage() {
           placeholder="Tất cả cấp độ"
           className="w-32"
         />
-        <span className="text-[12px] text-gray-400 ml-auto">
-          {filtered.length} khóa học
-        </span>
+        <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} khóa học</span>
       </div>
 
       {/* Table */}
@@ -422,7 +425,7 @@ export default function CourseManagementPage() {
           emptyMessage="Không có khóa học nào"
           keyExtractor={(c) => c._id}
         />
-        
+
         {!isLoading && filtered.length > PAGE_SIZE && (
           <div className="px-5 py-1 border-t border-gray-100">
             <Pagination
@@ -436,7 +439,6 @@ export default function CourseManagementPage() {
         )}
       </div>
 
-      {/* Form Dialog */}
       <CourseFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -444,263 +446,23 @@ export default function CourseManagementPage() {
         isSaving={isSaving}
         onSave={handleSave}
       />
+
+      <CoursePlanDialog
+        open={planOpen}
+        onOpenChange={setPlanOpen}
+        course={planTarget}
+        isSaving={isSavingPlan}
+        onSave={handleSavePlan}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        title="Xóa khóa học"
+        description={`Bạn có chắc chắn muốn xóa khóa học "${deleteTarget?.title}"? Hành động này không thể hoàn tác.`}
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
-  );
-}
-
-/* ─── Inline Course Form Dialog ─── */
-interface CourseFormDialogProps {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  course: Course | null;
-  isSaving: boolean;
-  onSave: (data: CreateCourseInput) => void;
-}
-
-function CourseFormDialog({
-  open,
-  onOpenChange,
-  course,
-  isSaving,
-  onSave,
-}: CourseFormDialogProps) {
-  const [form, setForm] = useState<CreateCourseInput>({
-    title: '',
-    description: '',
-    thumbnail: '',
-    level: 'beginner',
-    status: 'draft',
-    courseType: '',
-    isFree: true,
-    price: undefined,
-    tags: [],
-    isFeatured: false,
-  });
-  const [tagsInput, setTagsInput] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<CourseFormErrors>({});
-
-  useEffect(() => {
-    if (course) {
-      setForm({
-        title: course.title,
-        description: course.description ?? '',
-        thumbnail: course.thumbnail ?? '',
-        level: course.level,
-        status: course.status,
-        courseType: course.courseType ?? '',
-        isFree: course.isFree,
-        price: course.price,
-        tags: course.tags ?? [],
-        isFeatured: course.isFeatured ?? false,
-      });
-      setTagsInput((course.tags ?? []).join(', '));
-      setFieldErrors({});
-    } else {
-      setForm({
-        title: '',
-        description: '',
-        thumbnail: '',
-        level: 'beginner',
-        status: 'draft',
-        courseType: '',
-        isFree: true,
-        price: undefined,
-        tags: [],
-        isFeatured: false,
-      });
-      setTagsInput('');
-      setFieldErrors({});
-    }
-  }, [course, open]);
-
-  const set = <K extends keyof CreateCourseInput>(
-    k: K,
-    v: CreateCourseInput[K],
-  ) => {
-    setForm((prev) => ({ ...prev, [k]: v }));
-    if (k in fieldErrors) {
-      setFieldErrors((prev) => ({ ...prev, [k]: undefined }));
-    }
-  };
-
-  const renderFieldError = (field: CourseFormField) =>
-    fieldErrors[field] ? (
-      <p className="text-[11px] font-medium text-red-500">
-        {fieldErrors[field]}
-      </p>
-    ) : null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFieldErrors({});
-    if (!form.title.trim()) {
-      setFieldErrors({ title: 'Vui lòng nhập tên khóa học' });
-      return;
-    }
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const parsed = courseSchema.safeParse({ ...form, tags });
-    if (!parsed.success) {
-      setFieldErrors(zodFieldErrors<CourseFormField>(parsed.error));
-      return;
-    }
-    onSave(parsed.data);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#2d6a4f]" />
-            {course ? 'Chỉnh sửa khóa học' : 'Thêm khóa học mới'}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Tên khóa học *</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => set('title', e.target.value)}
-                placeholder="Nhập tên khóa học"
-              />
-              {renderFieldError('title')}
-            </div>
-            <div className="space-y-1.5">
-              <Label>Cấp độ</Label>
-              <Select
-                value={form.level}
-                onValueChange={(v) => set('level', v as CourseLevel)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Cơ bản</SelectItem>
-                  <SelectItem value="intermediate">Trung cấp</SelectItem>
-                  <SelectItem value="advanced">Nâng cao</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Trạng thái</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) => set('status', v as CourseStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
-                  <SelectItem value="pending">Chờ duyệt</SelectItem>
-                  <SelectItem value="published">Xuất bản</SelectItem>
-                  <SelectItem value="archived">Lưu trữ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Loại</Label>
-              <Select
-                value={form.isFree ? 'free' : 'paid'}
-                onValueChange={(v) => set('isFree', v === 'free')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Miễn phí</SelectItem>
-                  <SelectItem value="paid">Trả phí</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Loại khóa học</Label>
-              <Input
-                value={form.courseType ?? ''}
-                onChange={(e) => set('courseType', e.target.value)}
-                placeholder="foundation, advanced..."
-              />
-            </div>
-            {!form.isFree && (
-              <div className="col-span-2 space-y-1.5">
-                <Label>Giá (VNĐ)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.price ?? ''}
-                  onChange={(e) =>
-                    set(
-                      'price',
-                      e.target.value ? Number(e.target.value) : undefined,
-                    )
-                  }
-                  placeholder="0"
-                />
-                {renderFieldError('price')}
-              </div>
-            )}
-            <div className="col-span-2 space-y-1.5">
-              <Label>Mô tả</Label>
-              <Textarea
-                value={form.description ?? ''}
-                onChange={(e) => set('description', e.target.value)}
-                placeholder="Mô tả nội dung khóa học"
-                rows={2}
-              />
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Ảnh thumbnail (URL)</Label>
-              <Input
-                value={form.thumbnail ?? ''}
-                onChange={(e) => set('thumbnail', e.target.value)}
-                placeholder="https://..."
-              />
-              {renderFieldError('thumbnail')}
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Tags (cách nhau bởi dấu phẩy)</Label>
-              <Input
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="guitar, acoustic, beginner"
-              />
-            </div>
-            <div className="col-span-2 flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isFeatured"
-                checked={form.isFeatured ?? false}
-                onChange={(e) => set('isFeatured', e.target.checked)}
-                className="w-4 h-4 accent-[#2d6a4f]"
-              />
-              <Label htmlFor="isFeatured" className="cursor-pointer">
-                Đánh dấu là khóa học nổi bật
-              </Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Đang lưu...' : course ? 'Cập nhật' : 'Tạo khóa học'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }

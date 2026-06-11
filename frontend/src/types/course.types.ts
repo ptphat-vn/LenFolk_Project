@@ -1,7 +1,22 @@
 export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
-export type CourseStatus = 'draft' | 'pending' | 'published' | 'archived';
+export type CourseStatus = 'pending' | 'published' | 'archived';
+export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
+export type Currency = 'VND' | 'USD';
 
-/** Schema Course trả về từ API */
+/** CoursePlan — gói giá của course (bán theo chu kỳ). Course có tối đa 1 plan. */
+export interface CoursePlan {
+  _id: string;
+  courseId?: string;
+  name?: string | null;
+  description?: string | null;
+  price: number;
+  currency?: Currency;
+  billingCycle: BillingCycle;
+  features?: string[];
+  isActive?: boolean;
+}
+
+/** Schema Course trả về từ API. Giá KHÔNG nằm trên course — đọc từ `plan`. */
 export interface Course {
   _id: string;
   instructorId?: string;
@@ -10,9 +25,8 @@ export interface Course {
   thumbnail?: string;
   level: CourseLevel;
   status: CourseStatus;
-  courseType?: string;  // free-text: "foundation", "advanced", "masterclass"…
+  courseType?: string; // free-text: "foundation", "advanced", "masterclass"…
   isFree: boolean;
-  price?: number;
   adminCommissionPercentage?: number;
   tags?: string[];
   totalLessons?: number;
@@ -21,10 +35,12 @@ export interface Course {
   publishedAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Gói giá liên kết — embed trong GET /courses và GET /courses/:id */
+  plan?: CoursePlan | null;
 }
 
-/** Body dùng để tạo / cập nhật khóa học (POST /courses, PATCH /courses/:id)
- *  instructorId KHÔNG cần gửi — server inject từ JWT
+/** Body tạo / cập nhật khóa học (POST /courses, PATCH /courses/:id) — KHÔNG có giá.
+ *  instructorId KHÔNG cần gửi — server inject từ JWT. Đặt giá qua PUT /courses/:id/plan.
  */
 export interface CreateCourseInput {
   title: string;
@@ -34,10 +50,18 @@ export interface CreateCourseInput {
   status?: CourseStatus;
   tags?: string[];
   isFree?: boolean;
-  price?: number;
   adminCommissionPercentage?: number;
   courseType?: string;
   isFeatured?: boolean;
+}
+
+/** Body đặt/cập nhật gói giá cho course (PUT /courses/:id/plan) */
+export interface UpsertCoursePlanInput {
+  price: number;
+  billingCycle: BillingCycle;
+  name?: string;
+  description?: string;
+  features?: string[];
 }
 
 /** Query params cho GET /courses */

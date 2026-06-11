@@ -1,16 +1,22 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { X, Mail, Phone, Calendar, Zap } from 'lucide-react';
+import { X, Mail, Phone, Calendar, Zap, BookOpen, Music } from 'lucide-react';
 import { User, Role } from '@/types/user.types';
-import { Subscription } from '@/types/subscription.types';
+import { Enrollment } from '@/types/enrollment.types';
 
 const ROLE_STYLE: Record<Role, { label: string; cls: string }> = {
   admin: { label: 'Admin', cls: 'bg-[#1a3a2a] text-white' },
-  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
-  learner: { label: 'Học viên', cls: 'bg-blue-100 text-blue-700' },
-  guest: { label: 'Khách', cls: 'bg-gray-100 text-gray-500' },
+  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
+  user: { label: 'Người dùng', cls: 'bg-blue-100 text-blue-700' },
 };
+
+function enrollTitle(en: Enrollment): string {
+  if (en.itemType === 'course') {
+    return typeof en.courseId === 'object' ? en.courseId?.title ?? 'Khóa học' : 'Khóa học';
+  }
+  return typeof en.performanceId === 'object' ? en.performanceId?.title ?? 'Tiết mục' : 'Tiết mục';
+}
 
 function formatDate(d?: string) {
   if (!d) return '—';
@@ -25,16 +31,15 @@ export function UserDetailDrawer({
   user,
   isOpen,
   onClose,
-  subscriptions,
+  enrollments,
 }: {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
-  subscriptions: Subscription[];
+  enrollments: Enrollment[];
 }) {
   if (!isOpen || !user) return null;
 
-  const userSub = subscriptions.find((s) => s._id === user.currentSubscription);
   const role = ROLE_STYLE[user.role] ?? {
     label: user.role,
     cls: 'bg-gray-100 text-gray-600',
@@ -125,39 +130,49 @@ export function UserDetailDrawer({
             </div>
           </div>
 
-          {/* Subscription */}
+          {/* Đã đăng ký gì */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
-              Gói đăng ký
+              Đã đăng ký ({enrollments.length})
             </p>
-            {userSub ? (
-              <div className="bg-linear-to-br from-[#1a3a2a] to-[#2d6a4f] rounded-xl p-4 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4" />
-                  <p className="text-[14px] font-bold">{userSub.name}</p>
-                </div>
-                <p className="text-[12px] text-white/70">
-                  {userSub.description || 'Không có mô tả'}
-                </p>
-                <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
-                  <p className="text-[13px] font-bold">
-                    {userSub.price === 0
-                      ? 'Miễn phí'
-                      : `${userSub.price.toLocaleString('vi-VN')} ₫`}
-                  </p>
-                  <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded-full">
-                    {userSub.billingCycle === 'monthly'
-                      ? 'Hàng tháng'
-                      : userSub.billingCycle === 'quarterly'
-                        ? 'Hàng quý'
-                        : 'Hàng năm'}
-                  </span>
-                </div>
+            {enrollments.length > 0 ? (
+              <div className="space-y-2">
+                {enrollments.map((en) => {
+                  const ACTIVE = en.status === 'active';
+                  return (
+                    <div
+                      key={en._id}
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center shrink-0">
+                        {en.itemType === 'course' ? (
+                          <BookOpen className="w-4 h-4 text-[#2d6a4f]" />
+                        ) : (
+                          <Music className="w-4 h-4 text-violet-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-gray-800 truncate">
+                          {enrollTitle(en)}
+                        </p>
+                        <p className="text-[11px] text-gray-400">
+                          {en.itemType === 'course' ? 'Khóa học' : 'Tiết mục'}
+                          {en.endDate ? ' · có hạn' : ' · mua đứt'}
+                        </p>
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${ACTIVE ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-600'}`}
+                      >
+                        {ACTIVE ? 'Kích hoạt' : en.status}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-xl text-gray-400">
                 <Zap className="w-4 h-4" />
-                <p className="text-[13px]">Chưa đăng ký gói nào</p>
+                <p className="text-[13px]">Chưa đăng ký mục nào</p>
               </div>
             )}
           </div>

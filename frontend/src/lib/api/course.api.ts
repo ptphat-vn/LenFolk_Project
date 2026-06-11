@@ -1,6 +1,12 @@
 import axiosInstance from '../axios';
 import { APIResponse } from '@/types/response.type';
-import { Course, CreateCourseInput, GetCoursesQuery } from '@/types/course.types';
+import {
+  Course,
+  CreateCourseInput,
+  GetCoursesQuery,
+  CoursePlan,
+  UpsertCoursePlanInput,
+} from '@/types/course.types';
 import { CoursePurchaseInput, CoursePurchaseResponse } from '@/types/coupon.types';
 
 export const courseApi = {
@@ -31,6 +37,12 @@ export const courseApi = {
   /** DELETE /courses/:id — Xóa khóa học (Admin only) */
   delete: async (id: string) => {
     const res = await axiosInstance.delete<APIResponse<null>>(`/courses/${id}`);
+    return res.data;
+  },
+
+  /** PUT /courses/:id/plan — Đặt/cập nhật gói giá (CoursePlan) cho khóa học (Admin only) */
+  setPlan: async (id: string, body: UpsertCoursePlanInput) => {
+    const res = await axiosInstance.put<APIResponse<CoursePlan>>(`/courses/${id}/plan`, body);
     return res.data;
   },
 

@@ -34,12 +34,6 @@ function getApiErrorMessage(error: unknown): string | undefined {
     : undefined;
 }
 
-const BILLING_CYCLE_LABELS: Record<string, string> = {
-  monthly: 'Hàng tháng',
-  quarterly: 'Hàng quý (3 tháng)',
-  yearly: 'Hàng năm',
-};
-
 export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,8 +57,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
       videoUrl: initialData?.videoUrl || '',
       thumbnail: initialData?.thumbnail || '',
       adminCommissionPercentage: initialData?.adminCommissionPercentage ?? 30,
-      price: undefined,
-      billingCycle: 'monthly',
+      price: initialData?.price ?? undefined,
     },
   });
 
@@ -301,15 +294,15 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
           </div>
         </div>
 
-        {/* Price + Billing Cycle — chỉ hiện khi isFree = false */}
+        {/* Giá — chỉ hiện khi isFree = false. Tiết mục bán mua đứt 1 lần. */}
         <div
-          className={`grid grid-cols-2 gap-6 transition-all duration-300 ${
+          className={`transition-all duration-300 ${
             isFree ? 'opacity-40 pointer-events-none' : 'opacity-100'
           }`}
         >
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-w-xs">
             <label className="text-sm font-semibold text-gray-700">
-              Giá tiết mục (VND){' '}
+              Giá mua đứt (VND){' '}
               {!isFree && <span className="text-red-500">*</span>}
             </label>
             <div className="relative">
@@ -334,25 +327,8 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
               <p className="text-xs text-red-500">{errors.price.message}</p>
             )}
             <p className="text-[11px] text-gray-400">
-              Subscription plan sẽ được tạo tự động sau khi gửi.
+              Người mua trả 1 lần để sở hữu vĩnh viễn tiết mục này.
             </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-gray-700">
-              Chu kỳ thanh toán
-            </label>
-            <select
-              {...register('billingCycle')}
-              disabled={isFree}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
-            >
-              {Object.entries(BILLING_CYCLE_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 

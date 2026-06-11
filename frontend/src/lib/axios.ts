@@ -17,6 +17,12 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
+    // Khi body là FormData (upload file): bỏ Content-Type 'application/json'
+    // để trình duyệt tự set 'multipart/form-data; boundary=...'.
+    // Nếu giữ JSON, axios v1 sẽ convert FormData -> JSON và LÀM MẤT file.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
     return config;
   },
   (error) => {

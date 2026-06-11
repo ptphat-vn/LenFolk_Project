@@ -3,7 +3,7 @@ const { z } = require('zod');
 exports.createTransactionRecordSchema = z.object({
   body: z.object({
   userId: z.string(),
-  userSubscriptionId: z.string(),
+  enrollmentId: z.string(),
   amount: z.number(),
   currency: z.enum(['VND', 'USD']).optional(),
   paymentMethod: z.string(),
@@ -18,7 +18,7 @@ exports.createTransactionRecordSchema = z.object({
 exports.updateTransactionRecordSchema = z.object({
   body: z.object({
   userId: z.string().optional(),
-  userSubscriptionId: z.string().optional(),
+  enrollmentId: z.string().optional(),
   amount: z.number().optional(),
   currency: z.enum(['VND', 'USD']).optional(),
   paymentMethod: z.string().optional(),

@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'instructor' | 'learner' | 'guest';
+export type Role = 'admin' | 'instructor' | 'user';
 
 export type Gender = 'male' | 'female' | 'other';
 
@@ -12,7 +12,8 @@ export interface User {
   avatar?: string | null;
   phoneNumber?: string | null;
   role: Role;
-  currentSubscription?: string | null; // ID của UserSubscription hiện tại
+  /** Cờ xác nhận đã mua thành công ≥1 course/tiết mục (set khi admin approve giao dịch) */
+  isSubscribed?: boolean;
   isActive?: boolean;
   isVerified?: boolean;
   lastLoginAt?: string | null;
@@ -40,6 +41,7 @@ export interface UpdateUserInput {
   role?: Role;
   phoneNumber?: string;
   isActive?: boolean;
+  isSubscribed?: boolean;
   avatar?: File;  // file upload (binary)
 }
 

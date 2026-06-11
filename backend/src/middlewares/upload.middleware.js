@@ -22,6 +22,7 @@ const qrCodeStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'lenfolk/subscription-qr-codes',
+    resource_type: 'image',
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
   },
 });

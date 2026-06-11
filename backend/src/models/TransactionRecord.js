@@ -7,9 +7,9 @@ const transactionRecordSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
-    userSubscriptionId: {
+    enrollmentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserSubscription',
+      ref: 'Enrollment',
       required: false,
     },
     courseId: {
@@ -101,7 +101,7 @@ const transactionRecordSchema = new mongoose.Schema(
 
 transactionRecordSchema.index({ userId: 1 });
 transactionRecordSchema.index({ userId: 1, status: 1 });
-transactionRecordSchema.index({ userSubscriptionId: 1 });
+transactionRecordSchema.index({ enrollmentId: 1 });
 transactionRecordSchema.index({ gatewayTxId: 1 });
 transactionRecordSchema.index({ createdAt: -1 });
 

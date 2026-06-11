@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PayoutRequest } from '@/types/wallet.types';
 import { walletApi } from '@/lib/api/wallet.api';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
   Wallet,
   Building,
   CreditCard,
   RefreshCw,
+  Eye,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -18,7 +19,14 @@ import { FilterInput } from '@/common/filter/FilterInput';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
+import { RowActionsMenu, RowAction } from '@/components/admin/RowActionsMenu';
 import { useDebounce } from '@/hooks/useDebounce';
+
+function instructorLabel(p: PayoutRequest): string {
+  if (typeof p.instructorId === 'object' && p.instructorId)
+    return p.instructorId.name || p.instructorId.email || p.instructorId._id || '—';
+  return String(p.instructorId ?? '—');
+}
 
 export default function AdminPayoutsPage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
@@ -63,7 +71,7 @@ useEffect(() => {
   const filteredPayouts = payouts.filter((p) => {
     const searchLower = debouncedSearch.toLowerCase();
     return (
-      p.instructorId.toLowerCase().includes(searchLower) ||
+      instructorLabel(p).toLowerCase().includes(searchLower) ||
       p.bankDetails?.accountName.toLowerCase().includes(searchLower) ||
       p.bankDetails?.bankName.toLowerCase().includes(searchLower)
     );
@@ -109,9 +117,9 @@ useEffect(() => {
       ),
     },
     {
-      header: 'Giảng viên (ID)',
+      header: 'Giảng viên',
       render: (payout) => (
-        <span className="font-medium text-[13px] text-gray-900">{payout.instructorId}</span>
+        <span className="font-medium text-[13px] text-gray-900">{instructorLabel(payout)}</span>
       ),
     },
     {
@@ -158,27 +166,36 @@ useEffect(() => {
     {
       header: 'Thao tác',
       className: 'text-right',
-      render: (payout) =>
-        payout.status === 'pending' ? (
-          <div className="flex items-center justify-end gap-1.5">
-            <button
-              onClick={() => handleReview(payout._id, 'approved')}
-              disabled={isProcessing === payout._id}
-              className="px-2.5 py-1.5 text-[11px] font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors disabled:opacity-50"
-            >
-              Duyệt
-            </button>
-            <button
-              onClick={() => handleReview(payout._id, 'rejected')}
-              disabled={isProcessing === payout._id}
-              className="px-2.5 py-1.5 text-[11px] font-medium bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 rounded-md transition-colors disabled:opacity-50"
-            >
-              Từ chối
-            </button>
+      render: (payout) => {
+        const actions: RowAction[] = [
+          {
+            label: 'Xem chi tiết',
+            icon: Eye,
+            href: `/admin/business/payouts/${payout._id}`,
+          },
+          {
+            label: 'Duyệt',
+            icon: CheckCircle2,
+            hidden: payout.status !== 'pending',
+            disabled: isProcessing === payout._id,
+            onClick: () => handleReview(payout._id, 'approved'),
+            separatorBefore: true,
+          },
+          {
+            label: 'Từ chối',
+            icon: XCircle,
+            variant: 'destructive',
+            hidden: payout.status !== 'pending',
+            disabled: isProcessing === payout._id,
+            onClick: () => handleReview(payout._id, 'rejected'),
+          },
+        ];
+        return (
+          <div className="flex justify-end">
+            <RowActionsMenu actions={actions} />
           </div>
-        ) : (
-          <span className="text-[12px] text-gray-400 italic">—</span>
-        ),
+        );
+      },
     },
   ];
 

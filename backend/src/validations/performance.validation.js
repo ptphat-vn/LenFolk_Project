@@ -35,9 +35,9 @@ exports.createPerformanceSchema = z.object({
     tags: stringArrayFromForm.optional(),
     isFeatured: booleanFromForm.optional(),
     publishedAt: z.string().datetime().optional(),
-    // Giá và chu kỳ — instructor nhập để BE tự tạo Subscription
+    // Giá nằm thẳng trên tiết mục (mua đứt) — instructor nhập khi đăng
     price: z.coerce.number().min(0).optional(),
-    billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+    currency: z.enum(['VND', 'USD']).optional(),
   }),
 });
 
@@ -57,7 +57,7 @@ exports.updatePerformanceSchema = z.object({
     isFeatured: booleanFromForm.optional(),
     publishedAt: z.string().datetime().optional(),
     price: z.coerce.number().min(0).optional(),
-    billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+    currency: z.enum(['VND', 'USD']).optional(),
   }),
 });
 

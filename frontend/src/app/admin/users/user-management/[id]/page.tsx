@@ -30,7 +30,11 @@ const container: Variants = {
 };
 const item: Variants = {
   hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26 } },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 26 },
+  },
 };
 
 export default function UserDetailPage() {
@@ -74,7 +78,9 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Không tìm thấy người dùng</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Không tìm thấy người dùng
+        </h2>
         <ActionButton icon={ArrowLeft} onClick={() => router.back()}>
           Quay lại
         </ActionButton>
@@ -85,19 +91,31 @@ export default function UserDetailPage() {
   const transactionColumns: Column<TransactionRecord>[] = [
     {
       header: 'Mã GD',
-      render: (tx) => <span className="font-mono text-[12px] text-gray-500">{tx._id.substring(0, 8)}...</span>,
+      render: (tx) => (
+        <span className="font-mono text-[12px] text-gray-500">
+          {tx._id.substring(0, 8)}...
+        </span>
+      ),
     },
     {
-      header: 'Gói đăng ký',
+      header: 'Loại',
       render: (tx) => (
         <span className="font-medium text-[13px] text-gray-900">
-          {(tx.userSubscriptionId as any)?.planId?.name || 'Gói không rõ'}
+          {tx.transactionType === 'course'
+            ? 'Khoá học'
+            : tx.transactionType === 'performance'
+              ? 'Tiết mục'
+              : 'Khác'}
         </span>
       ),
     },
     {
       header: 'Số tiền',
-      render: (tx) => <span className="font-bold text-[13px] text-[#2d6a4f]">{formatCurrency(tx.amount)}</span>,
+      render: (tx) => (
+        <span className="font-bold text-[13px] text-[#2d6a4f]">
+          {formatCurrency(tx.amount)}
+        </span>
+      ),
     },
     {
       header: 'Trạng thái',
@@ -117,7 +135,8 @@ export default function UserDetailPage() {
         } else {
           return (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
-              <Clock className="w-3.5 h-3.5" /> {tx.status === 'pending' ? 'Chờ thanh toán' : 'Đang xử lý'}
+              <Clock className="w-3.5 h-3.5" />{' '}
+              {tx.status === 'pending' ? 'Chờ thanh toán' : 'Đang xử lý'}
             </span>
           );
         }
@@ -125,12 +144,21 @@ export default function UserDetailPage() {
     },
     {
       header: 'Thời gian',
-      render: (tx) => <span className="text-[12px] text-gray-500">{new Date(tx.createdAt || '').toLocaleString('vi-VN')}</span>,
+      render: (tx) => (
+        <span className="text-[12px] text-gray-500">
+          {new Date(tx.createdAt || '').toLocaleString('vi-VN')}
+        </span>
+      ),
     },
   ];
 
   return (
-    <motion.div className="p-6 md:p-8 space-y-6 w-full max-w-7xl mx-auto" variants={container} initial="hidden" animate="show">
+    <motion.div
+      className="p-6 md:p-8 space-y-6 w-full max-w-7xl mx-auto"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
       {/* Header */}
       <motion.div variants={item} className="flex items-center gap-4">
         <button
@@ -143,28 +171,44 @@ export default function UserDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             Hồ sơ người dùng
           </h1>
-          <p className="text-[13px] text-gray-500">ID: <span className="font-mono text-gray-900 bg-gray-100 px-1 rounded">{user._id}</span></p>
+          <p className="text-[13px] text-gray-500">
+            ID:{' '}
+            <span className="font-mono text-gray-900 bg-gray-100 px-1 rounded">
+              {user._id}
+            </span>
+          </p>
         </div>
       </motion.div>
 
       {/* Main Info Card */}
-      <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-8 items-start">
-        <div className="flex-shrink-0 flex flex-col items-center gap-3">
+      <motion.div
+        variants={item}
+        className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-8 items-start"
+      >
+        <div className="shrink-0 flex flex-col items-center gap-3">
           <div className="w-24 h-24 rounded-full bg-linear-to-br from-[#2d6a4f] to-[#1a3a2a] text-white text-3xl font-bold flex items-center justify-center shadow-lg">
             {user.name?.[0]?.toUpperCase() ?? 'U'}
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-            user.role === 'admin' ? 'bg-[#1a3a2a] text-white' :
-            user.role === 'instructor' ? 'bg-violet-100 text-violet-700' :
-            user.role === 'learner' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-          }`}>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              user.role === 'admin'
+                ? 'bg-[#1a3a2a] text-white'
+                : user.role === 'instructor'
+                  ? 'bg-violet-100 text-violet-700'
+                  : user.role === 'user'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600'
+            }`}
+          >
             {user.role}
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 w-full">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">{user.name}</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              {user.name}
+            </h2>
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-[14px] text-gray-600">
                 <Mail className="w-4 h-4 text-gray-400" />
@@ -172,13 +216,21 @@ export default function UserDetailPage() {
               </div>
               <div className="flex items-center gap-3 text-[14px] text-gray-600">
                 <Calendar className="w-4 h-4 text-gray-400" />
-                <span>Tham gia: {user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '—'}</span>
+                <span>
+                  Tham gia:{' '}
+                  {user.createdAt
+                    ? new Date(user.createdAt).toLocaleDateString('vi-VN')
+                    : '—'}
+                </span>
               </div>
               <div className="flex items-center gap-3 text-[14px] text-gray-600">
                 <Shield className="w-4 h-4 text-gray-400" />
-                <span>Trạng thái: 
-                  <span className={`ml-2 font-medium ${user.isActive !== false ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {user.isActive !== false ? 'Hoạt động' : 'Bị khóa'}
+                <span>
+                  Trạng thái:
+                  <span
+                    className={`ml-2 font-medium ${user.isActive !== false ? 'text-emerald-600' : 'text-red-500'}`}
+                  >
+                    {user.isActive !== false ? 'Hoạt động' : 'Bị khoá'}
                   </span>
                 </span>
               </div>
@@ -194,12 +246,16 @@ export default function UserDetailPage() {
               <div className="flex justify-between text-[13px]">
                 <span className="text-gray-500">Đăng nhập lần cuối:</span>
                 <span className="font-medium text-gray-900">
-                  {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('vi-VN') : 'Chưa có'}
+                  {user.lastLoginAt
+                    ? new Date(user.lastLoginAt).toLocaleString('vi-VN')
+                    : 'Chưa có'}
                 </span>
               </div>
               <div className="flex justify-between text-[13px]">
                 <span className="text-gray-500">Tổng số giao dịch:</span>
-                <span className="font-medium text-gray-900">{transactions.length}</span>
+                <span className="font-medium text-gray-900">
+                  {transactions.length}
+                </span>
               </div>
             </div>
           </div>
@@ -207,7 +263,10 @@ export default function UserDetailPage() {
       </motion.div>
 
       {/* Transactions Section */}
-      <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+      <motion.div
+        variants={item}
+        className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
+      >
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <CreditCard className="w-5 h-5 text-[#2d6a4f]" />
           Lịch sử giao dịch

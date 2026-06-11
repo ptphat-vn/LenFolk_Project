@@ -24,7 +24,10 @@ function formatDate(d?: string) {
   });
 }
 
-export const PayoutHistoryTable = ({ payouts, isLoading }: PayoutHistoryTableProps) => {
+export const PayoutHistoryTable = ({
+  payouts,
+  isLoading,
+}: PayoutHistoryTableProps) => {
   const [page, setPage] = useState(1);
 
   const paginated = payouts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -40,18 +43,41 @@ export const PayoutHistoryTable = ({ payouts, isLoading }: PayoutHistoryTablePro
     },
     {
       header: 'Ngày yêu cầu',
-      render: (p) => <span className="text-[13px] text-gray-500">{formatDate(p.createdAt)}</span>,
+      render: (p) => (
+        <span className="text-[13px] text-gray-500">
+          {formatDate(p.createdAt)}
+        </span>
+      ),
     },
     {
       header: 'Trạng thái',
       render: (p) => {
-        const statusMap: Record<string, { label: string; cls: string; dot: string }> = {
-          approved: { label: 'Đã duyệt', cls: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
-          pending: { label: 'Đang xử lý', cls: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
-          rejected: { label: 'Từ chối', cls: 'bg-red-50 text-red-600', dot: 'bg-red-500' },
+        const statusMap: Record<
+          string,
+          { label: string; cls: string; dot: string }
+        > = {
+          approved: {
+            label: 'Đã duyệt',
+            cls: 'bg-emerald-50 text-emerald-700',
+            dot: 'bg-emerald-500',
+          },
+          pending: {
+            label: 'Đang xử lý',
+            cls: 'bg-amber-50 text-amber-700',
+            dot: 'bg-amber-500',
+          },
+          rejected: {
+            label: 'Từ chối',
+            cls: 'bg-red-50 text-red-600',
+            dot: 'bg-red-500',
+          },
         };
-        const s = statusMap[p.status] || { label: p.status, cls: 'bg-gray-100 text-gray-500', dot: 'bg-gray-400' };
-        
+        const s = statusMap[p.status] || {
+          label: p.status,
+          cls: 'bg-gray-100 text-gray-500',
+          dot: 'bg-gray-400',
+        };
+
         return (
           <span
             className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.cls}`}
@@ -65,15 +91,20 @@ export const PayoutHistoryTable = ({ payouts, isLoading }: PayoutHistoryTablePro
     {
       header: 'Thông tin nhận tiền',
       render: (p) => (
-        <div className="text-[12px] text-gray-500 max-w-[200px] truncate">
-          {p.bankDetails ? `${p.bankDetails.bankName} - ${p.bankDetails.accountNumber}` : '—'}
+        <div className="text-[12px] text-gray-500 max-w-50 truncate">
+          {p.bankDetails
+            ? `${p.bankDetails.bankName} - ${p.bankDetails.accountNumber}`
+            : '—'}
         </div>
       ),
     },
     {
       header: 'Ghi chú',
       render: (p) => (
-        <span className="text-[12px] text-gray-500 max-w-[200px] truncate block" title={p.adminNote || ''}>
+        <span
+          className="text-[12px] text-gray-500 max-w-50 truncate block"
+          title={p.adminNote || ''}
+        >
           {p.adminNote || '—'}
         </span>
       ),
@@ -84,7 +115,9 @@ export const PayoutHistoryTable = ({ payouts, isLoading }: PayoutHistoryTablePro
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <h2 className="text-lg font-bold text-gray-900">Lịch sử rút tiền</h2>
-        <span className="text-[12px] text-gray-500">{payouts.length} yêu cầu</span>
+        <span className="text-[12px] text-gray-500">
+          {payouts.length} yêu cầu
+        </span>
       </div>
 
       <DataTable

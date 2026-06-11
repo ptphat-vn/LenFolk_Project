@@ -209,9 +209,15 @@ export default function RevenueReportsPage() {
       ),
     },
     {
-      header: 'Cổng thanh toán',
+      header: 'Loại',
       render: (tx) => (
-        <span className="text-[13px] text-gray-500">{tx.gatewayProvider ?? '—'}</span>
+        <span className="text-[13px] text-gray-500">
+          {tx.transactionType === 'course'
+            ? 'Khóa học'
+            : tx.transactionType === 'performance'
+              ? 'Tiết mục'
+              : '—'}
+        </span>
       ),
     },
     {
