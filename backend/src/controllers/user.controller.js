@@ -1,7 +1,5 @@
 const User = require('../models/User');
-
-
-
+const { writeAuditLog } = require('../utils/audit');
 
 
 
@@ -20,7 +18,7 @@ exports.getAll = async (req, res, next) => {
 
 exports.getOne = async (req, res, next) => {
   try {
-  const doc = await User.findById(req.params.id).populate({ path: 'currentSubscription' });
+  const doc = await User.findById(req.params.id);
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
@@ -29,6 +27,7 @@ exports.getOne = async (req, res, next) => {
 exports.createOne = async (req, res, next) => {
   try {
   const doc = await User.create(req.body);
+  await writeAuditLog(req, { action: 'CREATE', resource: 'User', resourceId: doc._id, after: doc.toJSON() });
   res.status(201).json({ success: true, message: 'Tạo người dùng thành công', data: doc });
   } catch (err) { next(err); }
 };
@@ -43,6 +42,7 @@ exports.updateOne = async (req, res, next) => {
   delete req.body.password;
   const doc = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  await writeAuditLog(req, { action: 'UPDATE', resource: 'User', resourceId: doc._id, after: doc.toJSON() });
   res.status(200).json({ success: true, message: 'Cập nhật người dùng thành công', data: doc });
   } catch (err) { next(err); }
 };
@@ -55,6 +55,7 @@ exports.deleteOne = async (req, res, next) => {
     return res.status(404).json({ success: false, message: 'No user found with that ID' });
   }
   await user.softDelete();
+  await writeAuditLog(req, { action: 'DELETE', resource: 'User', resourceId: user._id, before: user.toJSON() });
   res.status(200).json({ success: true, message: 'Xóa người dùng thành công', data: null });
   } catch (err) { next(err); }
 };

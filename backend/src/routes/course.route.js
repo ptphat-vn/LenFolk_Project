@@ -13,6 +13,7 @@ const validate = require('../middlewares/validate.middleware');
 const {
   createCourseSchema,
   updateCourseSchema,
+  upsertCoursePlanSchema,
 } = require('../validations/course.validation');
 
 // GET    /api/courses  — Optional auth: kết quả lọc theo subscription của user
@@ -46,7 +47,16 @@ router
   
   .delete(verifyToken, verifyAdmin, courseController.deleteOne);
 
-// POST   /api/courses/:id/purchase - Lên đơn thanh toán mua lẻ khóa học
+// PUT    /api/courses/:id/plan - Admin tạo/cập nhật gói đăng ký (giá) cho course
+router.put(
+  '/:id/plan',
+  verifyToken,
+  verifyAdmin,
+  validate(upsertCoursePlanSchema),
+  courseController.upsertPlan,
+);
+
+// POST   /api/courses/:id/purchase - Lên đơn thanh toán mua khóa học
 router.post('/:id/purchase', verifyToken, purchaseController.requestCoursePayment);
 
 module.exports = router;

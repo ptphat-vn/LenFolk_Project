@@ -1,6 +1,6 @@
 const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
-const { UserSubscription } = require('../models/Subscription');
+const { hasCourseAccess } = require('../utils/access');
 
 // Only show published lessons; admin/instructor can see all
 exports.getAll = async (req, res, next) => {
@@ -60,31 +60,9 @@ exports.getOne = async (req, res, next) => {
           return res.status(401).json({ success: false, message: 'Please log in to access this premium lesson.' });
         }
 
-        // 1. Kiểm tra enrolledCourses (mua đứt)
-        const User = require('../models/User');
-
-        const user = await User.findById(req.user._id).select('enrolledCourses');
-        const isEnrolled =
-          user &&
-          user.enrolledCourses &&
-          user.enrolledCourses.includes(course._id);
-
-        if (!isEnrolled) {
-          // 2. Tìm xem user có active subscription nào mở khóa course này không
-          const activeSubs = await UserSubscription.find({
-            userId: req.user._id,
-            status: 'active',
-            endDate: { $gt: new Date() },
-          }).populate({ path: 'subscriptionId', select: 'courseId' });
-
-          const hasAccess = activeSubs.some(
-            (sub) =>
-              sub.subscriptionId?.courseId?.toString() === course._id.toString(),
-          );
-
-          if (!hasAccess) {
-            return res.status(403).json({ success: false, message: 'This lesson belongs to a premium course. Please subscribe to access.' });
-          }
+        const hasAccess = await hasCourseAccess(req.user._id, course._id);
+        if (!hasAccess) {
+          return res.status(403).json({ success: false, message: 'This lesson belongs to a premium course. Please subscribe to access.' });
         }
       }
     }

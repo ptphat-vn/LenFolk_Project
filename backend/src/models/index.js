@@ -8,13 +8,15 @@ const PracticeSession = require('./PracticeSession');
 const { Badge, UserBadge } = require('./Badge');
 const Streak = require('./Streak');
 const Progress = require('./Progress');
-const { Subscription, UserSubscription } = require('./Subscription');
+const CoursePlan = require('./CoursePlan');
+const Enrollment = require('./Enrollment');
 const TransactionRecord = require('./TransactionRecord');
 const Notification = require('./Notification');
 const AuditLog = require('./AuditLog');
 const Coupon = require('./Coupon');
 const Wallet = require('./Wallet');
 const PayoutRequest = require('./PayoutRequest');
+const SystemSetting = require('./SystemSetting');
 
 module.exports = {
   User,
@@ -29,12 +31,13 @@ module.exports = {
   UserBadge,
   Streak,
   Progress,
-  Subscription,
-  UserSubscription,
+  CoursePlan,
+  Enrollment,
   TransactionRecord,
   Notification,
   AuditLog,
   Coupon,
   Wallet,
   PayoutRequest,
+  SystemSetting,
 };

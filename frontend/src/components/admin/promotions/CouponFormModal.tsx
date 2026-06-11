@@ -272,8 +272,8 @@ export function CouponFormModal({
                 className={inputClass('applicableTo', 'bg-white')}
               >
                 <option value="all">Tất cả</option>
-                <option value="subscription">Gói đăng ký</option>
                 <option value="course">Khoá học</option>
+                <option value="performance">Tiết mục</option>
               </select>
               {renderFieldError('applicableTo')}
             </div>

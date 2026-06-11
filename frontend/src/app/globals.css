@@ -126,6 +126,27 @@
   html {
     @apply font-sans;
   }
+
+  /* UX: phần tử tương tác luôn hiện con trỏ tay (Tailwind v4 không tự thêm) */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  label[for],
+  summary,
+  select:not(:disabled),
+  [type='checkbox']:not(:disabled),
+  [type='radio']:not(:disabled),
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  /* Phần tử bị vô hiệu hóa: con trỏ "cấm" */
+  button:disabled,
+  [aria-disabled='true'],
+  select:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
 }
 
 /* ─── Brand Theme ──────────────────────────────────────────────────────────── */

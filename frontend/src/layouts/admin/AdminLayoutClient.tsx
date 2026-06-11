@@ -13,7 +13,6 @@ interface AdminLayoutClientProps {
 export default function AdminLayoutClient({
   children,
 }: AdminLayoutClientProps) {
-  const [isMounted, setIsMounted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('admin-sidebar-collapsed') === 'true';
@@ -21,18 +20,19 @@ export default function AdminLayoutClient({
 
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const router = useRouter();
 
+  // Chỉ điều hướng SAU khi persist khôi phục xong (tránh văng ra /login do race)
   useEffect(() => {
-    const t = setTimeout(() => setIsMounted(true), 0);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted && (!token || !user)) {
-      router.push('/login');
+    if (!hasHydrated) return;
+    if (!token || !user) {
+      router.replace('/login');
+    } else if (user.role !== 'admin') {
+      // Sai vai trò → đưa về khu vực phù hợp
+      router.replace(user.role === 'instructor' ? '/instructor/dashboard' : '/');
     }
-  }, [isMounted, token, user, router]);
+  }, [hasHydrated, token, user, router]);
 
   const toggleSidebar = () => {
     setIsCollapsed((prev) => {
@@ -42,7 +42,7 @@ export default function AdminLayoutClient({
     });
   };
 
-  if (!isMounted || !token || !user) {
+  if (!hasHydrated || !token || !user || user.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">

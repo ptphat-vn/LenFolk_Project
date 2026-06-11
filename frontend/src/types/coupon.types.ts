@@ -1,7 +1,7 @@
 // ── Coupon ──────────────────────────────────────────────────────────────────
 
 export type DiscountType = 'percent' | 'fixed';
-export type CouponApplicableTo = 'subscription' | 'course' | 'all';
+export type CouponApplicableTo = 'course' | 'performance' | 'all';
 
 /** Schema Coupon trả về từ API */
 export interface Coupon {
@@ -31,15 +31,22 @@ export interface CreateCouponInput {
   applicableTo?: CouponApplicableTo;
 }
 
-/** Response khi mua khóa học có áp dụng coupon (POST /courses/:id/purchase) */
+/** Response khi mua khóa học/tiết mục (POST /courses|performances/:id/purchase).
+ *  Trả về QR cố định + bank info lấy từ SystemSetting. */
 export interface CoursePurchaseResponse {
   message: string;
   transactionId: string;
+  qrCodeUrl?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountName?: string | null;
+  transferNote?: string | null;
   originalAmount: number;
   discountAmount: number;
   amountToPay: number;
   currency: string;
-  courseName: string;
+  courseName?: string;
+  performanceName?: string;
 }
 
 /** Body dùng để mua lẻ khóa học */

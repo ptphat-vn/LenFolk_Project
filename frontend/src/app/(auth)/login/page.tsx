@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -12,10 +12,27 @@ import { useAuthStore } from '@/stores/authStore';
 import { isAxiosError } from 'axios';
 import { authApi } from '@/lib/api/auth.api';
 
+const dashboardFor = (role?: string) =>
+  role === 'admin'
+    ? '/admin/dashboard'
+    : role === 'instructor'
+      ? '/instructor/dashboard'
+      : '/';
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const setToken = useAuthStore((state) => state.setToken);
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+
+  // Đã đăng nhập rồi mà mở lại /login → đưa thẳng về khu vực phù hợp
+  useEffect(() => {
+    if (hasHydrated && token && user) {
+      router.replace(dashboardFor(user.role));
+    }
+  }, [hasHydrated, token, user, router]);
 
   const {
     register,
@@ -37,13 +54,7 @@ export default function LoginPage() {
       const { accessToken, refreshToken, user } = response.data;
       if (accessToken) {
         setToken(accessToken, refreshToken, user);
-        if (user?.role === 'admin') {
-          router.push('/admin/dashboard');
-        } else if (user?.role === 'instructor') {
-          router.push('/instructor/dashboard');
-        } else {
-          router.push('/');
-        }
+        router.replace(dashboardFor(user?.role));
       }
     } catch (error) {
       if (isAxiosError(error) && error.response) {

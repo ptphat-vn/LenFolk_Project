@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 import { UserDetailDrawer } from '@/components/admin/users-plans/UserDetailDrawer';
 import { userApi } from '@/lib/api/user.api';
-import { subscriptionApi } from '@/lib/api/subscription.api';
+import { enrollmentApi } from '@/lib/api/enrollment.api';
 import { User, Role } from '@/types/user.types';
-import { Subscription } from '@/types/subscription.types';
+import { Enrollment } from '@/types/enrollment.types';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
@@ -37,10 +37,13 @@ function formatDate(d?: string | null) {
 
 const ROLE_STYLE: Record<Role, { label: string; cls: string }> = {
   admin: { label: 'Admin', cls: 'bg-[#1a3a2a] text-white' },
-  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
-  learner: { label: 'Học viên', cls: 'bg-blue-100 text-blue-700' },
-  guest: { label: 'Khách', cls: 'bg-gray-100 text-gray-500' },
+  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
+  user: { label: 'Người dùng', cls: 'bg-blue-100 text-blue-700' },
 };
+
+function enrollUserId(en: Enrollment): string | undefined {
+  return typeof en.userId === 'object' ? en.userId?._id : en.userId ?? undefined;
+}
 
 const PAGE_SIZE = 12;
 
@@ -61,7 +64,7 @@ const item: Variants = {
 
 export default function UsersPlansPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
@@ -76,14 +79,14 @@ export default function UsersPlansPage() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [usersRes, subsRes] = await Promise.allSettled([
+      const [usersRes, enrollRes] = await Promise.allSettled([
         userApi.getUsers({ limit: 500 }),
-        subscriptionApi.getAll(),
+        enrollmentApi.getAll(),
       ]);
       if (usersRes.status === 'fulfilled' && Array.isArray(usersRes.value.data))
         setUsers(usersRes.value.data);
-      if (subsRes.status === 'fulfilled' && Array.isArray(subsRes.value.data))
-        setSubscriptions(subsRes.value.data);
+      if (enrollRes.status === 'fulfilled' && Array.isArray(enrollRes.value.data))
+        setEnrollments(enrollRes.value.data);
     } catch (e) {
       console.error('[UserPlans] fetch error:', e);
     } finally {
@@ -99,12 +102,22 @@ export default function UsersPlansPage() {
   const stats = useMemo(
     () => ({
       total: users.length,
-      learners: users.filter((u) => u.role === 'learner').length,
-      subscribed: users.filter((u) => u.currentSubscription).length,
+      learners: users.filter((u) => u.role === 'user').length,
+      subscribed: users.filter((u) => u.isSubscribed).length,
       instructors: users.filter((u) => u.role === 'instructor').length,
     }),
     [users],
   );
+
+  // Đếm số enrollment active theo userId
+  const enrollCountByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    enrollments.forEach((en) => {
+      const uid = enrollUserId(en);
+      if (uid && en.status === 'active') map.set(uid, (map.get(uid) ?? 0) + 1);
+    });
+    return map;
+  }, [enrollments]);
 
   // Filtered
   const filtered = useMemo(
@@ -117,8 +130,8 @@ export default function UsersPlansPage() {
         )
           return false;
         if (roleFilter !== 'all' && u.role !== roleFilter) return false;
-        if (subFilter === 'subscribed' && !u.currentSubscription) return false;
-        if (subFilter === 'free' && u.currentSubscription) return false;
+        if (subFilter === 'subscribed' && !u.isSubscribed) return false;
+        if (subFilter === 'free' && u.isSubscribed) return false;
         return true;
       }),
     [users, search, roleFilter, subFilter],
@@ -160,14 +173,14 @@ export default function UsersPlansPage() {
       },
     },
     {
-      header: 'Gói đăng ký',
+      header: 'Đã đăng ký',
       render: (u) => {
-        const userSub = subscriptions.find((s) => s._id === u.currentSubscription);
-        return userSub ? (
+        const count = enrollCountByUser.get(u._id) ?? 0;
+        return u.isSubscribed || count > 0 ? (
           <div className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-[#2d6a4f]" />
             <span className="text-[13px] font-medium text-gray-800">
-              {userSub.name}
+              {count > 0 ? `${count} mục` : 'Đã đăng ký'}
             </span>
           </div>
         ) : (
@@ -305,9 +318,7 @@ export default function UsersPlansPage() {
           <FilterSelect
             value={roleFilter}
             onChange={(v) => setRoleFilter(v as Role | 'all')}
-            options={(
-              ['learner', 'instructor', 'admin', 'guest'] as Role[]
-            ).map((r) => ({
+            options={(['user', 'instructor', 'admin'] as Role[]).map((r) => ({
               value: r,
               label: ROLE_STYLE[r].label,
             }))}
@@ -358,7 +369,11 @@ export default function UsersPlansPage() {
         user={selectedUser}
         isOpen={!!selectedUser}
         onClose={() => setSelectedUser(null)}
-        subscriptions={subscriptions}
+        enrollments={
+          selectedUser
+            ? enrollments.filter((en) => enrollUserId(en) === selectedUser._id)
+            : []
+        }
       />
     </motion.div>
   );

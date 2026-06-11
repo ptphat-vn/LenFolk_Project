@@ -23,7 +23,8 @@ export interface Wallet {
 /** Schema PayoutRequest — yêu cầu rút tiền của instructor */
 export interface PayoutRequest {
   _id: string;
-  instructorId: string;
+  /** string khi chưa populate; object khi admin list populate name/email */
+  instructorId: string | { _id?: string; name?: string; email?: string };
   amount: number;
   status: PayoutStatus;
   bankDetails: BankDetails;

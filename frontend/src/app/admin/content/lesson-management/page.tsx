@@ -5,25 +5,7 @@ import { lessonApi } from '@/lib/api/lesson.api';
 import { courseApi } from '@/lib/api/course.api';
 import { Lesson, CreateLessonInput } from '@/types/lesson.types';
 import { Course } from '@/types/course.types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   BookOpen,
@@ -33,41 +15,31 @@ import {
   Trash2,
   TrendingUp,
   Video,
-  Loader2,
+  Eye,
 } from 'lucide-react';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
+import { ConfirmDeleteDialog } from '@/components/admin/ConfirmDeleteDialog';
+import { LessonFormDialog } from '@/components/admin/lesson-management/LessonFormDialog';
 import { useDebounce } from '@/hooks/useDebounce';
-import { lessonSchema, zodFieldErrors } from '@/schema/form.schema';
-
-type LessonFormField =
-  | 'courseId'
-  | 'title'
-  | 'description'
-  | 'videoUrl'
-  | 'video'
-  | 'audioUrl'
-  | 'order'
-  | 'duration';
-type LessonFormErrors = Partial<Record<LessonFormField, string>>;
 
 export default function LessonManagementPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
-  const [statusFilter, setStatusFilter] = useState<
-    'all' | 'published' | 'draft'
-  >('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [freeFilter, setFreeFilter] = useState<'all' | 'free' | 'paid'>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Lesson | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
 
@@ -134,17 +106,18 @@ export default function LessonManagementPage() {
     setFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa bài học này?')) return;
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
     try {
-      setIsDeleting(id);
-      await lessonApi.delete(id);
+      setIsDeleting(true);
+      await lessonApi.delete(deleteTarget._id);
       toast.success('Đã xóa bài học');
+      setDeleteTarget(null);
       fetchData();
     } catch {
       toast.error('Lỗi khi xóa bài học');
     } finally {
-      setIsDeleting(null);
+      setIsDeleting(false);
     }
   };
 
@@ -172,9 +145,7 @@ export default function LessonManagementPage() {
       header: 'Tên bài học',
       render: (lesson) => (
         <>
-          <p className="font-medium text-gray-900 truncate max-w-56">
-            {lesson.title}
-          </p>
+          <p className="font-medium text-gray-900 truncate max-w-56">{lesson.title}</p>
           {lesson.description && (
             <p className="text-gray-400 text-[11px] truncate max-w-56 mt-0.5">
               {lesson.description}
@@ -187,9 +158,7 @@ export default function LessonManagementPage() {
       header: 'Khóa học',
       render: (lesson) => (
         <span className="text-gray-600 truncate max-w-40 block">
-          {courseMap[lesson.courseId] ?? (
-            <span className="text-gray-400 italic">—</span>
-          )}
+          {courseMap[lesson.courseId] ?? <span className="text-gray-400 italic">—</span>}
         </span>
       ),
     },
@@ -219,9 +188,7 @@ export default function LessonManagementPage() {
       render: (lesson) => (
         <span
           className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-            lesson.isFree
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600'
+            lesson.isFree ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
           }`}
         >
           {lesson.isFree ? 'Miễn phí' : 'Trả phí'}
@@ -243,24 +210,24 @@ export default function LessonManagementPage() {
       header: 'Hành động',
       className: 'text-right',
       render: (lesson) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <button
-            onClick={() => handleEdit(lesson)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(lesson._id)}
-            disabled={isDeleting === lesson._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeleting === lesson._id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/content/lesson-management/${lesson._id}`,
+              },
+              { label: 'Chỉnh sửa', icon: Pencil, onClick: () => handleEdit(lesson) },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                onClick: () => setDeleteTarget(lesson),
+              },
+            ]}
+          />
         </div>
       ),
     },
@@ -338,12 +305,8 @@ export default function LessonManagementPage() {
                     <Icon className={`w-4 h-4 ${s.iconColor}`} />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-gray-900 leading-none">
-                      {s.value}
-                    </p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">
-                      {s.label}
-                    </p>
+                    <p className="text-lg font-bold text-gray-900 leading-none">{s.value}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
                   </div>
                 </div>
               );
@@ -378,9 +341,7 @@ export default function LessonManagementPage() {
           placeholder="Loại"
           className="w-32"
         />
-        <span className="text-[12px] text-gray-400 ml-auto">
-          {filtered.length} bài học
-        </span>
+        <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} bài học</span>
       </div>
 
       {/* Table */}
@@ -393,7 +354,7 @@ export default function LessonManagementPage() {
           emptyMessage="Không có bài học nào"
           keyExtractor={(l) => l._id}
         />
-        
+
         {!isLoading && filtered.length > PAGE_SIZE && (
           <div className="px-5 py-1 border-t border-gray-100">
             <Pagination
@@ -407,7 +368,6 @@ export default function LessonManagementPage() {
         )}
       </div>
 
-      {/* Form Dialog */}
       <LessonFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -416,267 +376,15 @@ export default function LessonManagementPage() {
         isSaving={isSaving}
         onSave={handleSave}
       />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        title="Xóa bài học"
+        description={`Bạn có chắc chắn muốn xóa bài học "${deleteTarget?.title}"? Hành động này không thể hoàn tác.`}
+        isDeleting={isDeleting}
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
-  );
-}
-
-/* ─── Inline Form Dialog ─── */
-interface LessonFormDialogProps {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  lesson: Lesson | null;
-  courses: Course[];
-  isSaving: boolean;
-  onSave: (data: CreateLessonInput) => void;
-}
-
-function LessonFormDialog({
-  open,
-  onOpenChange,
-  lesson,
-  courses,
-  isSaving,
-  onSave,
-}: LessonFormDialogProps) {
-  const [form, setForm] = useState<CreateLessonInput>({
-    courseId: '',
-    title: '',
-    description: '',
-    videoUrl: '',
-    audioUrl: '',
-    order: 1,
-    duration: undefined,
-    video: undefined,
-    status: 'draft',
-    isFree: false,
-    techniques: [],
-  });
-  const [fieldErrors, setFieldErrors] = useState<LessonFormErrors>({});
-
-  useEffect(() => {
-    if (lesson) {
-      setForm({
-        courseId: lesson.courseId,
-        title: lesson.title,
-        description: lesson.description ?? '',
-        videoUrl: lesson.videoUrl ?? '',
-        audioUrl: lesson.audioUrl ?? '',
-        order: lesson.order,
-        duration: lesson.duration,
-        video: undefined,
-        status: lesson.status,
-        isFree: lesson.isFree,
-        techniques: lesson.techniques ?? [],
-      });
-      setFieldErrors({});
-    } else {
-      setForm({
-        courseId: '',
-        title: '',
-        description: '',
-        videoUrl: '',
-        audioUrl: '',
-        order: 1,
-        duration: undefined,
-        video: undefined,
-        status: 'draft',
-        isFree: false,
-        techniques: [],
-      });
-      setFieldErrors({});
-    }
-  }, [lesson, open]);
-
-  const set = <K extends keyof CreateLessonInput>(
-    k: K,
-    v: CreateLessonInput[K],
-  ) => {
-    setForm((prev) => ({ ...prev, [k]: v }));
-    if (k in fieldErrors) {
-      setFieldErrors((prev) => ({ ...prev, [k]: undefined }));
-    }
-  };
-
-  const renderFieldError = (field: LessonFormField) =>
-    fieldErrors[field] ? (
-      <p className="text-[11px] font-medium text-red-500">
-        {fieldErrors[field]}
-      </p>
-    ) : null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFieldErrors({});
-    if (!form.title.trim() || !form.courseId) {
-      setFieldErrors({
-        ...(!form.title.trim() ? { title: 'Vui lòng nhập tên bài học' } : {}),
-        ...(!form.courseId ? { courseId: 'Vui lòng chọn khóa học' } : {}),
-      });
-      return;
-    }
-    const parsed = lessonSchema.safeParse(form);
-    if (!parsed.success) {
-      setFieldErrors(zodFieldErrors<LessonFormField>(parsed.error));
-      return;
-    }
-    onSave(parsed.data);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {lesson ? 'Chỉnh sửa bài học' : 'Thêm bài học mới'}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 space-y-1.5">
-              <Label>Tên bài học *</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => set('title', e.target.value)}
-                placeholder="Nhập tên bài học"
-              />
-              {renderFieldError('title')}
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Khóa học *</Label>
-              <Select
-                value={form.courseId}
-                onValueChange={(v) => set('courseId', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn khóa học" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map((c) => (
-                    <SelectItem key={c._id} value={c._id}>
-                      {c.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {renderFieldError('courseId')}
-            </div>
-            <div className="space-y-1.5">
-              <Label>Thứ tự</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.order}
-                onChange={(e) => set('order', Number(e.target.value))}
-              />
-              {renderFieldError('order')}
-            </div>
-            <div className="space-y-1.5">
-              <Label>Thời lượng (giây)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.duration ?? ''}
-                onChange={(e) =>
-                  set(
-                    'duration',
-                    e.target.value ? Number(e.target.value) : undefined,
-                  )
-                }
-                placeholder="Không bắt buộc"
-              />
-              {renderFieldError('duration')}
-            </div>
-            <div className="space-y-1.5">
-              <Label>Trạng thái</Label>
-              <Select
-                value={form.status}
-                onValueChange={(v) => set('status', v as 'draft' | 'published')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Bản nháp</SelectItem>
-                  <SelectItem value="published">Xuất bản</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Loại</Label>
-              <Select
-                value={form.isFree ? 'free' : 'paid'}
-                onValueChange={(v) => set('isFree', v === 'free')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Miễn phí</SelectItem>
-                  <SelectItem value="paid">Trả phí</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Mô tả</Label>
-              <Textarea
-                value={form.description ?? ''}
-                onChange={(e) => set('description', e.target.value)}
-                placeholder="Mô tả ngắn về bài học"
-                rows={2}
-              />
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>URL video</Label>
-              <Input
-                value={form.videoUrl ?? ''}
-                onChange={(e) => set('videoUrl', e.target.value)}
-                placeholder="https://..."
-              />
-              {renderFieldError('videoUrl')}
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>Upload video</Label>
-              <Input
-                type="file"
-                accept="video/*"
-                onChange={(e) => set('video', e.target.files?.[0])}
-              />
-              {lesson?.videoUrl && (
-                <p className="text-[11px] text-gray-500 truncate">
-                  Video hiện tại: {lesson.videoUrl}
-                </p>
-              )}
-              {renderFieldError('video')}
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label>URL audio</Label>
-              <Input
-                value={form.audioUrl ?? ''}
-                onChange={(e) => set('audioUrl', e.target.value)}
-                placeholder="https://..."
-              />
-              {renderFieldError('audioUrl')}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Đang lưu...' : lesson ? 'Cập nhật' : 'Tạo bài học'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }

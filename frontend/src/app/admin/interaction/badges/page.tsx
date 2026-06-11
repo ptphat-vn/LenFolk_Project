@@ -16,12 +16,14 @@ import {
   RefreshCw,
   Loader2,
   Star,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { ActionButton } from '@/common/button/ActionButton';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   Dialog,
@@ -239,24 +241,25 @@ export default function AdminBadgesPage() {
       header: '',
       className: 'text-right',
       render: (badge) => (
-        <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={() => openEdit(badge)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(badge._id)}
-            disabled={isDeleting === badge._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeleting === badge._id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/interaction/badges/${badge._id}`,
+              },
+              { label: 'Chỉnh sửa', icon: Pencil, onClick: () => openEdit(badge) },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                disabled: isDeleting === badge._id,
+                onClick: () => handleDelete(badge._id),
+              },
+            ]}
+          />
         </div>
       ),
     },

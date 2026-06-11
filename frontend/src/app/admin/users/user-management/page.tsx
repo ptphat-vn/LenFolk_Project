@@ -42,12 +42,11 @@ function formatDate(d?: string) {
 
 const ROLE_STYLE: Record<Role, { label: string; cls: string }> = {
   admin: { label: 'Admin', cls: 'bg-[#1a3a2a] text-white' },
-  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
-  learner: { label: 'Học viên', cls: 'bg-blue-100 text-blue-700' },
-  guest: { label: 'Khách', cls: 'bg-gray-100 text-gray-500' },
+  instructor: { label: 'Giảng viên', cls: 'bg-violet-100 text-violet-700' },
+  user: { label: 'Người dùng', cls: 'bg-blue-100 text-blue-700' },
 };
 
-const ROLES: Role[] = ['admin', 'instructor', 'learner', 'guest'];
+const ROLES: Role[] = ['admin', 'instructor', 'user'];
 
 const PAGE_SIZE = 12;
 
@@ -105,7 +104,7 @@ export default function UsersPage() {
     () => ({
       total: users.length,
       instructors: users.filter((u) => u.role === 'instructor').length,
-      learners: users.filter((u) => u.role === 'learner').length,
+      learners: users.filter((u) => u.role === 'user').length,
       active: users.filter((u) => u.isActive !== false).length,
     }),
     [users],
@@ -301,7 +300,7 @@ export default function UsersPage() {
         />
         <StatCard
           icon={UserCheck}
-          label="Học viên"
+          label="Người dùng"
           value={stats.learners}
           iconBg="bg-emerald-50"
           iconColor="text-[#2d6a4f]"

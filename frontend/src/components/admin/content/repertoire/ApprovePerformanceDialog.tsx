@@ -46,12 +46,6 @@ function formatDuration(seconds?: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const BILLING_LABELS: Record<string, string> = {
-  monthly: 'Hàng tháng',
-  quarterly: 'Hàng quý',
-  yearly: 'Hàng năm',
-};
-
 export function ApprovePerformanceDialog({
   open,
   onOpenChange,
@@ -120,11 +114,11 @@ export function ApprovePerformanceDialog({
 
   if (!performance) return null;
 
-  const sub = detail?.subscription;
-  const instructorRevenue = sub?.price
-    ? Math.round(sub.price * (1 - commission / 100))
+  const price = detail?.price;
+  const instructorRevenue = price
+    ? Math.round(price * (1 - commission / 100))
     : undefined;
-  const adminRevenue = sub?.price ? Math.round(sub.price * (commission / 100)) : undefined;
+  const adminRevenue = price ? Math.round(price * (commission / 100)) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -224,12 +218,12 @@ export function ApprovePerformanceDialog({
                 <DollarSign className="w-4 h-4 text-[#2d6a4f]" />
                 <span className="text-sm font-semibold text-[#2d6a4f]">Thông tin giá</span>
               </div>
-              {sub ? (
+              {price ? (
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="bg-white rounded-lg py-2 px-3 border border-emerald-100">
                     <p className="text-[10px] text-gray-400">Giá bán</p>
-                    <p className="text-sm font-bold text-gray-900">{formatVND(sub.price)}</p>
-                    <p className="text-[10px] text-gray-400">{BILLING_LABELS[sub.billingCycle] || sub.billingCycle}</p>
+                    <p className="text-sm font-bold text-gray-900">{formatVND(price)}</p>
+                    <p className="text-[10px] text-gray-400">mua đứt</p>
                   </div>
                   <div className="bg-white rounded-lg py-2 px-3 border border-blue-100">
                     <p className="text-[10px] text-gray-400">Admin nhận</p>
@@ -245,8 +239,8 @@ export function ApprovePerformanceDialog({
               ) : (
                 <p className="text-[13px] text-gray-500">
                   {performance.isFree
-                    ? 'Tiết mục miễn phí — không có gói subscription.'
-                    : 'Chưa có gói subscription liên kết.'}
+                    ? 'Tiết mục miễn phí — không bán.'
+                    : 'Chưa đặt giá cho tiết mục này.'}
                 </p>
               )}
             </div>
@@ -272,8 +266,8 @@ export function ApprovePerformanceDialog({
                 <span className="text-[13px] text-gray-500">
                   Instructor sẽ nhận{' '}
                   <strong className="text-purple-700">{100 - commission}%</strong> doanh thu
-                  {sub?.price
-                    ? ` = ${formatVND(Math.round(sub.price * (1 - commission / 100)))}`
+                  {price
+                    ? ` = ${formatVND(Math.round(price * (1 - commission / 100)))}`
                     : ''}
                 </span>
               </div>

@@ -1,285 +1,211 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
-import { motion, Variants } from 'framer-motion';
-import { Plus, Zap, DollarSign, CheckCircle2, RefreshCw } from 'lucide-react';
-import { SubscriptionFormModal } from '@/components/admin/subscriptions/SubscriptionFormModal';
-import { SubscriptionDeleteConfirmModal } from '@/components/admin/subscriptions/SubscriptionDeleteConfirmModal';
-import { PlanCard } from '@/components/admin/subscriptions/PlanCard';
-import { subscriptionApi } from '@/lib/api/subscription.api';
-import {
-  Subscription,
-  CreateSubscriptionInput,
+import { Loader2, QrCode, Landmark, Save, Percent, Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { systemSettingApi } from '@/lib/api/system-setting.api';
+import { SystemSetting, UpdateSystemSettingInput } from '@/types/system-setting.types';
+import { systemSettingSchema, firstZodError } from '@/schema/form.schema';
 
-} from '@/types/subscription.types';
-import { courseApi } from '@/lib/api/course.api';
-import { Course } from '@/types/course.types';
-import { performanceApi } from '@/lib/api/performance.api';
-import { Performance } from '@/types/performance.types';
-import { ActionButton } from '@/common/button/ActionButton';
+/**
+ * Cấu hình thanh toán hệ thống — 1 mã QR cố định + tài khoản ngân hàng dùng chung
+ * cho toàn bộ đơn mua (course & tiết mục). GET/PUT /system-settings.
+ */
+export default function PaymentSettingsPage() {
+  const [settings, setSettings] = useState<SystemSetting | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatCurrency(n: number) {
-  if (n === 0) return 'Miễn phí';
-  return n.toLocaleString('vi-VN') + ' ₫';
-}
-
-const container: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
-};
-const item: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 300, damping: 26 },
-  },
-};
-
-// ─── Subscription Form Modal ──────────────────────────────────────────────────
-
-export default function SubscriptionsPage() {
-  const [subs, setSubs] = useState<Subscription[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [performances, setPerformances] = useState<Performance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [formOpen, setFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Subscription | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [subsRes, coursesRes, perfsRes] = await Promise.allSettled([
-        subscriptionApi.getAll(),
-        courseApi.getAll({ limit: 200 }),
-        performanceApi.getAll({ limit: 200 }),
-      ]);
-      if (subsRes.status === 'fulfilled' && Array.isArray(subsRes.value.data))
-        setSubs(subsRes.value.data);
-      if (
-        coursesRes.status === 'fulfilled' &&
-        Array.isArray(coursesRes.value.data)
-      )
-        setCourses(coursesRes.value.data);
-      if (
-        perfsRes.status === 'fulfilled' &&
-        Array.isArray(perfsRes.value.data)
-      )
-        setPerformances(perfsRes.value.data);
-    } catch (e) {
-      console.error('[Subscriptions] fetch error:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [bankName, setBankName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
+  const [transferNote, setTransferNote] = useState('');
+  const [commission, setCommission] = useState('');
+  const [qrFile, setQrFile] = useState<File | null>(null);
+  const [qrPreview, setQrPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
-  const stats = useMemo(
-    () => ({
-      total: subs.length,
-      active: subs.filter((s) => s.isActive).length,
-      totalRevenue: subs.reduce((a, s) => a + s.price, 0),
-    }),
-    [subs],
-  );
-
-  const handleSave = async (data: CreateSubscriptionInput, id?: string) => {
-    try {
-      if (id) {
-        const res = await subscriptionApi.update(id, data);
-        toast.success(res.message || 'Cập nhật gói đăng ký thành công');
-      } else {
-        const res = await subscriptionApi.create(data);
-        toast.success(res.message || 'Tạo gói đăng ký thành công');
+    (async () => {
+      try {
+        const res = await systemSettingApi.get();
+        const s = res.data;
+        setSettings(s);
+        setBankName(s.bankName ?? '');
+        setBankAccountNumber(s.bankAccountNumber ?? '');
+        setBankAccountName(s.bankAccountName ?? '');
+        setTransferNote(s.transferNote ?? '');
+        setCommission(
+          s.defaultCommissionPercentage !== undefined
+            ? String(s.defaultCommissionPercentage)
+            : '',
+        );
+      } catch {
+        toast.error('Lỗi khi tải cấu hình thanh toán');
+      } finally {
+        setLoading(false);
       }
-      await fetchAll();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Có lỗi xảy ra');
-      throw e;
-    }
+    })();
+  }, []);
+
+  const onPickQr = (file?: File) => {
+    if (!file) return;
+    setQrFile(file);
+    setQrPreview(URL.createObjectURL(file));
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload: UpdateSystemSettingInput = {
+      bankName: bankName.trim() || undefined,
+      bankAccountNumber: bankAccountNumber.trim() || undefined,
+      bankAccountName: bankAccountName.trim() || undefined,
+      transferNote: transferNote.trim() || undefined,
+      defaultCommissionPercentage: commission === '' ? undefined : Number(commission),
+      ...(qrFile ? { qrCode: qrFile } : {}),
+    };
+    const parsed = systemSettingSchema.safeParse(payload);
+    if (!parsed.success) {
+      toast.error(firstZodError(parsed.error));
+      return;
+    }
     try {
-      const res = await subscriptionApi.delete(deleteTarget._id);
-      toast.success(res.message || 'Đã xóa gói đăng ký');
-      setSubs((prev) => prev.filter((s) => s._id !== deleteTarget._id));
-      setDeleteTarget(null);
-    } catch (e: any) {
-      console.error('[Subscriptions] delete error:', e);
-      toast.error(e.response?.data?.message || 'Lỗi khi xóa gói đăng ký');
+      setSaving(true);
+      const res = await systemSettingApi.update(payload);
+      setSettings(res.data);
+      setQrFile(null);
+      setQrPreview(null);
+      toast.success('Đã lưu cấu hình thanh toán');
+    } catch {
+      toast.error('Lỗi khi lưu cấu hình');
     } finally {
-      setDeleting(false);
+      setSaving(false);
     }
   };
 
-  const handleToggle = async (sub: Subscription) => {
-    try {
-      const res = await subscriptionApi.update(sub._id, { isActive: !sub.isActive });
-      toast.success(res.message || 'Đã cập nhật trạng thái gói đăng ký');
-      setSubs((prev) =>
-        prev.map((s) =>
-          s._id === sub._id ? { ...s, isActive: !s.isActive } : s,
-        ),
-      );
-    } catch (e: any) {
-      console.error('[Subscriptions] toggle error:', e);
-      toast.error(e.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
-    }
-  };
+  const currentQr = qrPreview ?? settings?.paymentQrUrl ?? null;
 
   return (
-    <motion.div
-      className="p-6 space-y-6 w-full"
-      variants={container}
-      initial="hidden"
-      animate="show"
-    >
-      {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Gói đăng ký</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Quản lý các gói subscription của nền tảng
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ActionButton icon={RefreshCw} variant="outline" onClick={fetchAll}>
-            Làm mới
-          </ActionButton>
-          <ActionButton
-            icon={Plus}
-            onClick={() => {
-              setEditTarget(null);
-              setFormOpen(true);
-            }}
-          >
-            Tạo gói mới
-          </ActionButton>
-        </div>
-      </motion.div>
+    <div className="p-6 space-y-5 w-full max-w-4xl">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Cấu hình thanh toán</h1>
+        <p className="text-[13px] text-gray-500 mt-0.5">
+          Mã QR cố định &amp; tài khoản ngân hàng dùng chung cho mọi đơn mua khóa học và tiết mục
+        </p>
+      </div>
 
-      {/* Stats */}
-      <motion.div
-        variants={item}
-        className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-      >
-        {[
-          {
-            icon: Zap,
-            label: 'Tổng gói',
-            value: stats.total,
-            iconBg: 'bg-violet-50',
-            iconColor: 'text-violet-600',
-          },
-          {
-            icon: CheckCircle2,
-            label: 'Đang hoạt động',
-            value: stats.active,
-            iconBg: 'bg-emerald-50',
-            iconColor: 'text-[#2d6a4f]',
-          },
-          {
-            icon: DollarSign,
-            label: 'Tổng giá trị/kỳ',
-            value: formatCurrency(stats.totalRevenue),
-            iconBg: 'bg-amber-50',
-            iconColor: 'text-amber-600',
-          },
-        ].map((c) => (
-          <div
-            key={c.label}
-            className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}
-              >
-                <c.icon className={`w-5 h-5 ${c.iconColor}`} />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-gray-900">{c.value}</p>
-                <p className="text-[12px] text-gray-500">{c.label}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* Plans Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm animate-pulse"
-            >
-              <div className="h-5 bg-gray-100 rounded w-2/3 mb-3" />
-              <div className="h-3 bg-gray-100 rounded w-1/2 mb-5" />
-              <div className="h-8 bg-gray-100 rounded w-1/3 mb-5" />
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <div key={j} className="h-3 bg-gray-100 rounded" />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : subs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <Zap className="w-12 h-12 mb-3 opacity-20" />
-          <p className="text-[15px] font-medium">Chưa có gói đăng ký nào</p>
-          <p className="text-[13px] mt-1">
-            Nhấn &quot;Tạo gói mới&quot; để bắt đầu
-          </p>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
         </div>
       ) : (
-        <motion.div
-          variants={container}
-          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
-        >
-          {subs.map((sub) => (
-            <PlanCard
-              key={sub._id}
-              sub={sub}
-              onEdit={() => {
-                setEditTarget(sub);
-                setFormOpen(true);
-              }}
-              onDelete={() => setDeleteTarget(sub)}
-              onToggle={() => handleToggle(sub)}
-            />
-          ))}
-        </motion.div>
-      )}
+        <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* QR */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <QrCode className="w-4 h-4 text-[#2d6a4f]" />
+              <h2 className="text-sm font-semibold text-gray-900">Mã QR thanh toán</h2>
+            </div>
+            <div className="flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 min-h-52">
+              {currentQr ? (
+                <Image
+                  src={currentQr}
+                  alt="QR thanh toán"
+                  width={200}
+                  height={200}
+                  className="rounded-lg object-contain"
+                  unoptimized
+                />
+              ) : (
+                <p className="text-[13px] text-gray-400 text-center">
+                  Chưa có mã QR. Tải lên ảnh QR để người dùng quét chuyển khoản.
+                </p>
+              )}
+            </div>
+            <label className="flex items-center justify-center gap-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-[13px] text-gray-600 hover:bg-gray-50 cursor-pointer">
+              <Upload className="w-4 h-4" />
+              {qrFile ? qrFile.name : 'Chọn ảnh QR (jpg/png/webp)'}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => onPickQr(e.target.files?.[0])}
+              />
+            </label>
+          </div>
 
-      {/* Modals */}
-      <SubscriptionFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSave={handleSave}
-        editSub={editTarget}
-        courses={courses}
-        performances={performances}
-      />
-      {deleteTarget && (
-        <SubscriptionDeleteConfirmModal
-          sub={deleteTarget}
-          onCancel={() => setDeleteTarget(null)}
-          onConfirm={handleDelete}
-          deleting={deleting}
-        />
+          {/* Bank info */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-[#2d6a4f]" />
+              <h2 className="text-sm font-semibold text-gray-900">Tài khoản ngân hàng</h2>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Ngân hàng</Label>
+              <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="VD: Vietcombank" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Số tài khoản</Label>
+              <Input
+                value={bankAccountNumber}
+                onChange={(e) => setBankAccountNumber(e.target.value)}
+                placeholder="VD: 0123456789"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Chủ tài khoản</Label>
+              <Input
+                value={bankAccountName}
+                onChange={(e) => setBankAccountName(e.target.value)}
+                placeholder="VD: CONG TY LENFOLK"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Nội dung chuyển khoản gợi ý</Label>
+              <Input
+                value={transferNote}
+                onChange={(e) => setTransferNote(e.target.value)}
+                placeholder="VD: LENFOLK {transactionId}"
+              />
+            </div>
+          </div>
+
+          {/* Commission + Save */}
+          <div className="md:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-wrap items-end gap-4">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <Percent className="w-3.5 h-3.5 text-gray-500" />
+                Hoa hồng mặc định (%)
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={commission}
+                onChange={(e) => setCommission(e.target.value)}
+                placeholder="30"
+                className="w-32"
+              />
+            </div>
+            <p className="text-[12px] text-gray-400 flex-1 min-w-40">
+              Áp dụng cho item chưa đặt hoa hồng riêng. Instructor sẽ nhận phần còn lại.
+            </p>
+            <Button
+              type="submit"
+              disabled={saving}
+              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {saving ? 'Đang lưu...' : 'Lưu cấu hình'}
+            </Button>
+          </div>
+        </form>
       )}
-    </motion.div>
+    </div>
   );
 }

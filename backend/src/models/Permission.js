@@ -30,7 +30,7 @@ const rolePermissionSchema = new mongoose.Schema(
   {
     role: {
       type: String,
-      enum: ['admin', 'instructor', 'learner', 'guest'],
+      enum: ['admin', 'instructor', 'user'],
       required: true,
     },
     permissionId: {

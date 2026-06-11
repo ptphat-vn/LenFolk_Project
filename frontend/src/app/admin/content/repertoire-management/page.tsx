@@ -22,12 +22,12 @@ import {
   Eye,
   CheckCircle,
 } from 'lucide-react';
-import Link from 'next/link';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { Pagination } from '@/common/pagination/pagination';
 import { ActionButton } from '@/common/button/ActionButton';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { useDebounce } from '@/hooks/useDebounce';
 import { PerformanceFormModal } from '@/components/admin/content/repertoire/PerformanceFormModal';
 import { ApprovePerformanceDialog } from '@/components/admin/content/repertoire/ApprovePerformanceDialog';
@@ -206,17 +206,12 @@ export default function RepertoireManagementPage() {
       className: 'text-center',
       render: (perf) => {
         if (perf.isFree) return <span className="text-blue-600 text-[11px] font-medium">Miễn phí</span>;
-        const sub = perf.subscription;
-        if (!sub) return <span className="text-gray-400 text-[11px]">Chưa có</span>;
-        const CYCLE_LABELS: Record<string, string> = { monthly: '/tháng', quarterly: '/quý', yearly: '/năm' };
-        const formatted = new Intl.NumberFormat('vi-VN').format(sub.price);
+        if (!perf.price) return <span className="text-gray-400 text-[11px]">Chưa có</span>;
+        const formatted = new Intl.NumberFormat('vi-VN').format(perf.price);
         return (
           <div className="flex flex-col items-center gap-0.5">
             <span className="font-semibold text-gray-800 text-[12px]">{formatted}đ</span>
-            <span className="text-gray-400 text-[10px]">{CYCLE_LABELS[sub.billingCycle] ?? sub.billingCycle}</span>
-            {!sub.isActive && (
-              <span className="text-amber-600 text-[10px]">chờ duyệt</span>
-            )}
+            <span className="text-gray-400 text-[10px]">mua đứt</span>
           </div>
         );
       },
@@ -230,42 +225,31 @@ export default function RepertoireManagementPage() {
       header: 'Hành động',
       className: 'text-right',
       render: (perf) => (
-        <div className="flex items-center justify-end gap-1.5">
-          {perf.status === 'pending' && (
-            <button
-              onClick={() => handleApprove(perf)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 text-[11px] font-semibold transition-colors cursor-pointer border border-amber-200"
-              title="Xem & Duyệt"
-            >
-              <CheckCircle className="w-3 h-3" />
-              Duyệt
-            </button>
-          )}
-          <Link
-            href={`/admin/content/repertoire-management/${perf._id}`}
-            className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
-            title="Xem chi tiết"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </Link>
-          <button
-            onClick={() => handleEdit(perf)}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-            title="Chỉnh sửa"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleDelete(perf._id)}
-            disabled={isDeleting === perf._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isDeleting === perf._id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-red-500" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-          </button>
+        <div className="flex justify-end">
+          <RowActionsMenu
+            actions={[
+              {
+                label: 'Xem chi tiết',
+                icon: Eye,
+                href: `/admin/content/repertoire-management/${perf._id}`,
+              },
+              {
+                label: 'Duyệt tiết mục',
+                icon: CheckCircle,
+                hidden: perf.status !== 'pending',
+                onClick: () => handleApprove(perf),
+              },
+              { label: 'Chỉnh sửa', icon: Pencil, onClick: () => handleEdit(perf) },
+              {
+                label: 'Xoá',
+                icon: Trash2,
+                variant: 'destructive',
+                separatorBefore: true,
+                disabled: isDeleting === perf._id,
+                onClick: () => handleDelete(perf._id),
+              },
+            ]}
+          />
         </div>
       ),
     },
