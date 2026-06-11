@@ -161,11 +161,25 @@ export default function LessonDetailPage() {
                 <Video className="w-4 h-4 text-[#2d6a4f]" />
                 Video bài học
               </h3>
-              <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center">
-                <p className="text-[13px] text-gray-400 px-4 text-center break-all">
-                  {lesson.videoUrl}
-                </p>
-              </div>
+              {/youtube\.com|youtu\.be/.test(lesson.videoUrl) ? (
+                <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                  <iframe
+                    src={lesson.videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <video
+                  src={lesson.videoUrl}
+                  controls
+                  className="w-full rounded-lg bg-black"
+                  style={{ maxHeight: '360px' }}
+                >
+                  Trình duyệt không hỗ trợ video.
+                </video>
+              )}
             </div>
           )}
 
