@@ -265,6 +265,7 @@ export default function LoginScreen() {
             {/* Google Sign-in Alternative */}
             <TouchableOpacity
               activeOpacity={0.85}
+              onPress={() => Alert.alert("Google", "Backend chưa cấu hình đăng nhập Google OAuth.")}
               className="w-full bg-white py-4 rounded-2xl flex-row justify-center items-center border border-gray-100 shadow-sm mb-6"
             >
               <Image

@@ -1,15 +1,19 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
+import { Alert, View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
+import NotificationButton from "@/components/NotificationButton";
+import { useRouter } from "expo-router";
 
 export default function GameScreen() {
   const scrollRef = useScrollToTopOnFocus();
+  const router = useRouter();
   const [activeGameIndex, setActiveGameIndex] = React.useState(0);
+  const [challengePaused, setChallengePaused] = React.useState(false);
   const user = useAuthStore((state) => state.user);
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
@@ -69,6 +73,7 @@ export default function GameScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
+            onPress={() => router.back()}
           >
             <Ionicons
               name="arrow-back"
@@ -87,12 +92,7 @@ export default function GameScreen() {
           </Text>
 
           {/* Bell Notifications */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            className="w-10 h-10 rounded-full bg-[#8E9E6E]/20 border border-[#8E9E6E]/10 justify-center items-center"
-          >
-            <Ionicons name="notifications" size={20} color="#8E9E6E" />
-          </TouchableOpacity>
+          <NotificationButton />
         </AnimatedBlock>
 
         {/* --- DAILY CHALLENGE GREEN BANNER CARD --- */}
@@ -135,8 +135,9 @@ export default function GameScreen() {
             activeOpacity={0.8}
             style={{ position: "absolute", right: 20, bottom: 20 }}
             className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-md"
+            onPress={() => setChallengePaused((value) => !value)}
           >
-            <Ionicons name="pause" size={22} color="#8E9E6E" />
+            <Ionicons name={challengePaused ? "play" : "pause"} size={22} color="#8E9E6E" />
           </TouchableOpacity>
         </AnimatedBlock>
 
@@ -207,6 +208,16 @@ export default function GameScreen() {
                   <TouchableOpacity
                     activeOpacity={0.8}
                     className="w-full bg-white py-2 rounded-full items-center justify-center border border-gray-100 shadow-sm"
+                    onPress={() =>
+                      Alert.alert(
+                        game.title,
+                        "Backend hiện chưa có API game. Bạn vẫn có thể luyện nốt bằng AI trong mục Bài học.",
+                        [
+                          { text: "Đóng", style: "cancel" },
+                          { text: "Mở bài học", onPress: () => router.push("/(tabs)/courses") },
+                        ],
+                      )
+                    }
                   >
                     <Text
                       className="text-[#8E9E6E] font-bold text-xs"
@@ -246,11 +257,18 @@ export default function GameScreen() {
           className="bg-[#FFF9E6] rounded-[32px] p-5 mx-6 shadow-sm border border-[#F4E0AC]/20"
         >
           <View className="bg-[#8E9E6E] rounded-3xl p-4 flex-row items-center mb-4">
-            <Image
-              source={avatarSource}
-              style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: "white" }}
-              className="mr-3"
-            />
+            <View className="relative mr-3">
+              <Image
+                source={avatarSource}
+                style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: "white" }}
+                className="shadow-sm"
+              />
+              {user?.isSubscribed && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+                  <MaterialCommunityIcons name="crown" size={22} color="#FFB800" />
+                </View>
+              )}
+            </View>
             <View className="flex-1">
               <Text
                 className="text-white text-sm font-bold"

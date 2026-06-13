@@ -1,6 +1,69 @@
 const User = require('../models/User');
 const { writeAuditLog } = require('../utils/audit');
 
+exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.status(200).json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateMe = async (req, res, next) => {
+  try {
+    const updates = {
+      name: req.body.name,
+      email: req.body.email,
+      gender: req.body.gender,
+      dateOfBirth: req.body.dateOfBirth,
+      phoneNumber: req.body.phoneNumber,
+    };
+
+    Object.keys(updates).forEach((key) => {
+      if (updates[key] === undefined) delete updates[key];
+    });
+
+    if (req.file) {
+      updates.avatar = req.file.path;
+    }
+
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    await writeAuditLog(req, {
+      action: 'UPDATE',
+      resource: 'User',
+      resourceId: user._id,
+      after: user.toJSON(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Cập nhật hồ sơ thành công',
+      data: user,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 
 exports.getAll = async (req, res, next) => {

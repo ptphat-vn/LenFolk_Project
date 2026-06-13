@@ -1,14 +1,119 @@
+import React from "react";
+import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useVideoPlayer, VideoView } from "expo-video";
+import YoutubePlayer from "react-native-youtube-iframe";
 
 import SafeScreen from "@/components/SafeScreen";
-import { getLessonById } from "@/constants/lessons";
+import { lessons as allLessons } from "@/constants/lessons";
+import { useGetDetailLesson } from "@/hooks/lesson/use-get-detail-lesson";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
+import { useCreateProgress } from "@/hooks/progress/use-create-progress";
+import { useUpdateProgress } from "@/hooks/progress/use-update-progress";
+
+function getYoutubeVideoId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+}
 
 export default function LessonDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const lesson = getLessonById(id);
+
+  const { data: dbLesson, isLoading: lessonLoading } = useGetDetailLesson(id || "");
+  const { data: courses } = useGetCourses();
+  const { data: progressList, isLoading: progressLoading } = useGetProgressList();
+  const createProgress = useCreateProgress();
+  const updateProgress = useUpdateProgress();
+  const trackedLessonRef = React.useRef<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    if (!dbLesson || progressLoading || trackedLessonRef.current === dbLesson._id) {
+      return;
+    }
+
+    trackedLessonRef.current = dbLesson._id;
+    const existing = progressList?.find((item) => item.lessonId === dbLesson._id);
+    const lastAccessedAt = new Date().toISOString();
+
+    if (existing) {
+      if (existing.status !== "completed") {
+        updateProgress.mutate({
+          id: existing._id,
+          status: "in_progress",
+          completionPercent: Math.max(existing.completionPercent, 5),
+          lastAccessedAt,
+        });
+      }
+      return;
+    }
+
+    createProgress.mutate({
+      courseId: dbLesson.courseId,
+      lessonId: dbLesson._id,
+      status: "in_progress",
+      completionPercent: 5,
+      lastAccessedAt,
+    });
+  }, [createProgress, dbLesson, progressList, progressLoading, updateProgress]);
+
+  const lesson = React.useMemo(() => {
+    if (!dbLesson) return null;
+    const course = courses?.find((c) => c._id === dbLesson.courseId);
+    const category = course
+      ? course.level === "beginner"
+        ? "Cơ bản"
+        : course.level === "intermediate"
+        ? "Trung cấp"
+        : "Nâng cao"
+      : "Cơ bản";
+    const mockLesson = allLessons.find((l) => String(l.id) === id || l.title === dbLesson.title);
+
+    const minutes = Math.floor(dbLesson.duration / 60);
+    const seconds = dbLesson.duration % 60;
+    const duration = `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+    return {
+      id: dbLesson._id,
+      title: dbLesson.title,
+      category,
+      duration,
+      objective: dbLesson.description || mockLesson?.objective || "Nhận biết tư thế cầm sáo và vị trí đặt môi đúng.",
+      theory: dbLesson.techniques?.length ? dbLesson.techniques : (mockLesson?.theory || ["Thực hành đúng kỹ thuật", "Luyện hơi đều đặn"]),
+      targetNote: mockLesson?.targetNote || dbLesson.techniques?.[0] || "A",
+      practiceTip: mockLesson?.practiceTip || "Giữ nốt ổn định trong 3 đến 5 giây.",
+      videoUrl: dbLesson.videoUrl || null,
+    };
+  }, [dbLesson, courses, id]);
+
+  const youtubeVideoId = React.useMemo(() => {
+    return getYoutubeVideoId(lesson?.videoUrl);
+  }, [lesson?.videoUrl]);
+
+  const player = useVideoPlayer(null, (player) => {
+    player.loop = false;
+  });
+
+  React.useEffect(() => {
+    if (lesson?.videoUrl && !youtubeVideoId) {
+      player.replaceAsync(lesson.videoUrl);
+    }
+  }, [lesson?.videoUrl, youtubeVideoId, player]);
+
+  if (lessonLoading) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Bài học" }} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#8E9E6E" />
+        </View>
+      </SafeScreen>
+    );
+  }
 
   if (!lesson) {
     return (
@@ -52,6 +157,28 @@ export default function LessonDetailScreen() {
             </Text>
           </View>
         </View>
+
+        {/* --- VIDEO PLAYER --- */}
+        {youtubeVideoId ? (
+          <View className="overflow-hidden rounded-[28px] bg-black w-full shadow-sm">
+            <YoutubePlayer
+              height={200}
+              play={false}
+              videoId={youtubeVideoId}
+            />
+          </View>
+        ) : (
+          lesson.videoUrl && (
+            <View className="overflow-hidden rounded-[28px] bg-black aspect-[16/9] w-full shadow-sm">
+              <VideoView
+                style={{ width: "100%", height: "100%" }}
+                player={player}
+                allowsFullscreen
+                allowsPictureInPicture
+              />
+            </View>
+          )
+        )}
 
         <View className="gap-4 rounded-[30px] bg-[#8E9E6E] p-6">
           <View className="h-14 w-14 items-center justify-center rounded-2xl bg-white/90">

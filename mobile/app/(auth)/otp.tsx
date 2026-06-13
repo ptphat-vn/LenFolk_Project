@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { Alert, View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -93,7 +93,14 @@ export default function OtpScreen() {
         </AnimatedBlock>
 
         {/* Resend Code Countdown */}
-        <TouchableOpacity disabled={timer > 0} className="self-center mb-6">
+        <TouchableOpacity
+          disabled={timer > 0}
+          className="self-center mb-6"
+          onPress={() => {
+            setTimer(59);
+            Alert.alert("Chưa hỗ trợ", "Backend chưa có dịch vụ gửi OTP.");
+          }}
+        >
           <Text className="text-sm text-gray-500 font-medium">
             Gửi lại mã trong{" "}
             <Text className="text-[#0066FF] font-bold">{timer > 0 ? `${timer}s` : "gửi ngay"}</Text>
@@ -197,7 +204,9 @@ export default function OtpScreen() {
         <TouchableOpacity
           activeOpacity={0.9}
           className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
-          onPress={() => router.push("/reset-password")}
+          onPress={() =>
+            Alert.alert("Chưa hỗ trợ", "Backend chưa có endpoint xác minh OTP.")
+          }
         >
           <Text
             className="text-white text-base font-bold ml-4"

@@ -17,6 +17,9 @@ exports.getOne = async (req, res, next) => {
   try {
   const doc = await Notification.findById(req.params.id);
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
 };
@@ -30,8 +33,24 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
-  const doc = await Notification.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  const existing = await Notification.findById(req.params.id);
+  if (!existing) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!existing.userId.equals(req.user._id) && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied' });
+  }
+
+  const updates =
+    req.user.role === 'admin'
+      ? req.body
+      : {
+          isRead: req.body.isRead,
+          readAt: req.body.isRead ? new Date() : null,
+        };
+
+  const doc = await Notification.findByIdAndUpdate(req.params.id, updates, {
+    new: true,
+    runValidators: true,
+  });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });
   } catch (err) { next(err); }
 };

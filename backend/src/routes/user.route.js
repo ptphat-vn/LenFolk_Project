@@ -4,11 +4,20 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { verifyToken, verifyAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
-const { createUserSchema, updateUserSchema } = require('../validations/user.validation');
+const {
+  createUserSchema,
+  updateUserSchema,
+  updateMeSchema,
+} = require('../validations/user.validation');
 const upload = require('../middlewares/upload.middleware');
 
 // All user routes require authentication
 router.use(verifyToken);
+
+router
+  .route('/me')
+  .get(userController.getMe)
+  .patch(upload.single('avatar'), validate(updateMeSchema), userController.updateMe);
 
 // GET  /api/users        - Admin only: get all users
 // POST /api/users        - Admin only: create a user
