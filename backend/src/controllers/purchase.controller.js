@@ -6,11 +6,86 @@ const Performance = require('../models/Performance');
 const User = require('../models/User');
 const Coupon = require('../models/Coupon');
 const Wallet = require('../models/Wallet');
-const SystemSetting = require('../models/SystemSetting');
 const { hasCourseAccess, hasPerformanceAccess } = require('../utils/access');
-const { writeAuditLog } = require('../utils/audit');
+const { buildPayCode, buildSepayQrUrl, resolveSepayAccount } = require('../config/sepay');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Hoàn tất 1 giao dịch đã chuyển khoản thành công (dùng chung cho admin-duyệt-tay
+ * và webhook SePay tự động). Đặt giao dịch -> success, kích hoạt enrollment,
+ * tăng lượt dùng coupon, đánh dấu user đã đăng ký, và chia tiền cho instructor.
+ *
+ * Idempotent: nếu giao dịch đã 'success' thì return luôn, không xử lý lại.
+ * @param {object} transaction - document TransactionRecord (chưa .save())
+ * @param {object} [opts] - { reviewedBy, gatewayTxId, gatewayProvider, gatewayResponse }
+ */
+const fulfillTransaction = async (transaction, opts = {}) => {
+  if (transaction.status === 'success') return transaction;
+
+  const now = new Date();
+  transaction.status = 'success';
+  transaction.paidAt = now;
+  if (opts.reviewedBy) {
+    transaction.reviewedBy = opts.reviewedBy;
+    transaction.reviewedAt = now;
+  }
+  if (opts.gatewayTxId) transaction.gatewayTxId = opts.gatewayTxId;
+  if (opts.gatewayProvider) transaction.gatewayProvider = opts.gatewayProvider;
+  if (opts.gatewayResponse) transaction.gatewayResponse = opts.gatewayResponse;
+
+  if (transaction.couponId) {
+    await Coupon.findByIdAndUpdate(transaction.couponId, { $inc: { usedCount: 1 } });
+  }
+
+  let instructorId = null;
+  let commissionPercentage = 30;
+
+  if (transaction.transactionType === 'course') {
+    const course = await Course.findById(transaction.courseId).select('instructorId adminCommissionPercentage');
+    const plan = await CoursePlan.findOne({ courseId: transaction.courseId }).select('billingCycle');
+    if (course) {
+      instructorId = course.instructorId;
+      commissionPercentage = course.adminCommissionPercentage ?? 30;
+    }
+    await Enrollment.findByIdAndUpdate(transaction.enrollmentId, {
+      status: 'active',
+      isPaid: true,
+      startDate: now,
+      endDate: calcEndDate(now, plan?.billingCycle || 'monthly'),
+    });
+  } else if (transaction.transactionType === 'performance') {
+    const performance = await Performance.findById(transaction.performanceId).select('instructorId adminCommissionPercentage');
+    if (performance) {
+      instructorId = performance.instructorId;
+      commissionPercentage = performance.adminCommissionPercentage ?? 30;
+    }
+    await Enrollment.findByIdAndUpdate(transaction.enrollmentId, {
+      status: 'active',
+      isPaid: true,
+      startDate: now,
+      endDate: null, // mua đứt
+    });
+  }
+
+  // Đánh dấu user đã đăng ký (mua) thành công. Không đổi role (chỉ admin/instructor/user).
+  await User.findByIdAndUpdate(transaction.userId, { isSubscribed: true });
+
+  await transaction.save();
+
+  // Chia tiền cho instructor
+  if (instructorId) {
+    const instructorShare = (transaction.amount * (100 - commissionPercentage)) / 100;
+    await Wallet.findOneAndUpdate(
+      { instructorId },
+      { $inc: { balance: instructorShare, totalEarned: instructorShare } },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+  }
+
+  return transaction;
+};
+exports.fulfillTransaction = fulfillTransaction;
 
 // Tính endDate cho course theo billingCycle
 const calcEndDate = (startDate, billingCycle) => {
@@ -50,16 +125,16 @@ const calculateDiscount = async (couponCode, originalPrice, type) => {
   return { discountAmount, couponId: coupon._id };
 };
 
-// Lấy thông tin thanh toán dùng chung (QR cố định + bank)
-const getPaymentInfo = async () => {
-  const settings = await SystemSetting.getSettings();
-  return {
-    qrCodeUrl: settings.paymentQrUrl,
-    bankName: settings.bankName,
-    bankAccountNumber: settings.bankAccountNumber,
-    bankAccountName: settings.bankAccountName,
-    transferNote: settings.transferNote,
-  };
+// Lấy tài khoản nhận tiền SePay từ biến môi trường (SEPAY_*).
+// Ném 400 nếu chưa cấu hình để FE hiển thị thông báo rõ ràng.
+const getSepayAccountOrFail = () => {
+  const account = resolveSepayAccount();
+  if (!account.accountNumber || !account.bankCode) {
+    const e = new Error('Payment account is not configured yet. Please contact admin.');
+    e.statusCode = 400;
+    throw e;
+  }
+  return account;
 };
 
 // ─── Mua KHÓA HỌC (theo chu kỳ) ────────────────────────────────────────────────
@@ -85,10 +160,6 @@ exports.requestCoursePayment = async (req, res, next) => {
     if (!plan)
       return res.status(400).json({ success: false, message: 'No active price plan found for this course. Please contact admin.' });
 
-    const payment = await getPaymentInfo();
-    if (!payment.qrCodeUrl)
-      return res.status(400).json({ success: false, message: 'Payment QR is not configured yet. Please contact admin.' });
-
     if (await hasCourseAccess(userId, courseId))
       return res.status(400).json({ success: false, message: 'You already have active access to this course.' });
 
@@ -98,6 +169,7 @@ exports.requestCoursePayment = async (req, res, next) => {
     if (existingPending)
       return res.status(400).json({ success: false, message: 'You already have a pending payment request for this course.' });
 
+    const account = getSepayAccountOrFail();
     const { discountAmount, couponId } = await calculateDiscount(couponCode, plan.price, 'course');
     const finalAmount = plan.price - discountAmount;
     const now = new Date();
@@ -127,12 +199,20 @@ exports.requestCoursePayment = async (req, res, next) => {
       discountAmount,
     });
 
+    const payCode = buildPayCode(transaction._id);
+    transaction.payCode = payCode;
+    await transaction.save();
+
     res.status(201).json({
       success: true,
       data: {
-        message: 'Payment request created. Scan the QR, transfer, then upload your proof.',
+        message: 'Payment request created. Scan the SePay QR and transfer — your access is activated automatically.',
         transactionId: transaction._id,
-        ...payment,
+        payCode,
+        sepayQrUrl: buildSepayQrUrl(account, finalAmount, payCode),
+        bankCode: account.bankCode,
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
         originalAmount: plan.price,
         discountAmount,
         amountToPay: finalAmount,
@@ -166,10 +246,6 @@ exports.requestPerformancePayment = async (req, res, next) => {
     if (!performance.price || performance.price <= 0)
       return res.status(400).json({ success: false, message: 'This performance does not have a valid price.' });
 
-    const payment = await getPaymentInfo();
-    if (!payment.qrCodeUrl)
-      return res.status(400).json({ success: false, message: 'Payment QR is not configured yet. Please contact admin.' });
-
     if (await hasPerformanceAccess(userId, performanceId))
       return res.status(400).json({ success: false, message: 'You already have access to this performance.' });
 
@@ -179,6 +255,7 @@ exports.requestPerformancePayment = async (req, res, next) => {
     if (existingPending)
       return res.status(400).json({ success: false, message: 'You already have a pending payment request for this performance.' });
 
+    const account = getSepayAccountOrFail();
     const { discountAmount, couponId } = await calculateDiscount(couponCode, performance.price, 'performance');
     const finalAmount = performance.price - discountAmount;
     const now = new Date();
@@ -207,12 +284,20 @@ exports.requestPerformancePayment = async (req, res, next) => {
       discountAmount,
     });
 
+    const payCode = buildPayCode(transaction._id);
+    transaction.payCode = payCode;
+    await transaction.save();
+
     res.status(201).json({
       success: true,
       data: {
-        message: 'Payment request created. Scan the QR, transfer, then upload your proof.',
+        message: 'Payment request created. Scan the SePay QR and transfer — your access is activated automatically.',
         transactionId: transaction._id,
-        ...payment,
+        payCode,
+        sepayQrUrl: buildSepayQrUrl(account, finalAmount, payCode),
+        bankCode: account.bankCode,
+        accountNumber: account.accountNumber,
+        accountName: account.accountName,
         originalAmount: performance.price,
         discountAmount,
         amountToPay: finalAmount,
@@ -225,161 +310,38 @@ exports.requestPerformancePayment = async (req, res, next) => {
   }
 };
 
-// ─── Upload minh chứng ──────────────────────────────────────────────────────────
+// ─── Poll trạng thái thanh toán (mobile) ─────────────────────────────────────────
 
-exports.uploadProof = async (req, res, next) => {
+/**
+ * GET /api/transaction-records/:id/status
+ *
+ * Mobile gọi định kỳ sau khi hiện QR để biết SePay đã xác nhận chưa.
+ * Trả về trạng thái gọn nhẹ; `isPaid=true` khi giao dịch đã 'success'.
+ */
+exports.getTransactionStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user._id;
 
-    if (!req.file)
-      return res.status(400).json({ success: false, message: 'Please attach a payment proof image (field: proof)' });
-
-    const transaction = await TransactionRecord.findById(id);
+    const transaction = await TransactionRecord.findById(id).select(
+      'userId status amount currency payCode paidAt transactionType',
+    );
     if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
     if (!transaction.userId.equals(userId))
       return res.status(403).json({ success: false, message: 'Forbidden: this transaction does not belong to you' });
-    if (transaction.status !== 'pending')
-      return res.status(400).json({ success: false, message: `Cannot upload proof for a transaction with status '${transaction.status}'` });
-
-    transaction.proofImageUrl = req.file.path;
-    transaction.status = 'reviewing';
-    await transaction.save();
 
     res.status(200).json({
       success: true,
       data: {
-        message: 'Proof uploaded successfully. Your payment is under admin review.',
         transactionId: transaction._id,
-        proofImageUrl: transaction.proofImageUrl,
+        status: transaction.status,
+        isPaid: transaction.status === 'success',
+        amount: transaction.amount,
+        currency: transaction.currency,
+        payCode: transaction.payCode,
+        paidAt: transaction.paidAt,
+        transactionType: transaction.transactionType,
       },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ─── Admin duyệt / từ chối ──────────────────────────────────────────────────────
-
-/**
- * PATCH /api/transaction-records/:id/approve
- */
-exports.approve = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const adminId = req.user._id;
-
-    const transaction = await TransactionRecord.findById(id);
-    if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
-    if (transaction.status !== 'reviewing')
-      return res.status(400).json({ success: false, message: `Cannot approve a transaction with status '${transaction.status}'` });
-
-    const now = new Date();
-    transaction.status = 'success';
-    transaction.paidAt = now;
-    transaction.reviewedBy = adminId;
-    transaction.reviewedAt = now;
-
-    if (transaction.couponId) {
-      await Coupon.findByIdAndUpdate(transaction.couponId, { $inc: { usedCount: 1 } });
-    }
-
-    let instructorId = null;
-    let commissionPercentage = 30;
-
-    if (transaction.transactionType === 'course') {
-      const course = await Course.findById(transaction.courseId).select('instructorId adminCommissionPercentage');
-      const plan = await CoursePlan.findOne({ courseId: transaction.courseId }).select('billingCycle');
-      if (course) {
-        instructorId = course.instructorId;
-        commissionPercentage = course.adminCommissionPercentage ?? 30;
-      }
-      await Enrollment.findByIdAndUpdate(transaction.enrollmentId, {
-        status: 'active',
-        isPaid: true,
-        startDate: now,
-        endDate: calcEndDate(now, plan?.billingCycle || 'monthly'),
-      });
-    } else if (transaction.transactionType === 'performance') {
-      const performance = await Performance.findById(transaction.performanceId).select('instructorId adminCommissionPercentage');
-      if (performance) {
-        instructorId = performance.instructorId;
-        commissionPercentage = performance.adminCommissionPercentage ?? 30;
-      }
-      await Enrollment.findByIdAndUpdate(transaction.enrollmentId, {
-        status: 'active',
-        isPaid: true,
-        startDate: now,
-        endDate: null, // mua đứt
-      });
-    }
-
-    // Đánh dấu user đã đăng ký (mua) thành công. Không đổi role (chỉ admin/instructor/user).
-    await User.findByIdAndUpdate(transaction.userId, { isSubscribed: true });
-
-    await transaction.save();
-
-    // Chia tiền cho instructor
-    if (instructorId) {
-      const instructorShare = (transaction.amount * (100 - commissionPercentage)) / 100;
-      await Wallet.findOneAndUpdate(
-        { instructorId },
-        { $inc: { balance: instructorShare, totalEarned: instructorShare } },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
-      );
-    }
-
-    await writeAuditLog(req, {
-      action: 'APPROVE',
-      resource: 'TransactionRecord',
-      resourceId: transaction._id,
-      after: { status: 'success', amount: transaction.amount, type: transaction.transactionType },
-    });
-
-    res.status(200).json({
-      success: true,
-      data: { message: 'Đã duyệt thanh toán thành công.', transactionId: transaction._id },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * PATCH /api/transaction-records/:id/reject
- */
-exports.reject = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const adminId = req.user._id;
-    const { rejectReason } = req.body;
-
-    const transaction = await TransactionRecord.findById(id);
-    if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
-    if (transaction.status !== 'reviewing')
-      return res.status(400).json({ success: false, message: `Cannot reject a transaction with status '${transaction.status}'` });
-
-    const now = new Date();
-    transaction.status = 'failed';
-    transaction.rejectReason = rejectReason || null;
-    transaction.reviewedBy = adminId;
-    transaction.reviewedAt = now;
-    await transaction.save();
-
-    if (transaction.enrollmentId) {
-      await Enrollment.findByIdAndUpdate(transaction.enrollmentId, { status: 'cancelled' });
-    }
-
-    await writeAuditLog(req, {
-      action: 'REJECT',
-      resource: 'TransactionRecord',
-      resourceId: transaction._id,
-      after: { status: 'failed', rejectReason: rejectReason || null },
-    });
-
-    res.status(200).json({
-      success: true,
-      data: { message: 'Đã từ chối thanh toán.', transactionId: transaction._id },
     });
   } catch (err) {
     next(err);

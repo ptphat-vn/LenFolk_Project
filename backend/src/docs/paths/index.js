@@ -6,7 +6,7 @@ module.exports = {
   ...require('./courses'),
   ...require('./lessons'),
   ...require('./performances'),
-  ...require('./systemSettings'),
+  ...require('./payments'),
   ...require('./enrollments'),
   ...require('./transactions'),
   ...require('./coupons'),

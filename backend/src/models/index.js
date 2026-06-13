@@ -16,7 +16,6 @@ const AuditLog = require('./AuditLog');
 const Coupon = require('./Coupon');
 const Wallet = require('./Wallet');
 const PayoutRequest = require('./PayoutRequest');
-const SystemSetting = require('./SystemSetting');
 
 module.exports = {
   User,
@@ -39,5 +38,4 @@ module.exports = {
   Coupon,
   Wallet,
   PayoutRequest,
-  SystemSetting,
 };

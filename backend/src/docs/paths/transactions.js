@@ -1,20 +1,5 @@
 const { bearer, idParam, okData, okList, okMessage, err } = require('./_shared');
 
-const proofBody = {
-  required: true,
-  content: { 'multipart/form-data': { schema: {
-    type: 'object', required: ['proof'],
-    properties: { proof: { type: 'string', format: 'binary', description: 'Ảnh minh chứng chuyển khoản' } },
-  } } },
-};
-
-const rejectBody = {
-  required: false,
-  content: { 'application/json': { schema: {
-    type: 'object', properties: { rejectReason: { type: 'string', example: 'Số tiền không khớp' } },
-  } } },
-};
-
 module.exports = {
   '/transaction-records': {
     get: {
@@ -47,41 +32,41 @@ module.exports = {
       responses: { 200: okMessage('Đã xóa'), 404: err('Không tìm thấy') },
     },
   },
-  '/transaction-records/{id}/upload-proof': {
-    patch: {
+  '/transaction-records/{id}/status': {
+    get: {
       tags: ['TransactionRecords'],
-      summary: 'Upload minh chứng chuyển khoản (user) — pending → reviewing',
-      security: bearer,
-      parameters: [idParam],
-      requestBody: proofBody,
-      responses: {
-        200: okMessage('Đã upload, chờ admin duyệt'),
-        400: err('Thiếu ảnh / sai trạng thái'),
-        403: err('Không phải của bạn'), 404: err('Không tìm thấy'),
-      },
-    },
-  },
-  '/transaction-records/{id}/approve': {
-    patch: {
-      tags: ['TransactionRecords'],
-      summary: 'Admin duyệt thanh toán — reviewing → success',
+      summary: 'Poll trạng thái thanh toán (mobile, sau khi hiện QR SePay)',
       description:
-        'Enrollment → active + isPaid; course set endDate theo chu kỳ, performance endDate=null (mua đứt). ' +
-        'Cộng ví instructor `amount*(100-commission)/100`, set `User.isSubscribed=true`, tăng usedCount coupon, ghi AuditLog.',
+        'Mobile gọi định kỳ sau khi hiện QR để biết SePay đã xác nhận chưa. ' +
+        '`isPaid=true` khi `status` đã chuyển sang `success` (webhook SePay đã khớp & kích hoạt quyền truy cập).',
       security: bearer,
       parameters: [idParam],
-      responses: { 200: okMessage('Đã duyệt'), 400: err('Chỉ duyệt được giao dịch reviewing'), 404: err('Không tìm thấy') },
-    },
-  },
-  '/transaction-records/{id}/reject': {
-    patch: {
-      tags: ['TransactionRecords'],
-      summary: 'Admin từ chối thanh toán — reviewing → failed',
-      description: 'Enrollment → cancelled. Ghi AuditLog.',
-      security: bearer,
-      parameters: [idParam],
-      requestBody: rejectBody,
-      responses: { 200: okMessage('Đã từ chối'), 400: err('Chỉ từ chối được giao dịch reviewing'), 404: err('Không tìm thấy') },
+      responses: {
+        200: {
+          description: 'Trạng thái giao dịch',
+          content: { 'application/json': { schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              data: {
+                type: 'object',
+                properties: {
+                  transactionId: { type: 'string' },
+                  status: { type: 'string', enum: ['pending', 'success', 'failed', 'refunded'], example: 'pending' },
+                  isPaid: { type: 'boolean', example: false },
+                  amount: { type: 'number', example: 199000 },
+                  currency: { type: 'string', example: 'VND' },
+                  payCode: { type: 'string', example: 'LF1A2B3C4D' },
+                  paidAt: { type: 'string', format: 'date-time', nullable: true },
+                  transactionType: { type: 'string', example: 'course' },
+                },
+              },
+            },
+          } } },
+        },
+        403: err('Không phải của bạn'),
+        404: err('Không tìm thấy'),
+      },
     },
   },
 };

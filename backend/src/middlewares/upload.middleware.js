@@ -10,23 +10,6 @@ const avatarStorage = new CloudinaryStorage({
   },
 });
 
-const paymentProofStorage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'lenfolk/payment-proofs',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-  },
-});
-
-const qrCodeStorage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'lenfolk/subscription-qr-codes',
-    resource_type: 'image',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-  },
-});
-
 const lessonVideoStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -71,8 +54,6 @@ const documentFileFilter = (req, file, cb) => {
 };
 
 const upload = multer({ storage: avatarStorage });
-upload.paymentProof = multer({ storage: paymentProofStorage });
-upload.qrCode = multer({ storage: qrCodeStorage });
 upload.lessonVideo = multer({
   storage: lessonVideoStorage,
   fileFilter: videoFileFilter,

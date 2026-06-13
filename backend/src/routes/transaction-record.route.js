@@ -30,21 +30,9 @@ router
   
   .delete(verifyAdmin, transactionRecordController.deleteOne);
 
-// ── Payment proof & admin review actions ─────────────────────────────────────
+// ── Poll trạng thái thanh toán (mobile, sau khi hiện QR SePay) ────────────────
 const purchaseController = require('../controllers/purchase.controller');
-const upload = require('../middlewares/upload.middleware');
 
-
-router.patch(
-  '/:id/upload-proof',
-  upload.paymentProof.single('proof'),
-  purchaseController.uploadProof,
-);
-
-
-router.patch('/:id/approve', verifyAdmin, purchaseController.approve);
-
-
-router.patch('/:id/reject', verifyAdmin, purchaseController.reject);
+router.get('/:id/status', purchaseController.getTransactionStatus);
 
 module.exports = router;
