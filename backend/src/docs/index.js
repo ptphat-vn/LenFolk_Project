@@ -21,12 +21,12 @@ const options = {
         '### Kiến trúc định giá (v2)\n' +
         '- **Course** không lưu giá trực tiếp. Admin tạo course (không giá), sau đó đặt giá qua **CoursePlan** (`PUT /courses/{id}/plan`). Course bán **theo chu kỳ** (monthly/quarterly/yearly) → quyền truy cập có hạn.\n' +
         '- **Performance** lưu **giá thẳng trên tiết mục** (`price`). Instructor nhập khi đăng, admin duyệt. Bán **mua đứt 1 lần** → quyền truy cập vĩnh viễn.\n' +
-        '- **Enrollment** là nguồn sự thật duy nhất cho quyền truy cập (thay cho UserSubscription/enrolledCourses cũ), có cờ `isPaid`.\n' +
-        '- **SystemSetting** giữ **1 mã QR cố định + tài khoản ngân hàng dùng chung** cho mọi đơn (`GET/PUT /system-settings`).\n\n' +
-        '### Luồng thanh toán (QR thủ công)\n' +
-        '1. User gọi `POST /courses/{id}/purchase` hoặc `POST /performances/{id}/purchase` → nhận QR + số tiền (đã trừ coupon), hệ thống tạo Enrollment(pending) + TransactionRecord(pending).\n' +
-        '2. User chuyển khoản rồi `PATCH /transaction-records/{id}/upload-proof` (ảnh) → status `reviewing`.\n' +
-        '3. Admin `PATCH /transaction-records/{id}/approve` → Enrollment `active` + `isPaid`, cộng ví instructor, set `User.isSubscribed=true`. Hoặc `reject` → Enrollment `cancelled`.\n\n' +
+        '- **Enrollment** là nguồn sự thật duy nhất cho quyền truy cập (thay cho UserSubscription/enrolledCourses cũ), có cờ `isPaid`.\n\n' +
+        '### Luồng thanh toán (SePay — tự động)\n' +
+        '1. User gọi `POST /courses/{id}/purchase` hoặc `POST /performances/{id}/purchase` → nhận `payCode` + `sepayQrUrl` (QR động đã điền sẵn số tiền + nội dung), hệ thống tạo Enrollment(pending) + TransactionRecord(pending).\n' +
+        '2. User quét QR và chuyển khoản. SePay phát hiện tiền vào → gọi `POST /payments/sepay/webhook`.\n' +
+        '3. Webhook khớp `payCode` → Enrollment `active` + `isPaid`, cộng ví instructor, set `User.isSubscribed=true`. Tự động, không cần admin duyệt.\n' +
+        '4. Mobile poll `GET /transaction-records/{id}/status` để biết khi nào `isPaid=true` (đã xác nhận) rồi đóng màn QR.\n\n' +
         'Mọi route bảo vệ cần Bearer JWT ở header `Authorization`.',
       contact: { name: 'LenFolk Team' },
     },
@@ -38,6 +38,12 @@ const options = {
     components: {
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        sepayApiKey: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'Authorization',
+          description: 'SePay gửi `Authorization: Apikey <SEPAY_WEBHOOK_API_KEY>`',
+        },
       },
       schemas,
     },
@@ -47,7 +53,7 @@ const options = {
       { name: 'Courses', description: 'Khóa học + CoursePlan (gói giá) + mua khóa học' },
       { name: 'Lessons', description: 'Bài học trong khóa học' },
       { name: 'Performances', description: 'Tiết mục (giá inline) + duyệt + mua' },
-      { name: 'SystemSettings', description: 'Cấu hình QR + ngân hàng dùng chung' },
+      { name: 'Payments', description: 'Webhook SePay — xác nhận thanh toán tự động' },
       { name: 'Enrollments', description: 'Quyền truy cập đã mua — user xem "đã đăng ký gì"' },
       { name: 'TransactionRecords', description: 'Giao dịch: upload minh chứng, duyệt/từ chối' },
       { name: 'Coupons', description: 'Mã giảm giá (admin)' },

@@ -12,9 +12,15 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string().min(1, { message: 'CLOUDINARY_CLOUD_NAME is required' }),
   CLOUDINARY_API_KEY: z.string().min(1, { message: 'CLOUDINARY_API_KEY is required' }),
   CLOUDINARY_API_SECRET: z.string().min(1, { message: 'CLOUDINARY_API_SECRET is required' }),
-  ZALOPAY_APP_ID: z.string().default('2553'),
-  ZALOPAY_KEY1: z.string().default('PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL'),
-  ZALOPAY_KEY2: z.string().default('kLtgPl8YEStV61e9R1e7CgO7p3sDxt5I'),
+  // ── SePay ────────────────────────────────────────────────────────────────
+  // API Key khai báo trong SePay Dashboard → Webhooks → Authorization (Api Key)
+  SEPAY_WEBHOOK_API_KEY: z.string().default(''),
+  // Số tài khoản ngân hàng đã liên kết với SePay
+  SEPAY_ACCOUNT_NUMBER: z.string().default(''),
+  // Mã ngân hàng theo SePay (vd: MBBank, Vietcombank, ACB, TPBank, BIDV...)
+  SEPAY_BANK_CODE: z.string().default(''),
+  // Tên chủ tài khoản (chỉ để hiển thị)
+  SEPAY_ACCOUNT_NAME: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -41,11 +47,12 @@ module.exports = {
     apiKey: env.CLOUDINARY_API_KEY,
     apiSecret: env.CLOUDINARY_API_SECRET,
   },
-  zalopay: {
-    appId: env.ZALOPAY_APP_ID,
-    key1: env.ZALOPAY_KEY1,
-    key2: env.ZALOPAY_KEY2,
-    endpoint: 'https://sb-openapi.zalopay.vn/v2/create',
-    queryEndpoint: 'https://sb-openapi.zalopay.vn/v2/query',
+  sepay: {
+    webhookApiKey: env.SEPAY_WEBHOOK_API_KEY,
+    accountNumber: env.SEPAY_ACCOUNT_NUMBER,
+    bankCode: env.SEPAY_BANK_CODE,
+    accountName: env.SEPAY_ACCOUNT_NAME,
+    // Bộ sinh ảnh VietQR động của SePay
+    qrImageBase: 'https://qr.sepay.vn/img',
   },
 };

@@ -63,7 +63,7 @@ module.exports = {
       summary: 'Mua khóa học (user) — tạo đơn + nhận QR',
       description:
         'Lấy giá từ CoursePlan active. Tạo Enrollment(pending) + TransactionRecord(pending). ' +
-        'Trả về QR cố định + số tiền cần chuyển (đã trừ coupon). Sau đó upload minh chứng qua `/transaction-records/{id}/upload-proof`.',
+        'Trả về `sepayQrUrl` (QR động đã điền sẵn số tiền + nội dung CK). Sau khi hiện QR, mobile poll `GET /transaction-records/{id}/status` tới khi `isPaid=true`.',
       security: bearer,
       parameters: [idParam],
       requestBody: jsonBody('PurchaseInput', false),
