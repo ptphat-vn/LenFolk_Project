@@ -6,10 +6,11 @@ export type User = {
   dateOfBirth: string | null;
   avatar: string | null;
   phoneNumber: string | null;
-  role: "admin" | "instructor" | "moderator" | "learner" | "guest";
+  role: "admin" | "instructor" | "user" | "moderator" | "learner" | "guest";
   currentSubscription: string | null;
   isActive: boolean;
   isVerified: boolean;
+  isSubscribed?: boolean;
   lastLoginAt: string | null;
   deletedAt: string | null;
   createdAt: string;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -13,8 +13,11 @@ export default function ResetPasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = () => {
-    // Navigate back to login screen after successful reset
-    router.replace("/login");
+    if (password.length < 8 || password !== confirmPassword) {
+      Alert.alert("Mật khẩu không hợp lệ", "Mật khẩu cần ít nhất 8 ký tự và phải trùng khớp.");
+      return;
+    }
+    Alert.alert("Chưa hỗ trợ", "Backend chưa có endpoint đặt lại mật khẩu.");
   };
 
   return (

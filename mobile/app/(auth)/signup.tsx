@@ -169,6 +169,7 @@ export default function SignupScreen() {
             {/* Google Button */}
             <TouchableOpacity
               activeOpacity={0.85}
+              onPress={() => Alert.alert("Google", "Backend chưa cấu hình đăng ký Google OAuth.")}
               className="w-16 h-16 rounded-full bg-white justify-center items-center border border-gray-100 shadow-md"
             >
               <Image 
@@ -180,6 +181,7 @@ export default function SignupScreen() {
             {/* Apple Button */}
             <TouchableOpacity
               activeOpacity={0.85}
+              onPress={() => Alert.alert("Apple", "Backend chưa cấu hình đăng ký Apple.")}
               className="w-16 h-16 rounded-full bg-white justify-center items-center border border-gray-100 shadow-md"
             >
               <Image 

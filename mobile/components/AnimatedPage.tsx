@@ -34,7 +34,7 @@ const variantConfig = {
   panel: { entering: FadeIn, duration: 360 },
   card: { entering: FadeInUp, duration: 420 },
   listItem: { entering: FadeInRight, duration: 360 },
-  listContainer: { entering: FadeInDown, duration: 420 },
+  listContainer: { entering: FadeInUp, duration: 420 },
   slideRight: { entering: FadeInLeft, duration: 420 },
   chip: { entering: ZoomIn, duration: 260 },
   hero: { entering: ZoomIn, duration: 460 },

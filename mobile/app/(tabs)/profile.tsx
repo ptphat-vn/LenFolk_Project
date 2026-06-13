@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
+import { Alert, View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   cancelAnimation,
@@ -17,6 +16,8 @@ import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
+import NotificationButton from "@/components/NotificationButton";
+import { useGetMe } from "@/hooks/user/use-get-me";
 
 export default function ProfileTabScreen() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export default function ProfileTabScreen() {
   const logoutMutation = useLogout();
   const logoutOffset = useSharedValue(0);
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const { data: freshUser } = useGetMe();
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
     ? { uri: user.avatar }
@@ -36,6 +39,12 @@ export default function ProfileTabScreen() {
     user?.phoneNumber,
     user?.dateOfBirth,
   ].filter(Boolean).length;
+
+  React.useEffect(() => {
+    if (freshUser) {
+      updateUser(freshUser);
+    }
+  }, [freshUser, updateUser]);
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -95,23 +104,24 @@ export default function ProfileTabScreen() {
           </Text>
 
           {/* Bell Notifications */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            className="w-10 h-10 rounded-full justify-center items-center shadow"
-            style={{ backgroundColor: Colors.light.primary }}
-          >
-            <Ionicons name="notifications" size={20} color="white" />
-          </TouchableOpacity>
+          <NotificationButton inverted />
         </AnimatedBlock>
 
         {/* --- USER ACCOUNT CARD --- */}
         <AnimatedBlock variant="card" delay={90} className="bg-white rounded-[32px] p-5 mx-6 shadow-sm mb-6 mt-2 border border-gray-50">
           <View className="flex-row items-center mb-4">
-            <Image
-              source={avatarSource}
-              style={{ width: 64, height: 64, borderRadius: 32 }}
-              className="mr-4 shadow border border-gray-100"
-            />
+            <View className="relative mr-4">
+              <Image
+                source={avatarSource}
+                style={{ width: 64, height: 64, borderRadius: 32 }}
+                className="shadow border border-gray-100"
+              />
+              {user?.isSubscribed && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+                  <MaterialCommunityIcons name="crown" size={26} color="#FFB800" />
+                </View>
+              )}
+            </View>
             <View className="flex-1">
               <Text
                 className="text-charcoal text-lg font-bold"
@@ -140,6 +150,7 @@ export default function ProfileTabScreen() {
           {/* Edit Profile outline button */}
           <TouchableOpacity
             activeOpacity={0.8}
+            onPress={() => router.push("/profile/edit")}
             className="w-full bg-white border border-gray-200 py-3.5 rounded-full items-center justify-center shadow-sm"
           >
             <Text
@@ -162,7 +173,10 @@ export default function ProfileTabScreen() {
 
           <View className="bg-[#E2E8D3] rounded-3xl overflow-hidden border border-[#D6DDC6]/30">
             {/* Item 1: BPM */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4">
+            <TouchableOpacity
+              onPress={() => Alert.alert("Tốc độ mặc định", "Tùy chỉnh BPM sẽ được áp dụng khi backend có API cài đặt học tập.")}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="flash" size={16} color="#E0B034" />
@@ -201,7 +215,10 @@ export default function ProfileTabScreen() {
             </View>
 
             {/* Item 3: Mic Sensitivity */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4">
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/courses")}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="mic" size={16} color="#8E9E6E" />
@@ -222,7 +239,10 @@ export default function ProfileTabScreen() {
             </TouchableOpacity>
 
             {/* Item 4: Daily Goal */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4">
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/leaderboard")}
+              className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <MaterialCommunityIcons name="target" size={16} color="#8E9E6E" />
@@ -255,7 +275,10 @@ export default function ProfileTabScreen() {
 
           <View className="bg-[#E2E8D3] rounded-3xl overflow-hidden border border-[#D6DDC6]/30">
             {/* Item 1: Personal Info */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4">
+            <TouchableOpacity
+              onPress={() => router.push("/profile/edit")}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="person" size={16} color="#8E9E6E" />
@@ -272,8 +295,37 @@ export default function ProfileTabScreen() {
               />
             </TouchableOpacity>
 
-            {/* Item 2: Upgrade Premium */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4">
+            {/* Item 2: Account Verification */}
+            <TouchableOpacity
+              onPress={() => router.push("/profile/verify")}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
+              <View className="flex-row items-center flex-1 pr-4">
+                <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
+                  <Ionicons name="shield-checkmark" size={16} color="#8E9E6E" />
+                </View>
+                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                  Xác thực tài khoản
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text className={`text-xs font-bold mr-2 ${user?.isVerified ? "text-[#8E9E6E]" : "text-gray-400"}`}>
+                  {user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="#6B7280"
+                  className="animate-arrow-right"
+                />
+              </View>
+            </TouchableOpacity>
+
+            {/* Item 3: Upgrade Premium */}
+            <TouchableOpacity
+              onPress={() => router.push("/profile/subscription")}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="ribbon" size={16} color="#E0B034" />
@@ -291,7 +343,10 @@ export default function ProfileTabScreen() {
             </TouchableOpacity>
 
             {/* Item 3: Dark Mode */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4">
+            <TouchableOpacity
+              onPress={() => Alert.alert("Chế độ tối", "Giao diện tối chưa được thiết kế trong phiên bản hiện tại.")}
+              className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="moon" size={16} color="#8E9E6E" />
@@ -321,7 +376,10 @@ export default function ProfileTabScreen() {
 
           <View className="bg-[#E2E8D3] rounded-3xl overflow-hidden border border-[#D6DDC6]/30">
             {/* Item 1: Privacy Policy */}
-            <TouchableOpacity className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4">
+            <TouchableOpacity
+              onPress={() => router.push("/terms")}
+              className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
+            >
               <View className="flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="shield-checkmark" size={16} color="#8E9E6E" />

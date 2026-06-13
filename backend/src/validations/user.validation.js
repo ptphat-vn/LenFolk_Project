@@ -37,3 +37,19 @@ exports.updateUserSchema = z.object({
   deletedAt: z.string().datetime().optional(),
   })
 });
+
+exports.updateMeSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).optional(),
+    email: z.string().email().optional(),
+    gender: z.enum(['male', 'female', 'other']).optional(),
+    dateOfBirth: z.preprocess(
+      (value) => value === '' ? null : value,
+      z.string().datetime().nullable().optional(),
+    ),
+    phoneNumber: z.preprocess(
+      (value) => value === '' ? null : value,
+      z.string().nullable().optional(),
+    ),
+  }),
+});

@@ -18,61 +18,14 @@ import {
 } from "react-native";
 
 import SafeScreen from "@/components/SafeScreen";
-import { getLessonById } from "@/constants/lessons";
+import { lessons as allLessons } from "@/constants/lessons";
+import { useGetDetailLesson } from "@/hooks/lesson/use-get-detail-lesson";
+import { useCreatePracticeSession } from "@/hooks/practice-session/use-create-practice-session";
 import { useBasicAnalysis } from "@/hooks/ai-analytic/use-basic";
+import { useAdvancedAnalysis } from "@/hooks/ai-analytic/use-advanced";
+import { useGetMe } from "@/hooks/user/use-get-me";
+import { useAuthStore } from "@/store/authStore";
 import type { AnalysisResult } from "@/types/ai-analysis.type";
-
-type DisplayMetric = {
-  label: string;
-  value: string;
-};
-
-const preferredLabels: Record<string, string> = {
-  note: "Nốt nhận diện",
-  detected_note: "Nốt nhận diện",
-  pitch: "Cao độ",
-  frequency: "Tần số",
-  confidence: "Độ tin cậy",
-  score: "Điểm",
-  duration: "Thời lượng",
-  stability: "Độ ổn định",
-  feedback: "Nhận xét",
-  llm_feedback: "Gợi ý từ AI",
-  message: "Kết luận",
-};
-
-const formatKey = (key: string) =>
-  preferredLabels[key.toLowerCase()] ??
-  key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-
-const formatValue = (value: unknown) => {
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : value.toFixed(2);
-  }
-  if (typeof value === "string" || typeof value === "boolean") {
-    return String(value);
-  }
-  return JSON.stringify(value);
-};
-
-const getDisplayMetrics = (result?: AnalysisResult): DisplayMetric[] => {
-  if (!result) return [];
-
-  const source =
-    typeof result.result === "object" && result.result !== null
-      ? (result.result as Record<string, unknown>)
-      : result;
-
-  return Object.entries(source)
-    .filter(([, value]) => value !== null && value !== undefined)
-    .slice(0, 10)
-    .map(([key, value]) => ({
-      label: formatKey(key),
-      value: formatValue(value),
-    }));
-};
 
 export default function NotePracticeScreen() {
   const router = useRouter();
@@ -80,18 +33,71 @@ export default function NotePracticeScreen() {
     lessonId: string;
     note?: string;
   }>();
-  const lesson = getLessonById(lessonId);
-  const targetNote = note || lesson?.targetNote || "A4";
+
+  const { data: dbLesson } = useGetDetailLesson(lessonId || "");
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const { data: freshUser } = useGetMe();
+  const mockLesson = allLessons.find((l) => String(l.id) === lessonId || l.title === dbLesson?.title);
+
+  const lesson = useMemo(() => {
+    if (!dbLesson) return null;
+    return {
+      id: dbLesson._id,
+      title: dbLesson.title,
+      targetNote: mockLesson?.targetNote || dbLesson.techniques?.[0] || "A4",
+    };
+  }, [dbLesson, mockLesson]);
+
+  const createSession = useCreatePracticeSession();
+
+  const targetNote = note || lesson?.targetNote || mockLesson?.targetNote || "A4";
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
-  const analysis = useBasicAnalysis<AnalysisResult>();
+  const basicAnalysis = useBasicAnalysis<AnalysisResult>();
+  const advancedAnalysis = useAdvancedAnalysis<AnalysisResult>();
+  const hasAdvancedAccess = freshUser?.isSubscribed ?? user?.isSubscribed ?? false;
+  const analysis = hasAdvancedAccess ? advancedAnalysis : basicAnalysis;
   const [recordingUri, setRecordingUri] = useState<string>();
   const [permissionGranted, setPermissionGranted] = useState<boolean>();
 
-  const metrics = useMemo(
-    () => getDisplayMetrics(analysis.data),
-    [analysis.data],
-  );
+  useEffect(() => {
+    if (freshUser) {
+      updateUser(freshUser);
+    }
+  }, [freshUser, updateUser]);
+
+  const parsedData = useMemo(() => {
+    if (!analysis.data) return null;
+    
+    const rawData = analysis.data as Record<string, any>;
+    
+    let fileInfo: any = null;
+    const fileInfoVal = rawData.file_info || rawData["File Info"] || rawData.fileInfo;
+    if (fileInfoVal) {
+      if (typeof fileInfoVal === "string") {
+        try { fileInfo = JSON.parse(fileInfoVal); } catch { fileInfo = null; }
+      } else if (typeof fileInfoVal === "object") {
+        fileInfo = fileInfoVal;
+      }
+    }
+    
+    let summary: any = null;
+    const summaryVal = rawData.summary || rawData["Summary"] || rawData.summaryInfo;
+    if (summaryVal) {
+      if (typeof summaryVal === "string") {
+        try { summary = JSON.parse(summaryVal); } catch { summary = null; }
+      } else if (typeof summaryVal === "object") {
+        summary = summaryVal;
+      }
+    }
+    
+    if (!summary && (rawData.score !== undefined || rawData.summary !== undefined)) {
+      summary = rawData;
+    }
+    
+    return { fileInfo, summary };
+  }, [analysis.data]);
 
   useEffect(() => {
     const prepareAudio = async () => {
@@ -146,16 +152,29 @@ export default function NotePracticeScreen() {
   const analyzeRecording = () => {
     if (!recordingUri) return;
 
-    analysis.mutate({
-      file: {
-        uri: recordingUri,
-        name: `note-${targetNote}-${Date.now()}.m4a`,
-        type: "audio/mp4",
+    analysis.mutate(
+      {
+        file: {
+          uri: recordingUri,
+          name: `note-${targetNote}-${Date.now()}.m4a`,
+          type: "audio/mp4",
+        },
+        message: `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là ${targetNote}. Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện.`,
+        useLlm: true,
+        ...(hasAdvancedAccess ? { fast: false } : {}),
       },
-      message: `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là ${targetNote}. Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện.`,
-      maxDurationSec: 50,
-      useLlm: true,
-    });
+      {
+        onSuccess: () => {
+          if (lessonId) {
+            createSession.mutate({
+              lessonId,
+              audioFileUrl: recordingUri,
+              duration: durationSeconds,
+            });
+          }
+        },
+      }
+    );
   };
 
   const durationSeconds = Math.floor((recorderState.durationMillis ?? 0) / 1000);
@@ -187,6 +206,11 @@ export default function NotePracticeScreen() {
         </View>
 
         <View className="items-center gap-3 rounded-[32px] bg-[#8E9E6E] px-6 py-8">
+          <View className="rounded-full bg-white/20 px-3 py-1">
+            <Text className="text-[11px] font-bold text-white">
+              {hasAdvancedAccess ? "AI ADVANCED · GÓI NÂNG CAO" : "AI BASIC · GÓI CƠ BẢN"}
+            </Text>
+          </View>
           <Text selectable className="text-sm font-bold text-white/75">
             NỐT MỤC TIÊU
           </Text>
@@ -266,7 +290,9 @@ export default function NotePracticeScreen() {
             <Text className="font-bold text-[#4B421F]">
               {analysis.isPending
                 ? "AI đang phân tích..."
-                : "Phân tích cơ bản với AI"}
+                : hasAdvancedAccess
+                  ? "Phân tích nâng cao với AI"
+                  : "Phân tích cơ bản với AI"}
             </Text>
           </TouchableOpacity>
         )}
@@ -277,59 +303,143 @@ export default function NotePracticeScreen() {
               Không thể phân tích bản ghi
             </Text>
             <Text selectable className="text-sm leading-5 text-[#7C4B46]">
-              {analysis.error instanceof Error
-                ? analysis.error.message
-                : "Vui lòng kiểm tra kết nối và thử lại."}
+              {analysis.error?.message || "Vui lòng kiểm tra kết nối và thử lại."}
             </Text>
-          </View>
-        )}
-
-        {analysis.isSuccess && (
-          <View className="gap-4 rounded-[28px] bg-white p-6">
-            <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-[#E2E8D3]">
-                <Ionicons name="sparkles" size={20} color="#687451" />
-              </View>
-              <View>
-                <Text selectable className="text-base font-bold text-[#10120C]">
-                  Kết quả phân tích
-                </Text>
-                <Text selectable className="text-xs text-[#777B70]">
-                  Basic analytic · LLM đã bật
-                </Text>
-              </View>
-            </View>
-
-            {metrics.length > 0 ? (
-              metrics.map((metric) => (
-                <View
-                  key={metric.label}
-                  className="gap-1 rounded-2xl bg-[#F7F8F3] px-4 py-3"
-                >
-                  <Text selectable className="text-xs font-bold text-[#8E9E6E]">
-                    {metric.label}
-                  </Text>
-                  <Text selectable className="text-sm leading-6 text-[#34372F]">
-                    {metric.value}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text selectable className="text-sm text-[#777B70]">
-                AI đã xử lý bản ghi nhưng không trả về chỉ số hiển thị.
+            {__DEV__ && (
+              <Text selectable className="text-[10px] text-red-500 font-mono mt-1">
+                Debug: {JSON.stringify(analysis.error)}
               </Text>
             )}
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={startRecording}
-              className="flex-row items-center justify-center gap-2 rounded-full border border-[#D6DDC6] py-3"
-            >
-              <Ionicons name="refresh" size={18} color="#687451" />
-              <Text className="font-bold text-[#687451]">Ghi lại nốt khác</Text>
-            </TouchableOpacity>
           </View>
         )}
+
+        {analysis.isSuccess && (() => {
+          const { fileInfo, summary } = parsedData || {};
+          
+          if (!summary) {
+            return (
+              <View className="gap-4 rounded-[28px] bg-white p-6">
+                <Text className="text-sm font-bold text-[#10120C]">Kết quả gốc:</Text>
+                <Text className="text-xs font-mono text-[#777B70]">{JSON.stringify(analysis.data)}</Text>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={startRecording}
+                  className="flex-row items-center justify-center gap-2 rounded-full border border-[#D6DDC6] py-3 mt-4"
+                >
+                  <Ionicons name="refresh" size={18} color="#687451" />
+                  <Text className="font-bold text-[#687451]">Ghi lại nốt khác</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
+          
+          const score = summary.score ?? 0;
+          const label = summary.label ?? "Đã phân tích";
+          const description = summary.summary ?? "";
+          const issues: string[] = summary.issues ?? [];
+          const recommendations: string[] = summary.recommendations ?? [];
+          
+          let scoreBg = "bg-[#E2E8D3]";
+          let scoreText = "text-[#687451]";
+          if (score < 50) {
+            scoreBg = "bg-[#FFF2F0]";
+            scoreText = "text-[#A84236]";
+          } else if (score < 80) {
+            scoreBg = "bg-[#FFF9E6]";
+            scoreText = "text-[#7C672D]";
+          }
+
+          return (
+            <View className="gap-5 rounded-[30px] bg-white p-6 shadow-sm">
+              <View className="flex-row items-center gap-3 border-b border-gray-100 pb-4">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-[#E2E8D3]">
+                  <Ionicons name="sparkles" size={20} color="#687451" />
+                </View>
+                <View>
+                  <Text className="text-base font-bold text-[#10120C]">
+                    Kết quả phân tích
+                  </Text>
+                  <Text className="text-xs text-[#777B70]">
+                    {hasAdvancedAccess ? "Advanced AI Analysis" : "Basic AI Analysis"} · Đã tối ưu hiển thị
+                  </Text>
+                </View>
+              </View>
+
+              <View className="items-center py-4 bg-[#F7F8F3] rounded-[24px] gap-2">
+                <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider">ĐIỂM ĐÁNH GIÁ</Text>
+                <View className="flex-row items-baseline">
+                  <Text className="text-5xl font-black text-[#10120C]">{score}</Text>
+                  <Text className="text-lg font-bold text-[#777B70]">/100</Text>
+                </View>
+                <View className={`px-4 py-1.5 rounded-full ${scoreBg} mt-1`}>
+                  <Text className={`text-sm font-bold ${scoreText}`}>{label}</Text>
+                </View>
+              </View>
+
+              {description ? (
+                <View className="gap-1.5">
+                  <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider">NHẬN XÉT CHUNG</Text>
+                  <Text className="text-sm leading-6 text-[#34372F] text-justify">
+                    {description}
+                  </Text>
+                </View>
+              ) : null}
+
+              {issues.length > 0 && (
+                <View className="gap-2.5 rounded-[22px] bg-[#FFF2F0] p-5 border border-[#F0C7C2]">
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="alert-circle" size={20} color="#A84236" />
+                    <Text className="text-sm font-bold text-[#A84236]">Cần cải thiện</Text>
+                  </View>
+                  <View className="gap-2">
+                    {issues.map((issue, idx) => (
+                      <View key={idx} className="flex-row gap-2.5">
+                        <Text className="text-xs text-[#A84236]">•</Text>
+                        <Text className="flex-1 text-xs leading-5 text-[#7C4B46]">{issue}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {recommendations.length > 0 && (
+                <View className="gap-2.5 rounded-[22px] bg-[#E2E8D3]/30 p-5 border border-[#C5D0B4]">
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="bulb" size={20} color="#687451" />
+                    <Text className="text-sm font-bold text-[#687451]">Gợi ý luyện tập</Text>
+                  </View>
+                  <View className="gap-2">
+                    {recommendations.map((rec, idx) => (
+                      <View key={idx} className="flex-row gap-2.5">
+                        <Text className="text-xs text-[#687451]">•</Text>
+                        <Text className="flex-1 text-xs leading-5 text-[#4A533B]">{rec}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {fileInfo && (
+                <View className="gap-1.5 border-t border-gray-100 pt-4">
+                  <Text className="text-[10px] font-bold text-[#8E9E6E] uppercase tracking-wider">Thông tin tệp âm thanh</Text>
+                  <Text className="text-[10px] text-[#777B70] leading-4">
+                    Thời lượng: {fileInfo.duration?.toFixed(2)} giây · Tốc độ lấy mẫu: {fileInfo.sample_rate} Hz {"\n"}
+                    Tên tệp: {fileInfo.original_filename || fileInfo.filename}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={startRecording}
+                className="flex-row items-center justify-center gap-2 rounded-full bg-[#10120C] py-4 mt-2"
+              >
+                <Ionicons name="refresh" size={18} color="white" />
+                <Text className="font-bold text-white text-sm">Thử lại nốt khác</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
       </ScrollView>
     </SafeScreen>
   );

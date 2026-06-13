@@ -116,7 +116,7 @@ instance.interceptors.response.use(
     const originalRequest = axiosError.config as RetriableRequestConfig | undefined;
 
     if (
-      axiosError.response?.status === 403 &&
+      axiosError.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry
     ) {
@@ -140,10 +140,6 @@ instance.interceptors.response.use(
       }
     }
 
-    if (axiosError.response?.status === 401) {
-      await useAuthStore.getState().clearAuth();
-    }
-    
     return Promise.reject(error instanceof Error ? error : new Error(String(error)));
   }
 );
