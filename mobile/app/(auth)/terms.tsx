@@ -42,6 +42,7 @@ export default function TermsScreen() {
         {/* Notification Bell Badge Green Circle */}
         <TouchableOpacity
           activeOpacity={0.8}
+          onPress={() => router.push("/login")}
           className="w-10 h-10 rounded-full justify-center items-center"
           style={{ backgroundColor: Colors.light.primary }}
         >

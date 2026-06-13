@@ -23,7 +23,7 @@ export const createAnalysisFormData = ({
 }: Pick<BaseAnalysisPayload, "file" | "message">) => {
   const formData = new FormData();
 
-  formData.append("file", file as unknown as Blob);
+  formData.append("file", file as any);
 
   if (message) {
     formData.append("message", message);

@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Image } from "react-native";
+import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
-import { useAuthStore } from "../../store/authStore";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 
 export default function CompleteProfileScreen() {
@@ -18,36 +17,13 @@ export default function CompleteProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleComplete = () => {
-    setShowCongrats(true);
-    setIsLoading(true);
-
-    // Simulate loading and redirecting to tabs home screen
-    setTimeout(() => {
-      setIsLoading(false);
-      setShowCongrats(false);
-      // Thiết lập mock session để qua Auth Guard và vào Trang chủ
-      useAuthStore.setState({
-        user: {
-          _id: "mock-user-id",
-          name: name || "Minh",
-          email: email || "minh@lenfolk.vn",
-          gender: "other",
-          dateOfBirth: null,
-          avatar: null,
-          phoneNumber: phone || null,
-          role: "learner",
-          currentSubscription: null,
-          isActive: true,
-          isVerified: false,
-          lastLoginAt: null,
-          deletedAt: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        token: "mock-session-token",
-      });
-      router.replace("/(tabs)");
-    }, 3000);
+    setShowCongrats(false);
+    setIsLoading(false);
+    Alert.alert(
+      "Cần đăng nhập",
+      "Màn hình này không tạo session giả. Hãy đăng ký hoặc đăng nhập bằng API trước.",
+      [{ text: "Đến đăng nhập", onPress: () => router.replace("/login") }],
+    );
   };
 
   return (
@@ -91,6 +67,7 @@ export default function CompleteProfileScreen() {
               {/* Edit Icon Badge */}
               <TouchableOpacity
                 activeOpacity={0.8}
+                onPress={() => Alert.alert("Ảnh đại diện", "Bạn có thể cập nhật ảnh sau khi đăng nhập.")}
                 className="absolute bottom-0 right-0 w-9 h-9 rounded-full justify-center items-center border-2 border-white shadow"
                 style={{ backgroundColor: Colors.light.primary }}
               >
@@ -158,6 +135,7 @@ export default function CompleteProfileScreen() {
             {/* Language dropdown select */}
             <TouchableOpacity
               activeOpacity={0.8}
+              onPress={() => setLanguage((value) => value === "Tiếng Việt" ? "English" : "Tiếng Việt")}
               className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100 justify-between"
             >
               <View className="flex-row items-center py-4">

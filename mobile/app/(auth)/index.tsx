@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Image, Dimensions } from "react-native";
+import { Alert, View, Text, TouchableOpacity, Image, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome5, Ionicons } from "@expo/vector-icons";
-import gsap from "gsap";
+import { gsap } from "gsap";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 
 const { width } = Dimensions.get("window");
@@ -19,20 +19,21 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     if (slide !== 0) return;
+    const motion = splashMotion.current;
 
     const syncStyle = () => {
       setMascotStyle({
         transform: [
-          { translateY: splashMotion.current.y },
-          { scale: splashMotion.current.scale },
+          { translateY: motion.y },
+          { scale: motion.scale },
         ],
-        opacity: splashMotion.current.opacity,
+        opacity: motion.opacity,
       });
     };
 
     const timeline = gsap.timeline();
 
-    timeline.to(splashMotion.current, {
+    timeline.to(motion, {
       y: 0,
       scale: 1,
       opacity: 1,
@@ -41,7 +42,7 @@ export default function OnboardingScreen() {
       onUpdate: syncStyle,
     });
 
-    timeline.to(splashMotion.current, {
+    timeline.to(motion, {
       y: -14,
       duration: 1.8,
       ease: "sine.inOut",
@@ -52,7 +53,7 @@ export default function OnboardingScreen() {
 
     return () => {
       timeline.kill();
-      gsap.killTweensOf(splashMotion.current);
+      gsap.killTweensOf(motion);
     };
   }, [slide]);
 
@@ -255,6 +256,7 @@ export default function OnboardingScreen() {
               {/* Google Button */}
               <TouchableOpacity
                 activeOpacity={0.85}
+                onPress={() => Alert.alert("Google", "Backend chưa cấu hình đăng nhập Google OAuth.")}
                 className="w-full bg-white py-4 px-6 rounded-2xl flex-row justify-center items-center border border-gray-100 shadow-sm"
               >
                 <Image
@@ -269,6 +271,7 @@ export default function OnboardingScreen() {
               {/* Apple Button */}
               <TouchableOpacity
                 activeOpacity={0.85}
+                onPress={() => Alert.alert("Apple", "Backend chưa cấu hình đăng nhập Apple.")}
                 className="w-full bg-white py-4 px-6 rounded-2xl flex-row justify-center items-center border border-gray-100 shadow-sm"
               >
                 <Image

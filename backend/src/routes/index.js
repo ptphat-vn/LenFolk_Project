@@ -34,13 +34,12 @@ router.use('/notifications', require('./notification.route'));
 router.use('/progress', require('./progress.route'));
 router.use('/practice-sessions', require('./practice-session.route'));
 router.use('/streaks', require('./streak.route'));
-router.use('/system-settings', require('./system-setting.route'));
 router.use('/enrollments', require('./enrollment.route'));
 router.use('/transaction-records', require('./transaction-record.route'));
 router.use('/permissions', require('./permission.route'));
 router.use('/audit-logs', require('./audit-log.route'));
 router.use('/coupons', require('./coupon.route'));
 router.use('/wallets', require('./wallet.route'));
-// /payments (ZaloPay) — removed; use POST /subscriptions/:id/request + /transaction-records/:id/{upload-proof|approve|reject}
+router.use('/payments', require('./sepay.route'));
 
 module.exports = router;

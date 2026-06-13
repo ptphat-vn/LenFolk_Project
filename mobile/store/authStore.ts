@@ -11,6 +11,7 @@ type AuthState = {
   setAuth: (user: User, token: string, refreshToken?: string) => Promise<void>;
   clearAuth: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateUser: (updatedFields: Partial<User>) => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -49,5 +50,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       set({ isCheckingAuth: false });
     }
+  },
+
+  updateUser: async (updatedFields) => {
+    set((state) => {
+      if (!state.user) return state;
+      const mergedUser = { ...state.user, ...updatedFields };
+      AsyncStorage.setItem("user", JSON.stringify(mergedUser)).catch(console.error);
+      return { user: mergedUser };
+    });
   },
 }));

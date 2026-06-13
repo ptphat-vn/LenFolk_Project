@@ -23,9 +23,6 @@ export const useBasic = <AnalysisResult>() =>
             max_duration_sec: maxDurationSec,
             use_llm: useLlm,
           },
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
         },
       );
 

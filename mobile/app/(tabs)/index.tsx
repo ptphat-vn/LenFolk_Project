@@ -4,9 +4,14 @@ import { useIsFocused } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import LottieView from "lottie-react-native";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
+import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
+import { useGetStreaks } from "@/hooks/streak/use-get-streaks";
+import NotificationButton from "@/components/NotificationButton";
 import SafeScreen from "../../components/SafeScreen";
 
 const greetingPrompt = "Hôm nay bạn muốn học gì?";
@@ -14,15 +19,56 @@ const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nh�
 const typewriterMessages = [greetingPrompt, lenFolkMessage];
 
 export default function HomeScreen() {
+  const router = useRouter();
   const isFocused = useIsFocused();
   const scrollRef = useScrollToTopOnFocus();
   const [typedGreeting, setTypedGreeting] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState("");
   const user = useAuthStore((state) => state.user);
+  const { data: lessons } = useGetLessons();
+  const { data: progressList } = useGetProgressList();
+  const { data: streaks } = useGetStreaks();
   const displayName = user?.name?.trim() || "Bạn";
   const firstName = displayName.split(" ").filter(Boolean).pop() || displayName;
   const avatarSource = user?.avatar
     ? { uri: user.avatar }
     : require("../../assets/images/Profile.png");
+  const orderedLessons = React.useMemo(
+    () => [...(lessons ?? [])].sort((a, b) => a.order - b.order),
+    [lessons],
+  );
+  const visibleLessons = React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return orderedLessons;
+    return orderedLessons.filter((lesson) =>
+      `${lesson.title} ${lesson.description ?? ""}`.toLowerCase().includes(query),
+    );
+  }, [orderedLessons, searchQuery]);
+  const continueProgress =
+    progressList?.find((item) => item.status === "in_progress") ??
+    progressList?.find((item) => item.status === "not_started");
+  const continueLesson =
+    orderedLessons.find((lesson) => lesson._id === continueProgress?.lessonId) ??
+    orderedLessons[0];
+  const currentStreak = streaks?.[0]?.currentStreak ?? 0;
+  const todayLessons = visibleLessons.slice(0, 2);
+  const reviewLessons = orderedLessons.slice(0, 4);
+
+  const openLesson = (lessonId?: string) => {
+    if (!lessonId) return;
+    router.push({
+      pathname: "/lesson/[id]",
+      params: { id: lessonId },
+    });
+  };
+
+  const openPractice = (lessonId?: string, note?: string) => {
+    if (!lessonId) return;
+    router.push({
+      pathname: "/practice/[lessonId]",
+      params: { lessonId, note: note || "A4" },
+    } as any);
+  };
 
   React.useEffect(() => {
     if (!isFocused) {
@@ -81,11 +127,18 @@ export default function HomeScreen() {
         {/* Welcome row */}
         <View className="flex-row justify-between items-start mb-6">
           <View className="flex-row items-center flex-1 pr-3">
-            <Image
-              source={avatarSource}
-              style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "white" }}
-              className="mr-3 shadow"
-            />
+            <View className="relative mr-3">
+              <Image
+                source={avatarSource}
+                style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "white" }}
+                className="shadow"
+              />
+              {user?.isSubscribed && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+                  <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
+                </View>
+              )}
+            </View>
             <View className="flex-1 min-w-0">
               <Text
                 className="text-primary text-base font-bold"
@@ -104,12 +157,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Bell Notifications */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            className="w-12 h-12 shrink-0 rounded-full bg-[#8E9E6E]/20 border border-[#8E9E6E]/10 justify-center items-center"
-          >
-            <Ionicons name="notifications" size={22} color="#8E9E6E" />
-          </TouchableOpacity>
+          <NotificationButton />
         </View>
 
         {/* Search Input Bar */}
@@ -119,8 +167,13 @@ export default function HomeScreen() {
             className="flex-1 text-charcoal text-sm ml-3"
             placeholder="Tìm kiếm"
             placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
-          <TouchableOpacity className="pl-3 border-l border-gray-150">
+          <TouchableOpacity
+            className="pl-3 border-l border-gray-150"
+            onPress={() => router.push("/(tabs)/courses")}
+          >
             <Ionicons name="options-outline" size={20} color="#8E9E6E" />
           </TouchableOpacity>
         </View>
@@ -145,9 +198,9 @@ export default function HomeScreen() {
                 className="text-charcoal text-xs font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
-                {user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}
+                {currentStreak} ngày
               </Text>
-              <Text className="text-[12px] text-gray-400 font-bold">Tài khoản</Text>
+              <Text className="text-[12px] text-gray-400 font-bold">Chuỗi học</Text>
             </View>
           </View>
 
@@ -179,7 +232,9 @@ export default function HomeScreen() {
         <AnimatedBlock variant="button" delay={190}>
         <TouchableOpacity
           activeOpacity={0.95}
-          className="w-full bg-[#D6DDC6]/50 py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#8E9E6E]/20 mb-8"
+          disabled={!continueLesson}
+          onPress={() => openLesson(continueLesson?._id)}
+          className="w-full bg-[#D6DDC6]/50 py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#8E9E6E]/20 mb-6"
         >
           <View className="flex-row items-center py-2">
             <View className="w-12 h-12 rounded-2xl bg-white border border-gray-100 justify-center items-center shadow-sm">
@@ -189,7 +244,7 @@ export default function HomeScreen() {
               className="text-charcoal text-base font-bold ml-4"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
-              Tiếp tục bài học của bạn
+              {continueLesson?.title || "Chưa có bài học khả dụng"}
             </Text>
           </View>
           <Ionicons
@@ -199,6 +254,41 @@ export default function HomeScreen() {
             className="animate-arrow-right"
           />
         </TouchableOpacity>
+        </AnimatedBlock>
+
+        {/* Free Practice with AI Banner */}
+        <AnimatedBlock variant="button" delay={210}>
+          <TouchableOpacity
+            activeOpacity={0.95}
+            disabled={!continueLesson}
+            onPress={() =>
+              openPractice(continueLesson?._id, continueLesson?.techniques?.[0])
+            }
+            className="w-full bg-[#FFF9E6] py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#F4E0AC] mb-8"
+          >
+            <View className="flex-row items-center py-2">
+              <View className="w-12 h-12 rounded-2xl bg-[#F4E0AC]/40 justify-center items-center shadow-sm">
+                <Ionicons name="sparkles" size={22} color="#7C672D" />
+              </View>
+              <View className="ml-4">
+                <Text
+                  className="text-[#4B421F] text-base font-bold"
+                  style={{ fontFamily: "BeVietnamPro-Medium" }}
+                >
+                  Luyện tập tự do với AI
+                </Text>
+                <Text className="text-[12px] text-[#7C672D] mt-0.5">
+                  Thổi sáo và nhận đánh giá từ AI ngay lập tức
+                </Text>
+              </View>
+            </View>
+            <Ionicons
+              name="arrow-forward"
+              size={22}
+              color="#7C672D"
+              className="animate-arrow-right"
+            />
+          </TouchableOpacity>
         </AnimatedBlock>
 
         {/* Ôn tập hôm nay Section */}
@@ -211,37 +301,23 @@ export default function HomeScreen() {
           </Text>
 
           <View className="flex-row justify-between gap-3">
-            {/* Luyện hơi 1 */}
-            <View className="items-center flex-1">
-              <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
-                <MaterialCommunityIcons name="timer-music-outline" size={24} color="#8E9E6E" />
-              </TouchableOpacity>
-              <Text className="text-[13px] text-charcoal font-bold text-center">Luyện hơi 1</Text>
-            </View>
-
-            {/* Luyện hơi 2 */}
-            <View className="items-center flex-1">
-              <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
-                <MaterialCommunityIcons name="timer-music-outline" size={24} color="#8E9E6E" />
-              </TouchableOpacity>
-              <Text className="text-[13px] text-charcoal font-bold text-center">Luyện hơi 2</Text>
-            </View>
-
-            {/* Luyện ngón */}
-            <View className="items-center flex-1">
-              <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
-                <MaterialCommunityIcons name="gesture-tap" size={24} color="#8E9E6E" />
-              </TouchableOpacity>
-              <Text className="text-[13px] text-charcoal font-bold text-center">Luyện ngón</Text>
-            </View>
-
-            {/* Đánh lưỡi */}
-            <View className="items-center flex-1">
-              <TouchableOpacity className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2">
-                <Ionicons name="musical-notes-outline" size={22} color="#8E9E6E" />
-              </TouchableOpacity>
-              <Text className="text-[13px] text-charcoal font-bold text-center">Đánh lưỡi</Text>
-            </View>
+            {reviewLessons.map((lesson, index) => (
+              <View key={lesson._id} className="items-center flex-1">
+                <TouchableOpacity
+                  onPress={() => openPractice(lesson._id, lesson.techniques?.[0])}
+                  className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2"
+                >
+                  {index < 2 ? (
+                    <MaterialCommunityIcons name="timer-music-outline" size={24} color="#8E9E6E" />
+                  ) : (
+                    <Ionicons name="musical-notes-outline" size={22} color="#8E9E6E" />
+                  )}
+                </TouchableOpacity>
+                <Text numberOfLines={2} className="text-[12px] text-charcoal font-bold text-center">
+                  {lesson.title}
+                </Text>
+              </View>
+            ))}
           </View>
         </AnimatedBlock>
 
@@ -263,61 +339,31 @@ export default function HomeScreen() {
             />
 
             <View className="flex-row justify-between gap-4 mt-2">
-              {/* Lesson Card 1 */}
-              <TouchableOpacity
-                activeOpacity={0.9}
-                className="flex-1 bg-[#F8F9FA] rounded-2xl p-4 shadow-sm"
-              >
-                <Text className="text-xs text-gray-400 font-bold mb-1">01</Text>
-                <Text
-                  className="text-charcoal text-sm font-bold leading-5 mb-3"
-                  style={{ fontFamily: "BeVietnamPro-Medium" }}
+              {todayLessons.map((lesson, index) => (
+                <TouchableOpacity
+                  key={lesson._id}
+                  activeOpacity={0.9}
+                  onPress={() => openLesson(lesson._id)}
+                  className="flex-1 bg-[#F8F9FA] rounded-2xl p-4 shadow-sm"
                 >
-                  Kỹ thuật rung hơi
-                </Text>
-                <View className="flex-row justify-between items-center">
+                  <Text className="text-xs text-gray-400 font-bold mb-1">
+                    {String(index + 1).padStart(2, "0")}
+                  </Text>
+                  <Text
+                    numberOfLines={2}
+                    className="text-charcoal text-sm font-bold leading-5 mb-3"
+                    style={{ fontFamily: "BeVietnamPro-Medium" }}
+                  >
+                    {lesson.title}
+                  </Text>
                   <View className="flex-row items-center">
                     <Ionicons name="time-outline" size={12} color="gray" />
-                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">12 phút</Text>
+                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">
+                      {Math.max(1, Math.ceil(lesson.duration / 60))} phút
+                    </Text>
                   </View>
-                  <View className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center">
-                    <Ionicons
-                      name="arrow-up-right-box-outline"
-                      size={12}
-                      color="#8E9E6E"
-                      className="animate-arrow-up-right"
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              {/* Lesson Card 2 */}
-              <TouchableOpacity
-                activeOpacity={0.9}
-                className="flex-1 bg-[#F8F9FA] rounded-2xl p-4 shadow-sm"
-              >
-                <Text className="text-xs text-gray-400 font-bold mb-1">02</Text>
-                <Text
-                  className="text-charcoal text-sm font-bold leading-5 mb-3"
-                  style={{ fontFamily: "BeVietnamPro-Medium" }}
-                >
-                  Luyện tập giai điệu
-                </Text>
-                <View className="flex-row justify-between items-center">
-                  <View className="flex-row items-center">
-                    <Ionicons name="time-outline" size={12} color="gray" />
-                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">10 phút</Text>
-                  </View>
-                  <View className="w-6 h-6 rounded-full bg-primary/10 items-center justify-center">
-                    <Ionicons
-                      name="arrow-up-right-box-outline"
-                      size={12}
-                      color="#8E9E6E"
-                      className="animate-arrow-up-right"
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </AnimatedBlock>
@@ -337,6 +383,7 @@ export default function HomeScreen() {
               {/* Nhập môn */}
               <TouchableOpacity
                 activeOpacity={0.9}
+                onPress={() => router.push("/(tabs)/courses")}
                 className="flex-1 bg-[#D6DDC6]/50 p-5 rounded-3xl border border-[#8E9E6E]/20 shadow-sm"
               >
                 <View className="flex-row justify-between items-start mb-4">
@@ -354,6 +401,7 @@ export default function HomeScreen() {
               {/* Cơ bản */}
               <TouchableOpacity
                 activeOpacity={0.9}
+                onPress={() => router.push("/(tabs)/courses")}
                 className="flex-1 bg-[#D6DDC6]/50 p-5 rounded-3xl border border-[#8E9E6E]/20 shadow-sm"
               >
                 <View className="flex-row justify-between items-start mb-4">

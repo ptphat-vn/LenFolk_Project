@@ -40,16 +40,21 @@ const transactionRecordSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      comment: 'e.g. credit_card, momo, zalopay, apple_pay',
+      comment: 'e.g. qr_manual, sepay, momo',
     },
     gatewayTxId: {
       type: String,
       default: null,
       comment: 'Transaction ID from payment gateway',
     },
+    // Mã thanh toán nhúng trong nội dung chuyển khoản (vd "LF1A2B3C4D") để khớp webhook SePay
+    payCode: {
+      type: String,
+      default: null,
+    },
     status: {
       type: String,
-      enum: ['pending', 'reviewing', 'success', 'failed', 'refunded'],
+      enum: ['pending', 'success', 'failed', 'refunded'],
       default: 'pending',
     },
     gatewayProvider: {
@@ -76,25 +81,6 @@ const transactionRecordSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // ── Manual QR payment fields ─────────────────────────────────────────────
-    proofImageUrl: {
-      type: String,
-      default: null,
-      comment: 'Cloudinary URL of the payment proof image uploaded by user',
-    },
-    reviewedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-    },
-    reviewedAt: {
-      type: Date,
-      default: null,
-    },
-    rejectReason: {
-      type: String,
-      default: null,
-    },
   },
   { timestamps: true },
 );
@@ -103,6 +89,7 @@ transactionRecordSchema.index({ userId: 1 });
 transactionRecordSchema.index({ userId: 1, status: 1 });
 transactionRecordSchema.index({ enrollmentId: 1 });
 transactionRecordSchema.index({ gatewayTxId: 1 });
+transactionRecordSchema.index({ payCode: 1 });
 transactionRecordSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('TransactionRecord', transactionRecordSchema);
