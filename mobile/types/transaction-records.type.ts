@@ -1,0 +1,23 @@
+export type TransactionRecord = {
+  _id: string;
+  userId: string;
+  enrollmentId: string | null;
+  courseId: string | null;
+  performanceId: string | null;
+  transactionType: "subscription" | "course" | "performance";
+  amount: number;
+  currency: "VND" | "USD";
+  paymentMethod: string;
+  gatewayTxId: string | null;
+  status: "pending" | "reviewing" | "success" | "failed" | "refunded";
+  gatewayProvider: string | null;
+  paidAt: string | null;
+  couponId: string | null;
+  discountAmount: number;
+  proofImageUrl: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  rejectReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+};

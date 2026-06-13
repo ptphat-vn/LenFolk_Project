@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -7,9 +7,13 @@ import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
+import { useGetPracticeSessions } from "@/hooks/practice-session/use-get-practice-sessions";
+import NotificationButton from "@/components/NotificationButton";
+import { useRouter } from "expo-router";
 
 export default function ProgressScreen() {
   const scrollRef = useScrollToTopOnFocus();
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
@@ -42,11 +46,35 @@ export default function ProgressScreen() {
     { name: "Ngày sinh", icon: "calendar-outline", checked: Boolean(user?.dateOfBirth), progress: user?.dateOfBirth ? null : "0%" },
   ];
 
-  const history = [
+  const { data: practiceSessions, isLoading: sessionsLoading } = useGetPracticeSessions();
+
+  const staticHistory = [
     { title: "Tạo tài khoản", time: formatDate(user?.createdAt), score: user?.isActive ? "Đang hoạt động" : "Tạm khóa" },
     { title: "Cập nhật hồ sơ", time: formatDate(user?.updatedAt), score: `${profileProgress}%` },
     { title: "Lần đăng nhập gần nhất", time: formatDate(user?.lastLoginAt), score: user?.isVerified ? "Hợp lệ" : "Cần xác thực" },
   ];
+
+  const practiceHistory = (() => {
+    if (!practiceSessions || practiceSessions.length === 0) {
+      return staticHistory;
+    }
+    return practiceSessions.slice(0, 10).map((session) => {
+      const dateStr = session.createdAt ? formatDate(session.createdAt) : "Chưa có";
+      let statusStr = "Thất bại";
+      if (session.status === "completed") {
+        statusStr = `Điểm: ${session.aiScore ?? 0}`;
+      } else if (session.status === "pending") {
+        statusStr = "Chờ duyệt";
+      } else if (session.status === "processing") {
+        statusStr = "Đang xử lý";
+      }
+      return {
+        title: "Luyện sáo",
+        time: dateStr,
+        score: statusStr,
+      };
+    });
+  })();
 
   return (
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
@@ -65,6 +93,7 @@ export default function ProgressScreen() {
           <TouchableOpacity
             activeOpacity={0.8}
             className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border border-gray-100"
+            onPress={() => router.back()}
           >
             <Ionicons
               name="arrow-back"
@@ -83,13 +112,7 @@ export default function ProgressScreen() {
           </Text>
 
           {/* Bell Notifications */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            className="w-10 h-10 rounded-full justify-center items-center shadow"
-            style={{ backgroundColor: Colors.light.primary }}
-          >
-            <Ionicons name="notifications" size={20} color="white" />
-          </TouchableOpacity>
+          <NotificationButton inverted />
         </AnimatedBlock>
 
         {/* --- MASCOT POPPING & BUBBLE SPEECH --- */}
@@ -126,13 +149,19 @@ export default function ProgressScreen() {
 
         {/* --- PROGRESS USER CARD --- */}
         <AnimatedBlock variant="card" delay={130} className="bg-white rounded-[32px] p-5 mx-6 shadow-sm mb-6 border border-gray-50">
-          {/* User Profile Info Row */}
           <View className="flex-row items-center mb-5">
-            <Image
-              source={avatarSource}
-              style={{ width: 48, height: 48, borderRadius: 24 }}
-              className="mr-3 shadow-sm border border-gray-100"
-            />
+            <View className="relative mr-3">
+              <Image
+                source={avatarSource}
+                style={{ width: 48, height: 48, borderRadius: 24 }}
+                className="shadow-sm border border-gray-100"
+              />
+              {user?.isSubscribed && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+                  <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
+                </View>
+              )}
+            </View>
             <View>
               <Text
                 className="text-charcoal text-[16px] font-bold"
@@ -296,29 +325,33 @@ export default function ProgressScreen() {
           </Text>
 
           <View className="gap-3.5">
-            {history.map((item, idx) => (
-              <View
-                key={idx}
-                className="w-full bg-[#E2E8D3] rounded-3xl p-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/30"
-              >
-                <View className="flex-row items-center flex-1">
-                  <View className="w-9 h-9 rounded-full bg-white items-center justify-center mr-3 border border-[#8E9E6E]/20 shadow-sm">
-                    <Ionicons name="checkmark" size={18} color="#8E9E6E" />
+            {sessionsLoading ? (
+              <ActivityIndicator size="small" color="#8E9E6E" className="py-6" />
+            ) : (
+              practiceHistory.map((item, idx) => (
+                <View
+                  key={idx}
+                  className="w-full bg-[#E2E8D3] rounded-3xl p-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/30"
+                >
+                  <View className="flex-row items-center flex-1">
+                    <View className="w-9 h-9 rounded-full bg-white items-center justify-center mr-3 border border-[#8E9E6E]/20 shadow-sm">
+                      <Ionicons name="checkmark" size={18} color="#8E9E6E" />
+                    </View>
+                    <View>
+                      <Text
+                        className="text-charcoal text-sm font-bold"
+                        style={{ fontFamily: "BeVietnamPro-Medium" }}
+                      >
+                        {item.title}
+                      </Text>
+                      <Text className="text-[12px] text-gray-400 font-bold mt-0.5">{item.time}</Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text
-                      className="text-charcoal text-sm font-bold"
-                      style={{ fontFamily: "BeVietnamPro-Medium" }}
-                    >
-                      {item.title}
-                    </Text>
-                    <Text className="text-[12px] text-gray-400 font-bold mt-0.5">{item.time}</Text>
-                  </View>
-                </View>
 
-                <Text className="text-sm font-extrabold text-charcoal/80">{item.score}</Text>
-              </View>
-            ))}
+                  <Text className="text-sm font-extrabold text-charcoal/80">{item.score}</Text>
+                </View>
+              ))
+            )}
           </View>
         </AnimatedBlock>
       </ScrollView>

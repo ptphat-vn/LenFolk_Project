@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
 import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
@@ -12,7 +12,10 @@ import Animated, {
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import SafeScreen from "../../components/SafeScreen";
-import { lessons as allLessons } from "@/constants/lessons";
+import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
+import NotificationButton from "@/components/NotificationButton";
 
 export default function CoursesScreen() {
   const router = useRouter();
@@ -21,6 +24,40 @@ export default function CoursesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterWidth, setFilterWidth] = useState(0);
   const filterIndicatorX = useSharedValue(0);
+
+  const { data: dbLessons, isLoading: lessonsLoading } = useGetLessons();
+  const { data: courses } = useGetCourses();
+  const { data: progressList } = useGetProgressList();
+
+  const allLessonsMapped = React.useMemo(() => {
+    if (!dbLessons) return [];
+    return dbLessons.map((lesson) => {
+      const course = courses?.find((c) => c._id === lesson.courseId);
+      const category = course
+        ? course.level === "beginner"
+          ? "Cơ bản"
+          : course.level === "intermediate"
+          ? "Trung cấp"
+          : "Nâng cao"
+        : "Cơ bản";
+      const userProgress = progressList?.find((p) => p.lessonId === lesson._id);
+      const status = userProgress?.status || "not_started";
+      const progress = (userProgress?.completionPercent || 0) / 100;
+
+      const minutes = Math.floor(lesson.duration / 60);
+      const seconds = lesson.duration % 60;
+      const duration = `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+      return {
+        id: lesson._id,
+        category,
+        title: lesson.title,
+        duration,
+        status,
+        progress,
+      };
+    });
+  }, [dbLessons, courses, progressList]);
 
   const categories = ["Tất cả", "Cơ bản", "Trung cấp", "Nâng cao"];
   const activeFilterIndex = categories.indexOf(activeFilter);
@@ -39,7 +76,7 @@ export default function CoursesScreen() {
   }));
 
   // Filter lessons based on category pill and search query
-  const filteredLessons = allLessons.filter((lesson) => {
+  const filteredLessons = allLessonsMapped.filter((lesson) => {
     const matchesFilter = activeFilter === "Tất cả" || lesson.category === activeFilter;
     const matchesSearch = lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lesson.category.toLowerCase().includes(searchQuery.toLowerCase());
@@ -83,13 +120,7 @@ export default function CoursesScreen() {
             </Text>
 
             {/* Green Circle Bell Notification Button */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              className="w-10 h-10 rounded-full justify-center items-center shadow"
-              style={{ backgroundColor: Colors.light.primary }}
-            >
-              <Ionicons name="notifications" size={20} color="white" />
-            </TouchableOpacity>
+            <NotificationButton inverted />
           </View>
 
           {/* Search Bar Input */}
@@ -102,7 +133,13 @@ export default function CoursesScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            <TouchableOpacity className="pl-3 border-l border-gray-150">
+            <TouchableOpacity
+              className="pl-3 border-l border-gray-150"
+              onPress={() => {
+                setSearchQuery("");
+                setActiveFilter("Tất cả");
+              }}
+            >
               <Ionicons name="options-outline" size={20} color="#8E9E6E" />
             </TouchableOpacity>
           </View>
@@ -167,7 +204,9 @@ export default function CoursesScreen() {
             delay={420}
             className="bg-[#8E9E6E] pt-8 pb-4 px-5"
           >
-            {filteredLessons.length > 0 ? (
+            {lessonsLoading ? (
+              <ActivityIndicator color="white" size="large" className="py-12" />
+            ) : filteredLessons.length > 0 ? (
               filteredLessons.map((lesson) => (
                 <TouchableOpacity
                   key={lesson.id}

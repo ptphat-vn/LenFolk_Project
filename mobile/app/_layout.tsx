@@ -28,16 +28,10 @@ export default function RootLayout() {
   }, [fontsLoaded, isCheckingAuth]);
 
   useEffect(() => {
-    check();
-  }, []);
-
-  const check = async () => {
-    try {
-      await checkAuth();
-    } catch (error) {
+    checkAuth().catch((error) => {
       console.log("Error checking auth", error);
-    }
-  };
+    });
+  }, [checkAuth]);
 
   useEffect(() => {
     if (!navigationState?.key || isCheckingAuth) return;
@@ -50,7 +44,7 @@ export default function RootLayout() {
     } else if (isSignedIn && inAuthScreen) {
       router.replace("/(tabs)");
     }
-  }, [user, token, segments, navigationState?.key, isCheckingAuth]);
+  }, [user, token, segments, navigationState?.key, isCheckingAuth, router]);
 
   return (
     <QueryProvider>

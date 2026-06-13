@@ -8,6 +8,7 @@
     "scheme": "lenfolk-app",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "icon": "./assets/images/icon.png",
       "supportsTablet": true
     },
     "android": {
@@ -40,7 +41,9 @@
         {
           "microphonePermission": "Cho phép LenFolk sử dụng micro để ghi âm và phân tích nốt sáo của bạn."
         }
-      ]
+      ],
+      "expo-video",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
