@@ -1,4 +1,4 @@
-import { SplashScreen, Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
+import { SplashScreen, Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -11,11 +11,7 @@ import "../global.css";
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const router = useRouter();
-  const segments = useSegments();
-  const navigationState = useRootNavigationState();
-
-  const { checkAuth, user, token, isCheckingAuth } = useAuthStore();
+  const { checkAuth, isCheckingAuth } = useAuthStore();
 
   const [fontsLoaded] = useFonts({
     "BeVietnamPro-Medium": require("../assets/fonts/BeVietnamPro-Medium.ttf"),
@@ -32,19 +28,6 @@ export default function RootLayout() {
       console.log("Error checking auth", error);
     });
   }, [checkAuth]);
-
-  useEffect(() => {
-    if (!navigationState?.key || isCheckingAuth) return;
-
-    const inAuthScreen = segments[0] === "(auth)";
-    const isSignedIn = user && token;
-
-    if (!isSignedIn && !inAuthScreen) {
-      router.replace("/(auth)");
-    } else if (isSignedIn && inAuthScreen) {
-      router.replace("/(tabs)");
-    }
-  }, [user, token, segments, navigationState?.key, isCheckingAuth, router]);
 
   return (
     <QueryProvider>

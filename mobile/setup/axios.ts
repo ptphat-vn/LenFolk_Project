@@ -45,6 +45,9 @@ const getRefreshToken = (data: AuthResponse) =>
 
 let refreshPromise: Promise<string> | null = null;
 
+const isAuthSessionRequest = (url?: string) =>
+  url?.includes("/auth/login") || url?.includes("/auth/refresh-token");
+
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
     const refreshToken = await AsyncStorage.getItem("refreshToken");
@@ -93,9 +96,10 @@ const refreshAccessToken = async () => {
 // Request interceptor
 instance.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem("token");
+    const token =
+      useAuthStore.getState().token ?? await AsyncStorage.getItem("token");
 
-    if (token) {
+    if (token && !isAuthSessionRequest(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
@@ -118,6 +122,7 @@ instance.interceptors.response.use(
     if (
       axiosError.response?.status === 401 &&
       originalRequest &&
+      !isAuthSessionRequest(originalRequest.url) &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true;

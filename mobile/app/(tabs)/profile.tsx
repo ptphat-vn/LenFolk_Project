@@ -116,9 +116,9 @@ export default function ProfileTabScreen() {
                 style={{ width: 64, height: 64, borderRadius: 32 }}
                 className="shadow border border-gray-100"
               />
-              {user?.isSubscribed && (
-                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
-                  <MaterialCommunityIcons name="crown" size={26} color="#FFB800" />
+              {user?.currentSubscription === "Technique" && (
+                <View className="absolute -top-4 -left-1.5 rotate-[-36deg] z-10">
+                  <MaterialCommunityIcons name="crown" size={24} color="#FFB800" />
                 </View>
               )}
             </View>
@@ -138,10 +138,6 @@ export default function ProfileTabScreen() {
                 <View className="flex-row items-center">
                   <Ionicons name="person-circle-outline" size={14} color="#8E9E6E" />
                   <Text className="text-xs font-bold text-charcoal/80 ml-1">{profileScore}/5 hồ sơ</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Ionicons name="shield-checkmark-outline" size={14} color="#8E9E6E" />
-                  <Text className="text-xs font-bold text-charcoal/80 ml-1">{user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}</Text>
                 </View>
               </View>
             </View>
@@ -295,33 +291,7 @@ export default function ProfileTabScreen() {
               />
             </TouchableOpacity>
 
-            {/* Item 2: Account Verification */}
-            <TouchableOpacity
-              onPress={() => router.push("/profile/verify")}
-              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
-            >
-              <View className="flex-row items-center flex-1 pr-4">
-                <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
-                  <Ionicons name="shield-checkmark" size={16} color="#8E9E6E" />
-                </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
-                  Xác thực tài khoản
-                </Text>
-              </View>
-              <View className="flex-row items-center">
-                <Text className={`text-xs font-bold mr-2 ${user?.isVerified ? "text-[#8E9E6E]" : "text-gray-400"}`}>
-                  {user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color="#6B7280"
-                  className="animate-arrow-right"
-                />
-              </View>
-            </TouchableOpacity>
-
-            {/* Item 3: Upgrade Premium */}
+            {/* Item 2: Upgrade Premium */}
             <TouchableOpacity
               onPress={() => router.push("/profile/subscription")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
