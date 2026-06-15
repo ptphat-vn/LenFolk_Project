@@ -18,7 +18,7 @@ export const Contact = () => {
 
           {/* Left Column */}
           <div className="lg:w-2/5 flex flex-col justify-start pt-0">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-black tracking-tight leading-tight">
+            <h2 className="text-4xl md:text-5xl font-be-vietnam-pro mb-6 text-black tracking-tight leading-tight">
               Chúng tôi luôn<br />sẵn sàng lắng nghe
             </h2>
             <p className="text-lg text-gray-500 mb-12">
@@ -76,26 +76,26 @@ export const Contact = () => {
               ) : (
                 <>
                   <h3 className="text-2xl font-bold text-black mb-8">Gửi câu hỏi cho chúng tôi</h3>
-                  <form onSubmit={handleSubmit} noValidate className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-xs font-bold text-black mb-2">Họ và tên *</label>
-                        <input required type="text" className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-[#8e9e6e] focus:ring-1 focus:ring-[#8e9e6e] transition-all outline-none" />
+                        <input required type="text" className="w-full px-4 py-3 rounded-2xl bg-white border-none focus:ring-2 focus:ring-[#8e9e6e] transition-all outline-none shadow-sm" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-black mb-2">Email *</label>
-                        <input required type="email" className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-[#8e9e6e] focus:ring-1 focus:ring-[#8e9e6e] transition-all outline-none" />
+                        <input required type="email" className="w-full px-4 py-3 rounded-2xl bg-white border-none focus:ring-2 focus:ring-[#8e9e6e] transition-all outline-none shadow-sm" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-black mb-2">Số điện thoại</label>
-                        <input type="tel" className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-[#8e9e6e] focus:ring-1 focus:ring-[#8e9e6e] transition-all outline-none" />
+                        <input type="tel" className="w-full px-4 py-3 rounded-2xl bg-white border-none focus:ring-2 focus:ring-[#8e9e6e] transition-all outline-none shadow-sm" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-black mb-2">Bạn quan tâm đến</label>
-                        <select className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-[#8e9e6e] focus:ring-1 focus:ring-[#8e9e6e] transition-all outline-none appearance-none text-gray-700">
-                          <option>Khóa Basic</option>
-                          <option>Khóa Standard</option>
-                          <option>Khóa Master</option>
+                        <select className="w-full px-4 py-3 rounded-2xl bg-white border-none focus:ring-2 focus:ring-[#8e9e6e] transition-all outline-none appearance-none text-gray-700 shadow-sm">
+                          <option>Khóa Free</option>
+                          <option>Khóa Tech</option>
+                          <option>Khóa Repertoire</option>
                           <option>Khác</option>
                         </select>
                       </div>
@@ -103,7 +103,7 @@ export const Contact = () => {
 
                     <div>
                       <label className="block text-xs font-bold text-black mb-2">Nội dung câu hỏi *</label>
-                      <textarea required rows={4} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-[#8e9e6e] focus:ring-1 focus:ring-[#8e9e6e] transition-all outline-none resize-none"></textarea>
+                      <textarea required rows={4} className="w-full px-4 py-3 rounded-2xl bg-white border-none focus:ring-2 focus:ring-[#8e9e6e] transition-all outline-none resize-none shadow-sm"></textarea>
                     </div>
 
                     <button type="submit" className="w-full py-4 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-2">

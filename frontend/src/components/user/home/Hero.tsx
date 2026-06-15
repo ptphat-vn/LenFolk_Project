@@ -83,6 +83,21 @@ export const Hero = () => {
             }}
           />
         </motion.div>
+
+        {/* Action Buttons over the fade area */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 z-30 relative -mt-32 md:-mt-40 pb-[200px]"
+        >
+          <button className="px-8 py-3.5 rounded-full bg-gradient-to-r from-[#6b7b4d] to-[#c9b775] text-white font-medium text-[17px] shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 w-[200px] flex items-center justify-center">
+            Tải app miễn phí
+          </button>
+          <button className="px-8 py-3.5 rounded-full bg-[#f5f5f5] text-[#333] font-medium text-[17px] hover:bg-[#ebebeb] transition-all hover:-translate-y-1 shadow-md w-[200px] flex items-center justify-center">
+            Tìm hiểu lộ trình
+          </button>
+        </motion.div>
       </div>
     </section>
   );
