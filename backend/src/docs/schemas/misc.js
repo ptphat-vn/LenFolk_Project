@@ -89,6 +89,10 @@ module.exports = {
     properties: {
       _id: { type: 'string' },
       userId: { type: 'string' },
+      status: { type: 'string', enum: ['pending', 'approved', 'rejected'], example: 'pending', description: 'Trạng thái duyệt đơn giảng viên' },
+      rejectReason: { type: 'string', nullable: true },
+      reviewedBy: { type: 'string', nullable: true },
+      reviewedAt: { type: 'string', format: 'date-time', nullable: true },
       bio: { type: 'string', nullable: true },
       expertise: { type: 'string', nullable: true },
       websiteUrl: { type: 'string', nullable: true },

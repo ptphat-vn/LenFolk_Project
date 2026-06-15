@@ -69,4 +69,22 @@ module.exports = {
       },
     },
   },
+  '/transaction-records/{id}/cancel': {
+    patch: {
+      tags: ['TransactionRecords'],
+      summary: 'User tự hủy yêu cầu thanh toán đang chờ',
+      description:
+        'Cho user hủy đơn khi đóng màn QR / bấm "Hủy" hoặc "Xóa" mà **chưa chuyển khoản**. ' +
+        'Chỉ hủy được đơn còn `pending`; đơn `success`/`reviewing` sẽ trả `400`. ' +
+        'Khi hủy: giao dịch → `failed` (lý do "Cancelled by user"), Enrollment liên quan → `cancelled`.',
+      security: bearer,
+      parameters: [idParam],
+      responses: {
+        200: okMessage('Đã hủy yêu cầu thanh toán'),
+        400: err('Không thể hủy đơn ở trạng thái hiện tại'),
+        403: err('Không phải của bạn'),
+        404: err('Không tìm thấy'),
+      },
+    },
+  },
 };

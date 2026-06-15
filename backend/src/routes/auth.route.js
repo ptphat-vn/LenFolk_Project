@@ -14,6 +14,24 @@ const registerSchema = z.object({
   }),
 });
 
+const registerInstructorSchema = z.object({
+  body: z.object({
+    name: z.string({ required_error: 'Name is required' }).min(2, 'Name must be at least 2 characters'),
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+    password: z.string({ required_error: 'Password is required' }).min(8, 'Password must be at least 8 characters'),
+    bio: z.string().max(1000).optional(),
+    expertise: z.string().optional(),
+    websiteUrl: z.string().url('Invalid URL').optional(),
+    bankDetails: z
+      .object({
+        bankName: z.string().optional(),
+        accountName: z.string().optional(),
+        accountNumber: z.string().optional(),
+      })
+      .optional(),
+  }),
+});
+
 const loginSchema = z.object({
   body: z.object({
     email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
@@ -27,8 +45,38 @@ const refreshTokenSchema = z.object({
   }),
 });
 
+const verifyEmailSchema = z.object({
+  body: z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+    code: z.string({ required_error: 'Code is required' }).length(6, 'Mã xác thực gồm 6 chữ số'),
+  }),
+});
+
+const resendVerificationSchema = z.object({
+  body: z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+  }),
+});
+
+const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+  }),
+});
+
+const resetPasswordSchema = z.object({
+  body: z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+    code: z.string({ required_error: 'Code is required' }).length(6, 'Mã đặt lại gồm 6 chữ số'),
+    newPassword: z.string({ required_error: 'New password is required' }).min(8, 'Password must be at least 8 characters'),
+  }),
+});
+
 // POST /api/auth/register
 router.post('/register', validate(registerSchema), authController.register);
+
+// POST /api/auth/register-instructor — đăng ký giảng viên (chờ admin duyệt)
+router.post('/register-instructor', validate(registerInstructorSchema), authController.registerInstructor);
 
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), authController.login);
@@ -38,5 +86,17 @@ router.post('/refresh-token', validate(refreshTokenSchema), authController.refre
 
 // POST /api/auth/logout
 router.post('/logout', validate(refreshTokenSchema), authController.logout);
+
+// POST /api/auth/verify-email
+router.post('/verify-email', validate(verifyEmailSchema), authController.verifyEmail);
+
+// POST /api/auth/resend-verification
+router.post('/resend-verification', validate(resendVerificationSchema), authController.resendVerification);
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', validate(forgotPasswordSchema), authController.forgotPassword);
+
+// POST /api/auth/reset-password
+router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);
 
 module.exports = router;

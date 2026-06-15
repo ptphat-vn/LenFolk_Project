@@ -24,4 +24,10 @@ router
 
 .delete(verifyAdmin, instructorProfileController.deleteOne);
 
+// PATCH /api/instructor-profiles/:id/approve — Admin duyệt đơn giảng viên
+router.patch('/:id/approve', verifyAdmin, instructorProfileController.approve);
+
+// PATCH /api/instructor-profiles/:id/reject — Admin từ chối đơn giảng viên
+router.patch('/:id/reject', verifyAdmin, instructorProfileController.reject);
+
 module.exports = router;

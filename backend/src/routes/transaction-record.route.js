@@ -35,4 +35,7 @@ const purchaseController = require('../controllers/purchase.controller');
 
 router.get('/:id/status', purchaseController.getTransactionStatus);
 
+// ── User tự hủy đơn còn 'pending' (đóng QR / bấm Hủy / Xóa) ───────────────────
+router.patch('/:id/cancel', purchaseController.cancel);
+
 module.exports = router;

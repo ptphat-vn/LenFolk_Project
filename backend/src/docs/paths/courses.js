@@ -36,10 +36,14 @@ module.exports = {
     },
     delete: {
       tags: ['Courses'],
-      summary: 'Xóa khóa học (admin) — xóa luôn CoursePlan liên kết',
+      summary: 'Xóa khóa học (admin) — xóa luôn CoursePlan; chặn nếu còn bài học',
       security: bearer,
       parameters: [idParam],
-      responses: { 200: okMessage('Đã xóa'), 404: err('Không tìm thấy') },
+      responses: {
+        200: okMessage('Đã xóa'),
+        400: err('Vẫn còn bài học — xóa hết bài học trước'),
+        404: err('Không tìm thấy'),
+      },
     },
   },
   '/courses/{id}/plan': {
