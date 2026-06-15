@@ -11,12 +11,17 @@ import { useAuthStore } from "@/store/authStore";
 import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
 import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useGetStreaks } from "@/hooks/streak/use-get-streaks";
+import { useCreateStreak } from "@/hooks/streak/use-create-streak";
+import { useUpdateStreak } from "@/hooks/streak/use-update-streak";
 import NotificationButton from "@/components/NotificationButton";
 import SafeScreen from "../../components/SafeScreen";
 
 const greetingPrompt = "Hôm nay bạn muốn học gì?";
 const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nhạc.";
 const typewriterMessages = [greetingPrompt, lenFolkMessage];
+
+const getCalendarDay = (date: Date) =>
+  Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -27,7 +32,10 @@ export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { data: lessons } = useGetLessons();
   const { data: progressList } = useGetProgressList();
-  const { data: streaks } = useGetStreaks();
+  const { data: streaks, isSuccess: streaksLoaded } = useGetStreaks();
+  const createStreak = useCreateStreak();
+  const updateStreak = useUpdateStreak();
+  const trackedStreakDateRef = React.useRef<string | null>(null);
   const displayName = user?.name?.trim() || "Bạn";
   const firstName = displayName.split(" ").filter(Boolean).pop() || displayName;
   const avatarSource = user?.avatar
@@ -53,6 +61,69 @@ export default function HomeScreen() {
   const currentStreak = streaks?.[0]?.currentStreak ?? 0;
   const todayLessons = visibleLessons.slice(0, 2);
   const reviewLessons = orderedLessons.slice(0, 4);
+
+  React.useEffect(() => {
+    if (!isFocused || !user?._id || !streaksLoaded) return;
+
+    const now = new Date();
+    const todayKey = `${user._id}:${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    if (trackedStreakDateRef.current === todayKey) return;
+
+    trackedStreakDateRef.current = todayKey;
+    const streak = streaks?.[0];
+
+    const trackDailyStreak = async () => {
+      try {
+        if (!streak) {
+          await createStreak.mutateAsync({
+            currentStreak: 1,
+            longestStreak: 1,
+            totalActiveDays: 1,
+            lastActiveDate: now.toISOString(),
+          });
+          return;
+        }
+
+        const lastActiveDate = streak.lastActiveDate
+          ? new Date(streak.lastActiveDate)
+          : null;
+        const lastActiveDay =
+          lastActiveDate && !Number.isNaN(lastActiveDate.getTime())
+            ? getCalendarDay(lastActiveDate)
+            : null;
+        const today = getCalendarDay(now);
+        const daysSinceLastActive =
+          lastActiveDay === null
+            ? null
+            : Math.round((today - lastActiveDay) / 86_400_000);
+
+        if (daysSinceLastActive === 0) return;
+
+        const nextCurrentStreak =
+          daysSinceLastActive === 1 ? streak.currentStreak + 1 : 1;
+
+        await updateStreak.mutateAsync({
+          id: streak._id,
+          currentStreak: nextCurrentStreak,
+          longestStreak: Math.max(streak.longestStreak, nextCurrentStreak),
+          totalActiveDays: streak.totalActiveDays + 1,
+          lastActiveDate: now.toISOString(),
+        });
+      } catch (error) {
+        trackedStreakDateRef.current = null;
+        console.log("Error updating daily streak", error);
+      }
+    };
+
+    trackDailyStreak();
+  }, [
+    createStreak,
+    isFocused,
+    streaks,
+    streaksLoaded,
+    updateStreak,
+    user?._id,
+  ]);
 
   const openLesson = (lessonId?: string) => {
     if (!lessonId) return;
@@ -133,8 +204,8 @@ export default function HomeScreen() {
                 style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "white" }}
                 className="shadow"
               />
-              {user?.isSubscribed && (
-                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+              {user?.currentSubscription === "Technique" && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
                 </View>
               )}
@@ -219,7 +290,9 @@ export default function HomeScreen() {
               </View>
               <View className="flex-row items-center mt-0.5">
                 <MaterialCommunityIcons name="weight-lifter" size={12} color="#8E9E6E" />
-                <Text className="text-[12px] text-gray-500 font-bold ml-1">{user?.currentSubscription ? "Premium" : "Cơ bản"}</Text>
+                <Text className="text-[12px] text-gray-500 font-bold ml-1">
+                  {user?.currentSubscription === "Technique" ? "Technique" : "Foundations"}
+                </Text>
               </View>
             </View>
             <View className="w-10 h-10 rounded-full bg-[#8E9E6E]/20 items-center justify-center">
@@ -236,12 +309,14 @@ export default function HomeScreen() {
           onPress={() => openLesson(continueLesson?._id)}
           className="w-full bg-[#D6DDC6]/50 py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#8E9E6E]/20 mb-6"
         >
-          <View className="flex-row items-center py-2">
+          <View className="min-w-0 flex-1 flex-row items-center py-2 pr-3">
             <View className="w-12 h-12 rounded-2xl bg-white border border-gray-100 justify-center items-center shadow-sm">
               <Ionicons name="book" size={22} color="#8E9E6E" />
             </View>
             <Text
-              className="text-charcoal text-base font-bold ml-4"
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              className="min-w-0 flex-1 text-charcoal text-base font-bold ml-4"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
               {continueLesson?.title || "Chưa có bài học khả dụng"}

@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
+import { useAuthStore } from "@/store/authStore";
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const [itemWidth, setItemWidth] = React.useState(0);
@@ -123,6 +124,16 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 }
 
 export default function TabsLayout() {
+  const { user, token, isCheckingAuth } = useAuthStore();
+
+  if (isCheckingAuth) {
+    return null;
+  }
+
+  if (!user || !token) {
+    return <Redirect href="/(auth)" />;
+  }
+
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}

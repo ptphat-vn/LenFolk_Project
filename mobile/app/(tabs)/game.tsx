@@ -263,8 +263,8 @@ export default function GameScreen() {
                 style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: "white" }}
                 className="shadow-sm"
               />
-              {user?.isSubscribed && (
-                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+              {user?.currentSubscription === "Technique" && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={22} color="#FFB800" />
                 </View>
               )}
@@ -282,7 +282,7 @@ export default function GameScreen() {
             </View>
             <View className="bg-white/20 px-3 py-1 rounded-full">
               <Text className="text-white text-[12px] font-extrabold">
-                {user?.isVerified ? "Verified" : "Pending"}
+                {user?.role || "user"}
               </Text>
             </View>
           </View>
