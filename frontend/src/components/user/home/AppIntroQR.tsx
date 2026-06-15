@@ -11,7 +11,7 @@ export const AppIntroQR = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="relative bg-[#f2f2f2] rounded-[40px] overflow-hidden shadow-xl shadow-gray-200/50"
+          className="relative bg-[#e4e4e4] rounded-[40px] overflow-hidden shadow-xl shadow-gray-200/50"
         >
           {/* Inner Glowing Halo */}
           <div className="absolute top-1/2 right-[10%] -translate-y-1/2 w-[600px] h-[600px] bg-[#d6ddc6]/60 rounded-full blur-[100px] pointer-events-none z-0"></div>
@@ -19,7 +19,7 @@ export const AppIntroQR = () => {
           <div className="grid md:grid-cols-2 gap-8 items-center relative z-10">
             {/* Left Content */}
             <div className="flex flex-col items-start text-left p-8 md:p-14">
-              <h2 className="text-4xl md:text-5xl lg:text-5xl font-normal mb-4 leading-[1.1] text-black tracking-tight">
+              <h2 className="text-4xl md:text-5xl lg:text-5xl font-be-vietnam-pro mb-4 leading-[1.1] text-black tracking-tight">
                 Sẵn sàng trải nghiệm <br />
                 <span className="font-medium">LENFOLK</span>
               </h2>

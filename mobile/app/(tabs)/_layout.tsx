@@ -8,6 +8,8 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useAuthStore } from "@/store/authStore";
+import * as Haptics from "expo-haptics";
+import { SwipeableTabShell } from "@/components/swipeable-tab-shell";
 
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const [itemWidth, setItemWidth] = React.useState(0);
@@ -65,6 +67,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         const isFocused = state.index === index;
 
         const onPress = () => {
+          Haptics.selectionAsync().catch(() => undefined);
           const event = navigation.emit({
             type: "tabPress",
             target: route.key,
@@ -77,6 +80,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         };
 
         const onLongPress = () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
+            () => undefined,
+          );
           navigation.emit({
             type: "tabLongPress",
             target: route.key,
@@ -135,18 +141,21 @@ export default function TabsLayout() {
   }
 
   return (
-    <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: "Trang chủ" }} />
-      <Tabs.Screen name="courses" options={{ title: "Bài học" }} />
-      <Tabs.Screen name="game" options={{ title: "Trò chơi" }} />
-      <Tabs.Screen name="leaderboard" options={{ title: "Bảng xếp hạng" }} />
-      <Tabs.Screen name="profile" options={{ title: "Cá nhân" }} />
-    </Tabs>
+    <SwipeableTabShell>
+      <Tabs
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          animation: "shift",
+        }}
+      >
+        <Tabs.Screen name="index" options={{ title: "Trang chủ" }} />
+        <Tabs.Screen name="courses" options={{ title: "Bài học" }} />
+        <Tabs.Screen name="game" options={{ title: "Trò chơi" }} />
+        <Tabs.Screen name="leaderboard" options={{ title: "Bảng xếp hạng" }} />
+        <Tabs.Screen name="profile" options={{ title: "Cá nhân" }} />
+      </Tabs>
+    </SwipeableTabShell>
   );
 }
 

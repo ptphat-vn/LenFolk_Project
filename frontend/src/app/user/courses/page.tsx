@@ -1,8 +1,8 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Courses } from '@/components/user/home/Courses';
-import { FAQ } from '@/components/user/home/FAQ';
+import { Courses } from '@/components/user/courses/Courses';
+import { FAQ } from '@/components/user/courses/FAQ';
 
 export default function CoursesPage() {
   return (
@@ -17,7 +17,7 @@ export default function CoursesPage() {
             <span className="w-2 h-2 rounded-full bg-sage-dark"></span>
             Lộ trình phát triển
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-black tracking-tight leading-tight">
+          <h1 className="text-4xl md:text-6xl font-be-vietnam-pro mb-6 text-black tracking-tight leading-tight">
             Chọn con đường âm nhạc<br />
             <span className="text-[#8e9e6e]">dành riêng cho bạn</span>
           </h1>

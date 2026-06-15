@@ -40,7 +40,7 @@ export const Navbar = () => {
           }`}
       >
         <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
-           <Link href="/user" className="flex items-center gap-2 group">
+          <Link href="/user" className="flex items-center gap-2 group">
             <img src="/images/logo_black.png" alt="Lenfolk Logo" className="h-[50px] w-auto object-contain" />
             <img src="/images/name_black.png" alt="Lenfolk" className="h-[34px] w-auto object-contain ml-[-20px]" />
           </Link>
@@ -64,7 +64,7 @@ export const Navbar = () => {
           <div className="hidden md:flex items-center gap-4">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-[#8e9e6e] to-[#e6d596] text-white hover:shadow-xl transition-all duration-300 font-medium hover:scale-105 active:scale-95 shadow-lg"
+              className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-gradient-to-r from-[#6b7b4d] to-[#c9b775] text-white hover:shadow-xl transition-all duration-300 font-medium hover:scale-105 active:scale-95 shadow-lg"
             >
               Đăng nhập
             </Link>
@@ -107,7 +107,7 @@ export const Navbar = () => {
               <div className="flex flex-col gap-4 mt-8 w-64">
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[#8e9e6e] to-[#e6d596] text-white font-medium w-full shadow-lg"
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-gradient-to-r from-[#6b7b4d] to-[#c9b775] text-white font-medium w-full shadow-lg"
                 >
                   Đăng nhập
                 </Link>

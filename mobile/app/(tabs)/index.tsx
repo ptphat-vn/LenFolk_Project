@@ -15,6 +15,7 @@ import { useCreateStreak } from "@/hooks/streak/use-create-streak";
 import { useUpdateStreak } from "@/hooks/streak/use-update-streak";
 import NotificationButton from "@/components/NotificationButton";
 import SafeScreen from "../../components/SafeScreen";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 
 const greetingPrompt = "Hôm nay bạn muốn học gì?";
 const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nhạc.";
@@ -30,6 +31,11 @@ export default function HomeScreen() {
   const [typedGreeting, setTypedGreeting] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
   const user = useAuthStore((state) => state.user);
+  const {
+    label: subscriptionLabel,
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const { data: lessons } = useGetLessons();
   const { data: progressList } = useGetProgressList();
   const { data: streaks, isSuccess: streaksLoaded } = useGetStreaks();
@@ -204,7 +210,7 @@ export default function HomeScreen() {
                 style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "white" }}
                 className="shadow"
               />
-              {user?.currentSubscription === "Technique" && (
+              {hasPremiumAccess && (
                 <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
                 </View>
@@ -291,7 +297,7 @@ export default function HomeScreen() {
               <View className="flex-row items-center mt-0.5">
                 <MaterialCommunityIcons name="weight-lifter" size={12} color="#8E9E6E" />
                 <Text className="text-[12px] text-gray-500 font-bold ml-1">
-                  {user?.currentSubscription === "Technique" ? "Technique" : "Foundations"}
+                  {subscriptionLoading ? "Đang tải..." : subscriptionLabel}
                 </Text>
               </View>
             </View>
