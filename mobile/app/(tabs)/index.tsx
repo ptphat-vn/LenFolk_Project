@@ -16,6 +16,7 @@ import { useUpdateStreak } from "@/hooks/streak/use-update-streak";
 import NotificationButton from "@/components/NotificationButton";
 import SafeScreen from "../../components/SafeScreen";
 import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
+import { getRandomPracticeNote } from "@/constants/practice-notes";
 
 const greetingPrompt = "Hôm nay bạn muốn học gì?";
 const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nhạc.";
@@ -143,7 +144,7 @@ export default function HomeScreen() {
     if (!lessonId) return;
     router.push({
       pathname: "/practice/[lessonId]",
-      params: { lessonId, note: note || "A4" },
+      params: { lessonId, note: note || getRandomPracticeNote().pitch },
     } as any);
   };
 
@@ -343,7 +344,7 @@ export default function HomeScreen() {
             activeOpacity={0.95}
             disabled={!continueLesson}
             onPress={() =>
-              openPractice(continueLesson?._id, continueLesson?.techniques?.[0])
+              openPractice(continueLesson?._id)
             }
             className="w-full bg-[#FFF9E6] py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#F4E0AC] mb-8"
           >
@@ -385,7 +386,7 @@ export default function HomeScreen() {
             {reviewLessons.map((lesson, index) => (
               <View key={lesson._id} className="items-center flex-1">
                 <TouchableOpacity
-                  onPress={() => openPractice(lesson._id, lesson.techniques?.[0])}
+                  onPress={() => openPractice(lesson._id)}
                   className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2"
                 >
                   {index < 2 ? (
