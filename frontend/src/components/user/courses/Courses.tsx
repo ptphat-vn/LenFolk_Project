@@ -26,7 +26,7 @@ export const Courses = () => {
               ⭐ Được đề xuất
             </div>
             <h3 className="text-4xl md:text-5xl font-bold mb-4">Gói TECH</h3>
-            <div className="text-2xl font-bold mb-6 text-cream">829.000đ <span className="text-lg font-normal text-white/80">/ 5 tháng</span></div>
+            <div className="text-2xl font-bold mb-6 text-cream">459.000đ <span className="text-lg font-normal text-white/80">/ 3 tháng</span></div>
             <p className="text-white/90 text-lg mb-8 leading-relaxed">
               Trải nghiệm học tập toàn diện nhất. Truy cập không giới hạn vào tất cả các khóa học, nhận phản hồi AI tức thì và sự hỗ trợ trực tiếp từ giảng viên.
             </p>
@@ -34,9 +34,8 @@ export const Courses = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
               {[
                 'Toàn bộ bài học từ cơ bản đến nâng cao', 'AI đánh giá hơi thổi real-time',
-                'Lộ trình học cá nhân hóa', 'Hỗ trợ từ giảng viên',
-                'Chứng chỉ hoàn thành', 'Truy cập ứng dụng LENFOLK',
-                'Cộng đồng học viên', 'Cập nhật nội dung liên tục'
+                'Lộ trình học cá nhân hóa', 'Hỗ trợ từ Y Len',
+                'Truy cập ứng dụng LENFOLK', 'Cập nhật nội dung liên tục'
               ].map((feat, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div className="mt-1 bg-white/20 p-1 rounded-full"><Check size={14} /></div>
@@ -79,11 +78,10 @@ export const Courses = () => {
           {courses.map((course) => {
             const isRepertoire = course.name === 'Gói REPERTOIRE';
             return (
-              <div key={course.id} className={`rounded-[32px] p-8 md:p-10 border shadow-xl flex flex-col transition-colors ${
-                isRepertoire 
-                  ? 'bg-white border-black border-2 shadow-gray-200/50' 
-                  : 'bg-white border-gray-100 shadow-gray-200/50 hover:border-sage-light'
-              }`}>
+              <div key={course.id} className={`rounded-[32px] p-8 md:p-10 border shadow-xl flex flex-col transition-colors ${isRepertoire
+                ? 'bg-white border-black border-2 shadow-gray-200/50'
+                : 'bg-white border-gray-100 shadow-gray-200/50 hover:border-sage-light'
+                }`}>
                 <h3 className="text-3xl font-bold mb-2 text-black">{course.name}</h3>
                 <div className="text-xl font-bold mb-4 text-sage-dark">{course.price}</div>
                 <p className="mb-8 flex-1 text-gray-600">{course.desc}</p>
@@ -99,11 +97,10 @@ export const Courses = () => {
 
                 <button
                   onClick={() => setSelectedCourse(course.id)}
-                  className={`w-full py-4 border-2 font-bold rounded-full transition-colors mt-auto ${
-                    isRepertoire
-                      ? 'border-black bg-black text-white hover:bg-white hover:text-black'
-                      : 'border-black text-black hover:bg-black hover:text-white'
-                  }`}
+                  className={`w-full py-4 border-2 font-bold rounded-full transition-colors mt-auto ${isRepertoire
+                    ? 'border-black bg-black text-white hover:bg-white hover:text-black'
+                    : 'border-black text-black hover:bg-black hover:text-white'
+                    }`}
                 >
                   Đăng ký
                 </button>

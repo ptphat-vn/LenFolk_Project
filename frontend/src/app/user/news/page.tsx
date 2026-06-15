@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { News } from '@/components/user/home/News';
+import { News } from '@/components/user/news/News';
 
 export default function NewsPage() {
   return (

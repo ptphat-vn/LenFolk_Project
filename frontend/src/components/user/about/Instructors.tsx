@@ -12,7 +12,7 @@ export const Instructors = () => {
             <span className="w-2 h-2 rounded-full bg-sage-dark"></span>
             Đội ngũ giảng viên
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-black">
+          <h2 className="text-4xl md:text-5xl font-be-vietnam-pro text-black">
             Chuyên gia đứng sau LENFOLK
           </h2>
         </div>
