@@ -27,11 +27,11 @@ exports.register = async (req, res, next) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Email already in use' });
+      return res.status(400).json({ success: false, message: 'Email đã được sử dụng' });
     }
 
     if (password.length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+      return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 8 ký tự' });
     }
 
     const newUser = await User.create({ name, email, passwordHash: password });
@@ -82,7 +82,7 @@ exports.registerInstructor = async (req, res, next) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: 'Email already in use' });
+      return res.status(400).json({ success: false, message: 'Email đã được sử dụng' });
     }
 
     const newUser = await User.create({
@@ -242,13 +242,13 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập email và mật khẩu' });
     }
 
     const user = await User.findOne({ email }).select('+passwordHash');
 
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng' });
     }
 
     // Giảng viên phải được admin duyệt mới đăng nhập được
@@ -306,14 +306,14 @@ exports.refreshToken = async (req, res, next) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ success: false, message: 'Refresh token is required' });
+      return res.status(400).json({ success: false, message: 'Refresh token là bắt buộc' });
     }
 
     const decoded = jwt.verify(refreshToken, config.jwt.secret);
     const user = await User.findById(decoded.id).select('+refreshToken');
 
     if (!user || user.refreshToken !== refreshToken) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+      return res.status(401).json({ success: false, message: 'Refresh token không hợp lệ hoặc đã hết hạn' });
     }
 
     const accessToken = signToken(
@@ -340,14 +340,14 @@ exports.logout = async (req, res, next) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ success: false, message: 'Refresh token is required' });
+      return res.status(400).json({ success: false, message: 'Refresh token là bắt buộc' });
     }
 
     const decoded = jwt.verify(refreshToken, config.jwt.secret);
     const user = await User.findById(decoded.id).select('+refreshToken');
 
     if (!user || user.refreshToken !== refreshToken) {
-      return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+      return res.status(401).json({ success: false, message: 'Refresh token không hợp lệ' });
     }
 
     user.refreshToken = null;

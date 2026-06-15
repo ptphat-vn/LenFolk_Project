@@ -141,16 +141,16 @@ const calculateDiscount = async (couponCode, originalPrice, type) => {
     e.statusCode = 400;
     throw e;
   };
-  if (!coupon) fail('Invalid or inactive coupon code');
+  if (!coupon) fail('Mã giảm giá không hợp lệ hoặc đã ngưng');
 
   const now = new Date();
   if (coupon.validFrom && now < coupon.validFrom)
-    fail('Coupon is not yet valid');
-  if (coupon.validTo && now > coupon.validTo) fail('Coupon has expired');
+    fail('Mã giảm giá chưa tới thời gian áp dụng');
+  if (coupon.validTo && now > coupon.validTo) fail('Mã giảm giá đã hết hạn');
   if (coupon.maxUses && coupon.usedCount >= coupon.maxUses)
-    fail('Coupon usage limit reached');
+    fail('Mã giảm giá đã hết lượt sử dụng');
   if (coupon.applicableTo !== 'all' && coupon.applicableTo !== type)
-    fail(`Coupon cannot be applied to ${type}`);
+    fail(`Mã giảm giá không áp dụng cho ${type}`);
 
   let discountAmount = 0;
   if (coupon.discountType === 'percent') {
@@ -169,7 +169,7 @@ const getSepayAccountOrFail = () => {
   const account = resolveSepayAccount();
   if (!account.accountNumber || !account.bankCode) {
     const e = new Error(
-      'Payment account is not configured yet. Please contact admin.',
+      'Chưa cấu hình tài khoản nhận tiền. Vui lòng liên hệ admin.',
     );
     e.statusCode = 400;
     throw e;
@@ -193,20 +193,20 @@ exports.requestCoursePayment = async (req, res, next) => {
     if (!course)
       return res
         .status(404)
-        .json({ success: false, message: 'Course not found' });
+        .json({ success: false, message: 'Không tìm thấy khóa học' });
     if (course.isFree)
       return res
         .status(400)
         .json({
           success: false,
-          message: 'This course is free. No purchase required.',
+          message: 'Khóa học này miễn phí, không cần mua.',
         });
     if (course.status !== 'published')
       return res
         .status(400)
         .json({
           success: false,
-          message: 'This course is not available for purchase.',
+          message: 'Khóa học này hiện không thể mua.',
         });
 
     const plan = await CoursePlan.findOne({ courseId, isActive: true });
@@ -216,7 +216,7 @@ exports.requestCoursePayment = async (req, res, next) => {
         .json({
           success: false,
           message:
-            'No active price plan found for this course. Please contact admin.',
+            'Khóa học chưa có gói giá. Vui lòng liên hệ admin.',
         });
 
     if (await hasCourseAccess(userId, courseId))
@@ -224,7 +224,7 @@ exports.requestCoursePayment = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: 'You already have active access to this course.',
+          message: 'Bạn đã có quyền truy cập khóa học này.',
         });
 
     const existingPending = await Enrollment.findOne({
@@ -239,7 +239,7 @@ exports.requestCoursePayment = async (req, res, next) => {
         .json({
           success: false,
           message:
-            'You already have a pending payment request for this course.',
+            'Bạn đang có một đơn thanh toán chờ xử lý cho khóa học này.',
         });
 
     const account = getSepayAccountOrFail();
@@ -284,7 +284,7 @@ exports.requestCoursePayment = async (req, res, next) => {
       success: true,
       data: {
         message:
-          'Payment request created. Scan the SePay QR and transfer — your access is activated automatically.',
+          'Đã tạo yêu cầu thanh toán. Quét mã QR SePay và chuyển khoản — quyền truy cập sẽ được kích hoạt tự động.',
         transactionId: transaction._id,
         payCode,
         sepayQrUrl: buildSepayQrUrl(account, finalAmount, payCode),
@@ -319,27 +319,27 @@ exports.requestPerformancePayment = async (req, res, next) => {
     if (!performance)
       return res
         .status(404)
-        .json({ success: false, message: 'Performance not found' });
+        .json({ success: false, message: 'Không tìm thấy tiết mục' });
     if (performance.isFree)
       return res
         .status(400)
         .json({
           success: false,
-          message: 'This performance is free. No purchase required.',
+          message: 'Tiết mục này miễn phí, không cần mua.',
         });
     if (performance.status !== 'published')
       return res
         .status(400)
         .json({
           success: false,
-          message: 'This performance is not available for purchase.',
+          message: 'Tiết mục này hiện không thể mua.',
         });
     if (!performance.price || performance.price <= 0)
       return res
         .status(400)
         .json({
           success: false,
-          message: 'This performance does not have a valid price.',
+          message: 'Tiết mục này không có mức giá hợp lệ.',
         });
 
     if (await hasPerformanceAccess(userId, performanceId))
@@ -347,7 +347,7 @@ exports.requestPerformancePayment = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: 'You already have access to this performance.',
+          message: 'Bạn đã có quyền truy cập tiết mục này.',
         });
 
     const existingPending = await Enrollment.findOne({
@@ -362,7 +362,7 @@ exports.requestPerformancePayment = async (req, res, next) => {
         .json({
           success: false,
           message:
-            'You already have a pending payment request for this performance.',
+            'Bạn đang có một đơn thanh toán chờ xử lý cho tiết mục này.',
         });
 
     const account = getSepayAccountOrFail();
@@ -406,7 +406,7 @@ exports.requestPerformancePayment = async (req, res, next) => {
       success: true,
       data: {
         message:
-          'Payment request created. Scan the SePay QR and transfer — your access is activated automatically.',
+          'Đã tạo yêu cầu thanh toán. Quét mã QR SePay và chuyển khoản — quyền truy cập sẽ được kích hoạt tự động.',
         transactionId: transaction._id,
         payCode,
         sepayQrUrl: buildSepayQrUrl(account, finalAmount, payCode),
@@ -444,13 +444,13 @@ exports.getTransactionStatus = async (req, res, next) => {
     if (!transaction)
       return res
         .status(404)
-        .json({ success: false, message: 'Transaction not found' });
+        .json({ success: false, message: 'Không tìm thấy giao dịch' });
     if (!transaction.userId.equals(userId))
       return res
         .status(403)
         .json({
           success: false,
-          message: 'Forbidden: this transaction does not belong to you',
+          message: 'Giao dịch này không thuộc về bạn',
         });
 
     res.status(200).json({
@@ -489,20 +489,20 @@ exports.cancel = async (req, res, next) => {
     if (!transaction)
       return res
         .status(404)
-        .json({ success: false, message: 'Transaction not found' });
+        .json({ success: false, message: 'Không tìm thấy giao dịch' });
     if (!transaction.userId.equals(userId))
       return res
         .status(403)
         .json({
           success: false,
-          message: 'Forbidden: this transaction does not belong to you',
+          message: 'Giao dịch này không thuộc về bạn',
         });
     if (transaction.status !== 'pending')
       return res
         .status(400)
         .json({
           success: false,
-          message: `Cannot cancel a transaction with status '${transaction.status}'`,
+          message: `Không thể hủy giao dịch khi trạng thái là '${transaction.status}'`,
         });
 
     transaction.status = 'failed';

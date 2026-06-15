@@ -28,7 +28,11 @@ exports.getAll = async (req, res, next) => {
     query = req.query.sort
       ? query.sort(req.query.sort.split(',').join(' '))
       : query.sort('-createdAt');
-    query = query.skip(skip).limit(limit).select('-__v');
+    query = query
+      .skip(skip)
+      .limit(limit)
+      .select('-__v')
+      .populate({ path: 'instructorId', select: 'name email avatar' });
 
     const docs = await query;
 
@@ -54,11 +58,13 @@ exports.getAll = async (req, res, next) => {
 
 exports.getOne = async (req, res, next) => {
   try {
-    const course = await Course.findById(req.params.id).select('-__v');
+    const course = await Course.findById(req.params.id)
+      .select('-__v')
+      .populate({ path: 'instructorId', select: 'name email avatar' });
     if (!course)
       return res
         .status(404)
-        .json({ success: false, message: 'No course found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy khóa học' });
 
     const isPrivileged =
       req.user && (req.user.role === 'admin' || req.user.role === 'instructor');
@@ -67,21 +73,21 @@ exports.getOne = async (req, res, next) => {
       if (course.status !== 'published')
         return res
           .status(404)
-          .json({ success: false, message: 'No course found with that ID' });
+          .json({ success: false, message: 'Không tìm thấy khóa học' });
 
       if (!course.isFree) {
         if (!req.user)
           return res.status(403).json({
             success: false,
             message:
-              'This is a premium course. Please log in and subscribe to access.',
+              'Đây là khóa học trả phí. Vui lòng đăng nhập và mua để truy cập.',
           });
 
         const hasAccess = await hasCourseAccess(req.user._id, course._id);
         if (!hasAccess)
           return res.status(403).json({
             success: false,
-            message: 'This course requires an active subscription.',
+            message: 'Khóa học này cần mua mới truy cập được.',
           });
       }
     }
@@ -132,7 +138,7 @@ exports.updateOne = async (req, res, next) => {
     if (!course)
       return res
         .status(404)
-        .json({ success: false, message: 'No course found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy khóa học' });
 
     const before = course.toObject();
 
@@ -177,7 +183,7 @@ exports.deleteOne = async (req, res, next) => {
     if (!course)
       return res
         .status(404)
-        .json({ success: false, message: 'No document found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy khóa học' });
 
     // Ràng buộc: không cho xóa khi khóa học còn bài học
     const lessonCount = await Lesson.countDocuments({ courseId: course._id });
@@ -220,11 +226,11 @@ exports.upsertPlan = async (req, res, next) => {
     if (!course)
       return res
         .status(404)
-        .json({ success: false, message: 'No course found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy khóa học' });
     if (course.isFree)
       return res.status(400).json({
         success: false,
-        message: 'Cannot set a price plan for a free course.',
+        message: 'Không thể đặt gói giá cho khóa học miễn phí.',
       });
 
     const { price, billingCycle, name, description, features } = req.body;

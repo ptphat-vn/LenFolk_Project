@@ -29,7 +29,7 @@ exports.getOne = async (req, res, next) => {
   const doc = await AuditLog.findById(req.params.id)
     .select('+before +after -__v')
     .populate('actorId', 'name email role');
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
 };
@@ -44,7 +44,7 @@ exports.createOne = async (req, res, next) => {
 exports.updateOne = async (req, res, next) => {
   try {
   const doc = await AuditLog.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });
   } catch (err) { next(err); }
 };
@@ -52,7 +52,7 @@ exports.updateOne = async (req, res, next) => {
 exports.deleteOne = async (req, res, next) => {
   try {
   const doc = await AuditLog.findByIdAndDelete(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   res.status(200).json({ success: true, message: 'Xóa thành công', data: null });
   } catch (err) { next(err); }
 };
