@@ -18,6 +18,7 @@ import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
 import NotificationButton from "@/components/NotificationButton";
 import { useGetMe } from "@/hooks/user/use-get-me";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 
 export default function ProfileTabScreen() {
   const router = useRouter();
@@ -28,6 +29,11 @@ export default function ProfileTabScreen() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const { data: freshUser } = useGetMe();
+  const {
+    label: subscriptionLabel,
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
     ? { uri: user.avatar }
@@ -116,7 +122,7 @@ export default function ProfileTabScreen() {
                 style={{ width: 64, height: 64, borderRadius: 32 }}
                 className="shadow border border-gray-100"
               />
-              {user?.currentSubscription === "Technique" && (
+              {hasPremiumAccess && (
                 <View className="absolute -top-4 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={24} color="#FFB800" />
                 </View>
@@ -132,6 +138,27 @@ export default function ProfileTabScreen() {
               <Text className="text-xs text-gray-400 font-bold mt-0.5">
                 {user?.email || "Chưa có email"}
               </Text>
+
+              <View className="flex-row flex-wrap items-center gap-2 mt-2">
+                <View className="bg-[#E2E8D3] px-2.5 py-1 rounded-full">
+                  <Text className="text-[10px] font-bold text-[#687451]">
+                    Gói: {subscriptionLoading ? "Đang tải..." : subscriptionLabel}
+                  </Text>
+                </View>
+                <View
+                  className={`px-2.5 py-1 rounded-full ${
+                    user?.isVerified ? "bg-[#E5F4EA]" : "bg-[#FFF1E6]"
+                  }`}
+                >
+                  <Text
+                    className={`text-[10px] font-bold ${
+                      user?.isVerified ? "text-[#2F855A]" : "text-[#C05621]"
+                    }`}
+                  >
+                    {user?.isVerified ? "Đã xác thực" : "Chưa xác thực"}
+                  </Text>
+                </View>
+              </View>
               
               {/* Ratings and trophies */}
               <View className="flex-row items-center mt-2 gap-4">
@@ -291,7 +318,7 @@ export default function ProfileTabScreen() {
               />
             </TouchableOpacity>
 
-            {/* Item 2: Upgrade Premium */}
+            {/* Item 2: Current package */}
             <TouchableOpacity
               onPress={() => router.push("/profile/subscription")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
@@ -301,18 +328,52 @@ export default function ProfileTabScreen() {
                   <Ionicons name="ribbon" size={16} color="#E0B034" />
                 </View>
                 <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
-                  Nâng cấp Premium
+                  Gói học hiện tại
                 </Text>
               </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color="#6B7280"
-                className="animate-arrow-right"
-              />
+              <View className="flex-row items-center">
+                <Text className="text-xs text-gray-500 font-bold mr-2">
+                  {subscriptionLoading ? "..." : subscriptionLabel}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color="#6B7280"
+                  className="animate-arrow-right"
+                />
+              </View>
             </TouchableOpacity>
 
-            {/* Item 3: Dark Mode */}
+            {/* Item 3: Account verification */}
+            <TouchableOpacity
+              onPress={() => router.push("/profile/verify")}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
+              <View className="flex-row items-center flex-1 pr-4">
+                <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
+                  <Ionicons
+                    name={user?.isVerified ? "shield-checkmark" : "shield-outline"}
+                    size={16}
+                    color={user?.isVerified ? "#2F855A" : "#C05621"}
+                  />
+                </View>
+                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                  Xác thực tài khoản
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text
+                  className={`text-xs font-bold mr-2 ${
+                    user?.isVerified ? "text-[#2F855A]" : "text-[#C05621]"
+                  }`}
+                >
+                  {user?.isVerified ? "Đã xác thực" : "Xác thực ngay"}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              </View>
+            </TouchableOpacity>
+
+            {/* Item 4: Dark Mode */}
             <TouchableOpacity
               onPress={() => Alert.alert("Chế độ tối", "Giao diện tối chưa được thiết kế trong phiên bản hiện tại.")}
               className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"

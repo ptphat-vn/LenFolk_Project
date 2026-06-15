@@ -26,7 +26,7 @@ export default function AccountVerificationScreen() {
   const verifyMutation = useVerifyEmail();
 
   // Backend xác thực email bằng OTP gửi qua email → dùng email của tài khoản.
-  const [contactInfo, setContactInfo] = useState(user?.email || "");
+  const contactInfo = user?.email || "";
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [timer, setTimer] = useState(60);
@@ -199,13 +199,18 @@ export default function AccountVerificationScreen() {
                     <Text className="text-xs font-bold text-[#8E9E6E] mb-2">EMAIL</Text>
                     <TextInput
                       value={contactInfo}
-                      onChangeText={setContactInfo}
                       placeholder="Nhập email của bạn"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      editable={!user?.email}
                       className="w-full bg-[#F3F4F6]/50 border border-gray-200 rounded-2xl px-4 py-3.5 text-charcoal text-sm"
                     />
+                    {user?.email && (
+                      <Text className="text-[10px] text-gray-400 mt-2">
+                        Mã xác thực chỉ được gửi tới email của tài khoản hiện tại.
+                      </Text>
+                    )}
                   </View>
 
                   <TouchableOpacity

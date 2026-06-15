@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "../../components/SafeScreen";
 import NotificationButton from "@/components/NotificationButton";
 import { useRouter } from "expo-router";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 
 export default function GameScreen() {
   const scrollRef = useScrollToTopOnFocus();
@@ -15,6 +16,7 @@ export default function GameScreen() {
   const [activeGameIndex, setActiveGameIndex] = React.useState(0);
   const [challengePaused, setChallengePaused] = React.useState(false);
   const user = useAuthStore((state) => state.user);
+  const { hasPremiumAccess } = useCurrentSubscription();
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
     ? { uri: user.avatar }
@@ -263,7 +265,7 @@ export default function GameScreen() {
                 style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: "white" }}
                 className="shadow-sm"
               />
-              {user?.currentSubscription === "Technique" && (
+              {hasPremiumAccess && (
                 <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={22} color="#FFB800" />
                 </View>
