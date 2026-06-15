@@ -20,7 +20,7 @@ import { useGetTransactionStatus } from "@/hooks/transaction-record/use-get-tran
 import { useCancelTransaction } from "@/hooks/transaction-record/use-cancel-transaction";
 import { useGetMyEnrollments } from "@/hooks/enrollment/use-get-my-enrollments";
 
-type PackageTab = "foundation" | "technique" | "repertoire";
+type PackageTab = "foundation" | "technique";
 
 // Map message lỗi (thường là tiếng Anh / nội bộ) từ backend sang tiếng Việt thân thiện.
 // Không hiển thị nguyên văn message backend cho người dùng.
@@ -81,16 +81,13 @@ export default function SubscriptionScreen() {
   const mappedCourses = useMemo(() => {
     if (!courses) return {};
     const technique = courses.find((c) => c.level === "intermediate" || c.title.toLowerCase().includes("technique"));
-    const repertoire = courses.find((c) => c.level === "advanced" || c.title.toLowerCase().includes("repertoire"));
     return {
       technique: technique?._id || null,
-      repertoire: repertoire?._id || null,
     };
   }, [courses]);
 
   const activeCourseId = useMemo(() => {
     if (activeTab === "technique") return mappedCourses.technique;
-    if (activeTab === "repertoire") return mappedCourses.repertoire;
     return null;
   }, [activeTab, mappedCourses]);
 
@@ -109,7 +106,6 @@ export default function SubscriptionScreen() {
 
     const foundationCourse = findCourse("beginner", ["foundations", "foundation", "cơ bản"]);
     const techniqueCourse = findCourse("intermediate", ["technique", "kỹ năng", "trung cấp"]);
-    const repertoireCourse = findCourse("advanced", ["repertoire", "biểu diễn", "chuyên nghiệp"]);
 
     return {
       foundation: {
@@ -155,39 +151,6 @@ export default function SubscriptionScreen() {
             "Kiểm soát hơi thở, âm thanh ổn định",
             "Luyện, đánh lưỡi, rung hơi, lấy hơi thành thạo",
             "Làm chủ kỹ thuật cốt lõi của sáo trúc",
-          ],
-      },
-      repertoire: {
-        name: repertoireCourse?.title || "Repertoire",
-        price: repertoireCourse?.plan
-          ? `${new Intl.NumberFormat("vi-VN").format(repertoireCourse.plan.price)}đ`
-          : "499.000đ",
-        billing: repertoireCourse?.plan?.billingCycle === "monthly"
-          ? "1 tháng"
-          : repertoireCourse?.plan?.billingCycle === "quarterly"
-            ? "3 tháng"
-            : repertoireCourse?.plan?.billingCycle === "yearly"
-              ? "1 năm"
-              : "Tác phẩm",
-        badge: "Chuyên nghiệp",
-        description: repertoireCourse?.plan?.description || repertoireCourse?.description || "Hoàn thiện khả năng biểu diễn sáo trúc chuyên sâu: xử lý cảm xúc, màu sắc âm thanh và phong cách biểu diễn. Kết hợp luyện tập AI thông minh và coaching 1:1 trực tiếp cùng giảng viên.",
-        highlights: repertoireCourse?.plan?.features && repertoireCourse.plan.features.length > 0
-          ? repertoireCourse.plan.features.slice(0, 3)
-          : [
-            "Hoàn thiện kỹ thuật & cảm xúc biểu diễn thực thụ",
-            "Luyện tập thông minh & đánh giá cao độ/nhịp bằng AI",
-            "Coaching 1:1 hoặc 1:2 trực tiếp cùng Giảng viên chuyên môn",
-          ],
-        checklist: repertoireCourse?.plan?.features && repertoireCourse.plan.features.length > 3
-          ? repertoireCourse.plan.features.slice(3)
-          : [
-            "1. Thẩm âm: Tìm hiểu và nghe làm quen giai điệu (Audio/Video)",
-            "2. Xướng âm (Solfège): Đọc nốt theo nhịp, hiểu tiết tấu & cao độ",
-            "3. Phân tích bài: Hiểu rõ cấu trúc, tone và các phân đoạn khó",
-            "4. Luyện ngón + kỹ thuật + hơi thở chuyên sâu cho tác phẩm",
-            "5. Vỡ bài: Tập luyện với tempo chậm kết hợp công nghệ AI",
-            "6. Tập với nhạc nền/beat: Duy trì tempo và hòa hợp âm nhạc",
-            "7. Hoàn thiện: Coaching trực tiếp với Giảng viên để tạo màu sắc riêng",
           ],
       },
     };
@@ -334,7 +297,7 @@ export default function SubscriptionScreen() {
 
         {/* --- PACKAGE SELECTION TABS --- */}
         <View className="mx-6 bg-white rounded-2xl p-1.5 flex-row justify-between shadow-sm border border-gray-100 mb-6">
-          {(["foundation", "technique", "repertoire"] as const).map((tab) => {
+          {(["foundation", "technique"] as const).map((tab) => {
             const isSelected = activeTab === tab;
             const details = packageDetails[tab];
             const tabName = details.name;
@@ -395,7 +358,7 @@ export default function SubscriptionScreen() {
             <Text className="text-sm font-bold text-[#687451] ml-1">/ {currentDetails.billing}</Text>
           </View>
 
-          {/* Highlights box (Only for Technique/Repertoire) */}
+          {/* Highlights box for the paid package */}
           {activeTab !== "foundation" && (
             <View className="w-full bg-[#E2E8D3]/30 border border-[#C5D0B4]/40 rounded-2xl p-4 gap-2 mb-6">
               {currentDetails.highlights.map((h, idx) => (

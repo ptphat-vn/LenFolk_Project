@@ -1,5 +1,4 @@
 import React from "react";
-import { useIsFocused } from "@react-navigation/native";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -49,24 +48,12 @@ export function AnimatedBlock({
   className,
   style,
 }: AnimatedBlockProps) {
-  const isFocused = useIsFocused();
-  const wasFocused = React.useRef(isFocused);
-  const [focusCycle, setFocusCycle] = React.useState(0);
   const config = variant ? variantConfig[variant] : undefined;
   const entering = config?.entering ?? (direction === "down" ? FadeInDown : FadeInUp);
   const duration = config?.duration ?? 420;
 
-  React.useEffect(() => {
-    if (isFocused && !wasFocused.current) {
-      setFocusCycle((cycle) => cycle + 1);
-    }
-
-    wasFocused.current = isFocused;
-  }, [isFocused]);
-
   return (
     <Animated.View
-      key={focusCycle}
       entering={entering.delay(delay).duration(duration).springify()}
       layout={Layout.springify()}
       className={className}

@@ -8,7 +8,7 @@ import { runOnJS } from "react-native-reanimated";
 const TAB_ROUTES = [
   { segment: "/", href: "/(tabs)" },
   { segment: "/courses", href: "/(tabs)/courses" },
-  { segment: "/game", href: "/(tabs)/game" },
+  { segment: "/practice", href: "/(tabs)/practice" },
   { segment: "/leaderboard", href: "/(tabs)/leaderboard" },
   { segment: "/profile", href: "/(tabs)/profile" },
 ] as const;
