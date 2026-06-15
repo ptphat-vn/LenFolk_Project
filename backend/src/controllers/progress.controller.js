@@ -25,9 +25,9 @@ exports.createOne = async (req, res, next) => {
 exports.getOne = async (req, res, next) => {
   try {
     const doc = await Progress.findById(req.params.id);
-    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
     if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'You do not have permission to access this record' });
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xem bản ghi này' });
     }
     res.status(200).json({ success: true, data: doc });
   } catch (err) {
@@ -38,9 +38,9 @@ exports.getOne = async (req, res, next) => {
 exports.updateOne = async (req, res, next) => {
   try {
     const doc = await Progress.findById(req.params.id);
-    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
     if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'You do not have permission to update this record' });
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền sửa bản ghi này' });
     }
     // Prevent userId/courseId/lessonId spoofing on update
     delete req.body.userId;
@@ -57,9 +57,9 @@ exports.updateOne = async (req, res, next) => {
 exports.deleteOne = async (req, res, next) => {
   try {
     const doc = await Progress.findById(req.params.id);
-    if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+    if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
     if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'You do not have permission to delete this record' });
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa bản ghi này' });
     }
     await Progress.findByIdAndDelete(req.params.id);
     res.status(204).json({ success: true, data: null });

@@ -1,8 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { InstructorProfile, CreateInstructorProfileInput } from '@/types/instructor.types';
+import {
+  InstructorProfile,
+  CreateInstructorProfileInput,
+  InstructorStatus,
+  getInstructorUserId,
+  getInstructorUserName,
+  getInstructorUserEmail,
+} from '@/types/instructor.types';
 import { instructorApi } from '@/lib/api/instructor.api';
 import {
   UserCheck,
@@ -11,31 +18,74 @@ import {
   BookOpen,
   Trash2,
   Globe,
-  Loader2,
   Eye,
+  Plus,
+  Pencil,
+  Check,
+  X,
+  Clock,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
-import Link from 'next/link';
+import { isAxiosError } from 'axios';
 import { toast } from 'sonner';
 import { FilterInput } from '@/common/filter/FilterInput';
+import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { ActionButton } from '@/common/button/ActionButton';
-import { Plus, Pencil } from 'lucide-react';
+import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { InstructorFormModal } from '@/components/admin/users/InstructorFormModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+
+const STATUS_META: Record<
+  InstructorStatus,
+  { label: string; className: string; icon: typeof Clock }
+> = {
+  pending: { label: 'Chờ duyệt', className: 'bg-amber-100 text-amber-700', icon: Clock },
+  approved: { label: 'Đã duyệt', className: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 },
+  rejected: { label: 'Từ chối', className: 'bg-red-100 text-red-700', icon: XCircle },
+};
+
+const STATUS_FILTER_OPTIONS = [
+  { label: 'Tất cả trạng thái', value: 'all' },
+  { label: 'Chờ duyệt', value: 'pending' },
+  { label: 'Đã duyệt', value: 'approved' },
+  { label: 'Từ chối', value: 'rejected' },
+];
+
+function getBackendMessage(error: unknown): string | undefined {
+  return isAxiosError(error)
+    ? (error.response?.data as { message?: string } | undefined)?.message
+    : undefined;
+}
 
 export default function AdminInstructorsPage() {
   const [instructors, setInstructors] = useState<InstructorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const debouncedSearch = useDebounce(search, 500);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  
+  const [actingId, setActingId] = useState<string | null>(null);
+
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<InstructorProfile | null>(null);
+
+  const [rejectTarget, setRejectTarget] = useState<InstructorProfile | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   async function fetchInstructors() {
     try {
       setLoading(true);
-      const res = await instructorApi.getAll();
+      const res = await instructorApi.getAll(
+        statusFilter === 'all' ? undefined : { status: statusFilter as InstructorStatus },
+      );
       setInstructors(res.data || []);
     } catch (error) {
       console.error('Failed to fetch instructors', error);
@@ -47,7 +97,8 @@ export default function AdminInstructorsPage() {
 
   useEffect(() => {
     fetchInstructors();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   const handleSave = async (data: CreateInstructorProfileInput, id?: string) => {
     try {
@@ -61,12 +112,12 @@ export default function AdminInstructorsPage() {
       fetchInstructors();
     } catch (error) {
       console.error('Failed to save instructor', error);
-      toast.error('Lỗi khi lưu hồ sơ');
+      toast.error(getBackendMessage(error) || 'Lỗi khi lưu hồ sơ');
       throw error; // Let modal handle loading state
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (inst: InstructorProfile) => {
     if (
       !confirm(
         'Bạn có chắc chắn muốn xóa hồ sơ giảng viên này? Hành động này không thể hoàn tác.',
@@ -75,34 +126,83 @@ export default function AdminInstructorsPage() {
       return;
 
     try {
-      setIsDeleting(id);
-      await instructorApi.delete(id);
+      setActingId(inst._id);
+      await instructorApi.delete(inst._id);
       toast.success('Đã xóa hồ sơ giảng viên');
       fetchInstructors();
     } catch (error) {
       console.error('Failed to delete instructor', error);
-      toast.error('Lỗi khi xóa hồ sơ');
+      toast.error(getBackendMessage(error) || 'Lỗi khi xóa hồ sơ');
     } finally {
-      setIsDeleting(null);
+      setActingId(null);
     }
   };
 
-  const filteredInstructors = instructors.filter((inst) => {
+  const handleApprove = async (inst: InstructorProfile) => {
+    try {
+      setActingId(inst._id);
+      await instructorApi.approve(inst._id);
+      toast.success('Đã duyệt giảng viên');
+      fetchInstructors();
+    } catch (error) {
+      console.error('Failed to approve instructor', error);
+      toast.error(getBackendMessage(error) || 'Lỗi khi duyệt giảng viên');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectTarget) return;
+    try {
+      setActingId(rejectTarget._id);
+      await instructorApi.reject(rejectTarget._id, rejectReason.trim() || undefined);
+      toast.success('Đã từ chối đơn giảng viên');
+      setRejectTarget(null);
+      setRejectReason('');
+      fetchInstructors();
+    } catch (error) {
+      console.error('Failed to reject instructor', error);
+      toast.error(getBackendMessage(error) || 'Lỗi khi từ chối đơn');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const filteredInstructors = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
-    return (
-      inst.userId.toLowerCase().includes(searchLower) ||
-      (inst.expertise || '').toLowerCase().includes(searchLower)
-    );
-  });
+    if (!searchLower) return instructors;
+    return instructors.filter((inst) => {
+      const name = getInstructorUserName(inst.userId) || '';
+      const email = getInstructorUserEmail(inst.userId) || '';
+      return (
+        name.toLowerCase().includes(searchLower) ||
+        email.toLowerCase().includes(searchLower) ||
+        getInstructorUserId(inst.userId).toLowerCase().includes(searchLower) ||
+        (inst.expertise || '').toLowerCase().includes(searchLower)
+      );
+    });
+  }, [instructors, debouncedSearch]);
 
   const columns: Column<InstructorProfile>[] = [
     {
-      header: 'User ID',
-      render: (inst) => (
-        <span className="font-mono text-xs text-gray-900 bg-gray-100 px-2 py-1 rounded">
-          {inst.userId}
-        </span>
-      ),
+      header: 'Giảng viên',
+      render: (inst) => {
+        const name = getInstructorUserName(inst.userId);
+        const email = getInstructorUserEmail(inst.userId);
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-900">
+              {name || (
+                <span className="font-mono text-xs text-gray-500">
+                  {getInstructorUserId(inst.userId)}
+                </span>
+              )}
+            </span>
+            {email && <span className="text-xs text-gray-500">{email}</span>}
+          </div>
+        );
+      },
     },
     {
       header: 'Chuyên môn',
@@ -123,6 +223,32 @@ export default function AdminInstructorsPage() {
       ),
     },
     {
+      header: 'Trạng thái',
+      className: 'text-center',
+      render: (inst) => {
+        const meta = STATUS_META[inst.status ?? 'approved'] ?? STATUS_META.approved;
+        const Icon = meta.icon;
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${meta.className}`}
+            >
+              <Icon className="w-3 h-3" />
+              {meta.label}
+            </span>
+            {inst.status === 'rejected' && inst.rejectReason && (
+              <span
+                className="text-[10px] text-red-400 line-clamp-1 max-w-40"
+                title={inst.rejectReason}
+              >
+                {inst.rejectReason}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       header: 'Thông số',
       render: (inst) => (
         <div className="flex flex-col gap-1.5">
@@ -136,9 +262,7 @@ export default function AdminInstructorsPage() {
           </div>
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <Star className="w-3.5 h-3.5 text-amber-500" />
-            <span>
-              {inst.rating ? inst.rating.toFixed(1) : 'Chưa có'} điểm
-            </span>
+            <span>{inst.rating ? inst.rating.toFixed(1) : 'Chưa có'} điểm</span>
           </div>
         </div>
       ),
@@ -161,51 +285,58 @@ export default function AdminInstructorsPage() {
         ),
     },
     {
-      header: 'Ngày đăng ký',
-      render: (inst) => (
-        <span className="text-gray-500">
-          {inst.createdAt
-            ? new Date(inst.createdAt).toLocaleDateString('vi-VN')
-            : 'N/A'}
-        </span>
-      ),
-    },
-    {
       header: 'Thao tác',
       className: 'text-right',
-      render: (inst) => (
-        <div className="flex justify-end gap-1.5">
-          <Link
-            href={`/admin/users/instructor-management/${inst._id}`}
-            className="p-1.5 rounded-md hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
-            title="Xem chi tiết"
-          >
-            <Eye className="w-4 h-4" />
-          </Link>
-          <button
-            onClick={() => {
-              setEditTarget(inst);
-              setFormOpen(true);
-            }}
-            className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-            title="Chỉnh sửa hồ sơ"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => handleDelete(inst._id)}
-            disabled={isDeleting === inst._id}
-            className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Xóa hồ sơ"
-          >
-            {isDeleting === inst._id ? (
-              <Loader2 className="w-4 h-4 animate-spin text-red-500" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-      ),
+      render: (inst) => {
+        const isPending = (inst.status ?? 'approved') === 'pending';
+        return (
+          <div className="flex justify-end">
+            <RowActionsMenu
+              actions={[
+                {
+                  label: 'Xem chi tiết',
+                  icon: Eye,
+                  href: `/admin/users/instructor-management/${inst._id}`,
+                },
+                {
+                  label: 'Duyệt giảng viên',
+                  icon: Check,
+                  hidden: !isPending,
+                  disabled: actingId === inst._id,
+                  onClick: () => handleApprove(inst),
+                },
+                {
+                  label: 'Từ chối',
+                  icon: X,
+                  variant: 'destructive',
+                  hidden: !isPending,
+                  disabled: actingId === inst._id,
+                  onClick: () => {
+                    setRejectReason('');
+                    setRejectTarget(inst);
+                  },
+                },
+                {
+                  label: 'Chỉnh sửa hồ sơ',
+                  icon: Pencil,
+                  separatorBefore: true,
+                  onClick: () => {
+                    setEditTarget(inst);
+                    setFormOpen(true);
+                  },
+                },
+                {
+                  label: 'Xóa hồ sơ',
+                  icon: Trash2,
+                  variant: 'destructive',
+                  disabled: actingId === inst._id,
+                  onClick: () => handleDelete(inst),
+                },
+              ]}
+            />
+          </div>
+        );
+      },
     },
   ];
 
@@ -218,7 +349,7 @@ export default function AdminInstructorsPage() {
             Quản lý giảng viên
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Xem và quản lý hồ sơ của các giảng viên trên hệ thống
+            Duyệt đơn đăng ký và quản lý hồ sơ giảng viên trên hệ thống
           </p>
         </div>
         <ActionButton
@@ -238,8 +369,15 @@ export default function AdminInstructorsPage() {
           <FilterInput
             value={search}
             onChange={setSearch}
-            placeholder="Tìm kiếm theo ID User, chuyên môn..."
+            placeholder="Tìm theo tên, email, chuyên môn..."
             className="w-full sm:w-80"
+          />
+          <FilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={STATUS_FILTER_OPTIONS}
+            icon
+            className="w-full sm:w-56"
           />
         </div>
 
@@ -260,6 +398,57 @@ export default function AdminInstructorsPage() {
         onSave={handleSave}
         editInstructor={editTarget}
       />
+
+      {/* Reject reason dialog */}
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRejectTarget(null);
+            setRejectReason('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-5 h-5" />
+              Từ chối đơn giảng viên
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2">
+            <p className="text-sm text-gray-600">
+              Nhập lý do từ chối (tùy chọn). Lý do sẽ được gửi qua email cho giảng viên.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="VD: Hồ sơ thiếu thông tin chuyên môn..."
+              className="w-full h-28 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none"
+            />
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectTarget(null);
+                setRejectReason('');
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!!actingId}
+              onClick={handleRejectConfirm}
+            >
+              Xác nhận từ chối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

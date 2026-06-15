@@ -22,8 +22,8 @@ export const performanceApi = {
   },
 
   /**
-   * POST /performances — Tạo tiết mục mới.
-   * - Instructor: status tự động = pending, BE tạo Subscription plan nếu có price+billingCycle.
+   * POST /performances — Tạo tiết mục mới (mua đứt theo `price`).
+   * - Instructor: status tự động = pending, instructorId gán từ token.
    * - Admin: có thể chỉ định status.
    */
   create: async (body: CreatePerformanceInput) => {
@@ -34,7 +34,7 @@ export const performanceApi = {
     return res.data;
   },
 
-  /** GET /performances/:id — Lấy chi tiết tiết mục (kèm subscription plan nếu có) */
+  /** GET /performances/:id — Lấy chi tiết tiết mục */
   getById: async (id: string) => {
     const res = await axiosInstance.get<APIResponse<Performance>>(`/performances/${id}`);
     return res.data;

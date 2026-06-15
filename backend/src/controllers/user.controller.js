@@ -7,7 +7,7 @@ exports.getMe = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: 'Không tìm thấy người dùng',
       });
     }
 
@@ -43,7 +43,7 @@ exports.updateMe = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found',
+        message: 'Không tìm thấy người dùng',
       });
     }
 
@@ -82,7 +82,7 @@ exports.getAll = async (req, res, next) => {
 exports.getOne = async (req, res, next) => {
   try {
   const doc = await User.findById(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
 };
@@ -104,7 +104,7 @@ exports.updateOne = async (req, res, next) => {
   delete req.body.passwordHash;
   delete req.body.password;
   const doc = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
   await writeAuditLog(req, { action: 'UPDATE', resource: 'User', resourceId: doc._id, after: doc.toJSON() });
   res.status(200).json({ success: true, message: 'Cập nhật người dùng thành công', data: doc });
   } catch (err) { next(err); }
@@ -115,7 +115,7 @@ exports.deleteOne = async (req, res, next) => {
   try {
   const user = await User.findById(req.params.id);
   if (!user) {
-    return res.status(404).json({ success: false, message: 'No user found with that ID' });
+    return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
   }
   await user.softDelete();
   await writeAuditLog(req, { action: 'DELETE', resource: 'User', resourceId: user._id, before: user.toJSON() });

@@ -67,6 +67,46 @@ export const registerSchema = z
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 
+// ─── Register Instructor Schema ──────────────────────────────────────────────
+
+export const registerInstructorSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Vui lòng nhập họ tên')
+    .max(100, 'Họ tên không được quá 100 ký tự'),
+
+  email: z
+    .string()
+    .min(1, 'Vui lòng nhập email')
+    .email('Email không đúng định dạng'),
+
+  password: z
+    .string()
+    .min(1, 'Vui lòng nhập mật khẩu')
+    .min(8, 'Mật khẩu tối thiểu 8 ký tự')
+    .max(100, 'Mật khẩu không được quá 100 ký tự'),
+
+  bio: z.string().max(1000, 'Tiểu sử không được quá 1000 ký tự').optional().or(z.literal('')),
+
+  expertise: z
+    .string()
+    .max(200, 'Chuyên môn không được quá 200 ký tự')
+    .optional()
+    .or(z.literal('')),
+
+  websiteUrl: z
+    .string()
+    .url('Đường dẫn website không hợp lệ')
+    .optional()
+    .or(z.literal('')),
+
+  bankName: z.string().optional().or(z.literal('')),
+  accountName: z.string().optional().or(z.literal('')),
+  accountNumber: z.string().optional().or(z.literal('')),
+});
+
+export type RegisterInstructorFormValues = z.infer<typeof registerInstructorSchema>;
+
 // ─── Password strength helper ─────────────────────────────────────────────────
 
 export function getPasswordStrength(password: string): number {

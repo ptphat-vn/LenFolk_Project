@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "@/setup/axios";
-import { TransactionRecord } from "@/types/transaction-records.type";
+import { PurchaseResponse } from "@/types/payment.type";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -9,16 +9,15 @@ type ApiResponse<T> = {
 
 type PurchasePerformancePayload = {
   performanceId: string;
-  paymentMethod: string;
   couponCode?: string;
 };
 
 export const usePurchasePerformance = () => {
   return useMutation({
-    mutationFn: async ({ performanceId, paymentMethod, couponCode }: PurchasePerformancePayload) => {
-      const response = await axios.post<ApiResponse<TransactionRecord>>(
+    mutationFn: async ({ performanceId, couponCode }: PurchasePerformancePayload) => {
+      const response = await axios.post<ApiResponse<PurchaseResponse>>(
         `/performances/${performanceId}/purchase`,
-        { paymentMethod, couponCode }
+        couponCode ? { couponCode } : {}
       );
       return response.data.data;
     },

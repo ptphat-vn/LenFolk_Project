@@ -81,7 +81,7 @@ exports.getOne = async (req, res, next) => {
     if (!lesson)
       return res
         .status(404)
-        .json({ success: false, message: 'No lesson found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy bài học' });
 
     // Privileged roles bypass subscription check
     const isPrivileged =
@@ -94,12 +94,12 @@ exports.getOne = async (req, res, next) => {
       if (!course)
         return res
           .status(404)
-          .json({ success: false, message: 'Parent course not found' });
+          .json({ success: false, message: 'Không tìm thấy khóa học' });
 
       if (lesson.status !== 'published' || course.status !== 'published') {
         return res
           .status(404)
-          .json({ success: false, message: 'No lesson found with that ID' });
+          .json({ success: false, message: 'Không tìm thấy bài học' });
       }
 
       // Khóa có phí nhưng bài này là preview miễn phí → cho xem thẳng
@@ -109,7 +109,7 @@ exports.getOne = async (req, res, next) => {
             .status(401)
             .json({
               success: false,
-              message: 'Please log in to access this premium lesson.',
+              message: 'Vui lòng đăng nhập để truy cập bài học trả phí này.',
             });
         }
 
@@ -120,7 +120,7 @@ exports.getOne = async (req, res, next) => {
             .json({
               success: false,
               message:
-                'This lesson belongs to a premium course. Please subscribe to access.',
+                'Bài học này thuộc khóa học trả phí. Vui lòng mua để truy cập.',
             });
         }
       }
@@ -143,7 +143,7 @@ exports.createOne = async (req, res, next) => {
     if (!course)
       return res
         .status(404)
-        .json({ success: false, message: 'No course found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy khóa học' });
 
     if (
       req.user.role === 'instructor' &&
@@ -153,7 +153,7 @@ exports.createOne = async (req, res, next) => {
         .status(403)
         .json({
           success: false,
-          message: 'You do not have permission to add lessons to this course',
+          message: 'Bạn không có quyền thêm bài học vào khóa học này',
         });
     }
 
@@ -187,7 +187,7 @@ exports.updateOne = async (req, res, next) => {
     if (!doc)
       return res
         .status(404)
-        .json({ success: false, message: 'No document found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy bài học' });
     res
       .status(200)
       .json({
@@ -207,7 +207,7 @@ exports.deleteOne = async (req, res, next) => {
     if (!lesson)
       return res
         .status(404)
-        .json({ success: false, message: 'No lesson found with that ID' });
+        .json({ success: false, message: 'Không tìm thấy bài học' });
 
     await Lesson.findByIdAndDelete(req.params.id);
     await Course.findByIdAndUpdate(lesson.courseId, {

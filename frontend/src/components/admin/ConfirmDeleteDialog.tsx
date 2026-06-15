@@ -17,6 +17,10 @@ interface ConfirmDeleteDialogProps {
   description: string;
   isDeleting?: boolean;
   onConfirm: () => void;
+  /** Nhãn nút xác nhận (mặc định "Xóa") */
+  confirmLabel?: string;
+  /** Nhãn nút khi đang xử lý (mặc định "Đang xóa...") */
+  loadingLabel?: string;
 }
 
 export function ConfirmDeleteDialog({
@@ -26,6 +30,8 @@ export function ConfirmDeleteDialog({
   description,
   isDeleting,
   onConfirm,
+  confirmLabel = 'Xóa',
+  loadingLabel = 'Đang xóa...',
 }: ConfirmDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,7 +61,7 @@ export function ConfirmDeleteDialog({
             className="bg-red-500 hover:bg-red-600 text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isDeleting ? 'Đang xóa...' : 'Xóa'}
+            {isDeleting ? loadingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

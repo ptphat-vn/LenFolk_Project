@@ -347,6 +347,7 @@ export default function UsersPlansPage() {
           emptyIcon={Users}
           emptyMessage="Không tìm thấy người dùng"
           keyExtractor={(u) => u._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
           onRowClick={(u) => setSelectedUser(u)}
         />
 

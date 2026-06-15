@@ -8,6 +8,9 @@ const {
 
 
 
+// Populate TÊN + email người dùng thay vì chỉ trả userId.
+const USER_FIELDS = 'name email avatar';
+
 exports.getAll = async (req, res, next) => {
   try {
   const queryObj = { ...req.query };
@@ -16,15 +19,21 @@ exports.getAll = async (req, res, next) => {
   const page = req.query.page * 1 || 1;
   const limit = req.query.limit * 1 || 100;
   const skip = (page - 1) * limit;
-  const docs = await InstructorProfile.find(JSON.parse(queryStr)).sort(req.query.sort ? req.query.sort.split(',').join(' ') : '-createdAt').skip(skip).limit(limit).select('-__v');
+  const docs = await InstructorProfile.find(JSON.parse(queryStr))
+    .sort(req.query.sort ? req.query.sort.split(',').join(' ') : '-createdAt')
+    .skip(skip).limit(limit).select('-__v')
+    .populate({ path: 'userId', select: USER_FIELDS })
+    .populate({ path: 'reviewedBy', select: 'name email' });
   res.status(200).json({ success: true, results: docs.length, data: docs });
   } catch (err) { next(err); }
 };
 
 exports.getOne = async (req, res, next) => {
   try {
-  const doc = await InstructorProfile.findById(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  const doc = await InstructorProfile.findById(req.params.id)
+    .populate({ path: 'userId', select: USER_FIELDS })
+    .populate({ path: 'reviewedBy', select: 'name email' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
 };
@@ -39,7 +48,7 @@ exports.createOne = async (req, res, next) => {
 exports.updateOne = async (req, res, next) => {
   try {
   const doc = await InstructorProfile.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });
   } catch (err) { next(err); }
 };
@@ -47,7 +56,7 @@ exports.updateOne = async (req, res, next) => {
 exports.deleteOne = async (req, res, next) => {
   try {
   const doc = await InstructorProfile.findByIdAndDelete(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
   res.status(200).json({ success: true, message: 'Xóa thành công', data: null });
   } catch (err) { next(err); }
 };

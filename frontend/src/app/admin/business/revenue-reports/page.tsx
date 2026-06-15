@@ -80,12 +80,7 @@ const STATUS_CONFIG: Record<
   { label: string; cls: string; icon: React.ElementType }
 > = {
   pending: {
-    label: 'Chờ xử lý',
-    cls: 'bg-gray-100 text-gray-600',
-    icon: Clock,
-  },
-  reviewing: {
-    label: 'Đang xét',
+    label: 'Chờ thanh toán',
     cls: 'bg-amber-50 text-amber-700',
     icon: Clock,
   },
@@ -188,6 +183,10 @@ export default function RevenueReportsPage() {
     [txs, statusFilter],
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const filteredTotal = useMemo(
+    () => filtered.reduce((sum, t) => sum + (t.amount ?? 0), 0),
+    [filtered],
+  );
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => setPage(1), [statusFilter]);
 
@@ -403,17 +402,24 @@ export default function RevenueReportsPage() {
         className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-[14px] font-semibold text-gray-900">
-            Lịch sử giao dịch
-          </h2>
+          <div className="flex items-baseline gap-3">
+            <h2 className="text-[14px] font-semibold text-gray-900">
+              Lịch sử giao dịch
+            </h2>
+            <span className="text-[12px] text-gray-400">
+              {filtered.length} giao dịch · Tổng:{' '}
+              <span className="font-semibold text-[#2d6a4f]">
+                {formatCurrency(filteredTotal)}
+              </span>
+            </span>
+          </div>
           <FilterSelect
             value={statusFilter}
             onChange={(v) => setStatusFilter(v as typeof statusFilter)}
             options={[
               { value: 'success', label: 'Hoàn tất' },
-              { value: 'reviewing', label: 'Đang xét' },
-              { value: 'pending', label: 'Chờ xử lý' },
-              { value: 'failed', label: 'Từ chối' },
+              { value: 'pending', label: 'Chờ thanh toán' },
+              { value: 'failed', label: 'Thất bại' },
               { value: 'refunded', label: 'Hoàn tiền' },
             ]}
             placeholder="Tất cả trạng thái"
@@ -428,6 +434,18 @@ export default function RevenueReportsPage() {
           emptyIcon={CreditCard}
           emptyMessage="Không có giao dịch nào"
           keyExtractor={(t) => t._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
+          footer={
+            <tr>
+              <td colSpan={4} className="px-5 py-3.5 text-right text-[12px] font-semibold uppercase tracking-wider text-gray-500">
+                Tổng cộng ({filtered.length.toLocaleString('vi-VN')} giao dịch)
+              </td>
+              <td className="px-5 py-3.5 text-[14px] font-bold text-[#2d6a4f]">
+                {filteredTotal.toLocaleString('vi-VN')} ₫
+              </td>
+              <td colSpan={2} />
+            </tr>
+          }
         />
 
         {/* Pagination */}

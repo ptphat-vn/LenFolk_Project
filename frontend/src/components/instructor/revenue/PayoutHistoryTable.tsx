@@ -127,6 +127,7 @@ export const PayoutHistoryTable = ({
         emptyIcon={CreditCard}
         emptyMessage="Bạn chưa có yêu cầu rút tiền nào"
         keyExtractor={(p) => p._id}
+        indexOffset={(page - 1) * PAGE_SIZE}
       />
 
       {!isLoading && payouts.length > PAGE_SIZE && (

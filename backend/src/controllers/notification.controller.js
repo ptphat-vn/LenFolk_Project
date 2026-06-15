@@ -16,9 +16,9 @@ exports.getAll = async (req, res, next) => {
 exports.getOne = async (req, res, next) => {
   try {
   const doc = await Notification.findById(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   if (!doc.userId.equals(req.user._id) && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Access denied' });
+    return res.status(403).json({ success: false, message: 'Không có quyền truy cập' });
   }
   res.status(200).json({ success: true, data: doc });
   } catch (err) { next(err); }
@@ -34,9 +34,9 @@ exports.createOne = async (req, res, next) => {
 exports.updateOne = async (req, res, next) => {
   try {
   const existing = await Notification.findById(req.params.id);
-  if (!existing) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!existing) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   if (!existing.userId.equals(req.user._id) && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Access denied' });
+    return res.status(403).json({ success: false, message: 'Không có quyền truy cập' });
   }
 
   const updates =
@@ -58,7 +58,7 @@ exports.updateOne = async (req, res, next) => {
 exports.deleteOne = async (req, res, next) => {
   try {
   const doc = await Notification.findByIdAndDelete(req.params.id);
-  if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
+  if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   res.status(200).json({ success: true, message: 'Xóa thành công', data: null });
   } catch (err) { next(err); }
 };

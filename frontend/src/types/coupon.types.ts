@@ -32,7 +32,8 @@ export interface CreateCouponInput {
 }
 
 /** Response khi mua khóa học/tiết mục (POST /courses|performances/:id/purchase).
- *  Trả về QR cố định + bank info lấy từ SystemSetting. */
+ *  SePay tạo QR động cho từng giao dịch; thanh toán được xác nhận tự động qua webhook.
+ *  Các field bank/transferNote có thể null tuỳ cấu hình SEPAY_* phía server. */
 export interface CoursePurchaseResponse {
   message: string;
   transactionId: string;

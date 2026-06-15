@@ -13,17 +13,25 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Eye,
   Loader2,
-  ImageOff,
+  RefreshCw,
   User as UserIcon,
+  BookOpen,
+  Ticket,
+  Hash,
+  ShieldCheck,
 } from 'lucide-react';
-import Image from 'next/image';
 import { paymentApi } from '@/lib/api/payment.api';
-import { TransactionRecord, TransactionStatus } from '@/types/payment.types';
+import {
+  TransactionRecord,
+  TransactionStatus,
+  txUserName,
+  txUserEmail,
+  txItemTitle,
+  txCouponCode,
+} from '@/types/payment.types';
 import { ActionButton } from '@/common/button/ActionButton';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -35,11 +43,10 @@ const item: Variants = {
 };
 
 const STATUS: Record<TransactionStatus, { label: string; cls: string; icon: typeof Clock }> = {
-  pending: { label: 'Chờ thanh toán', cls: 'bg-gray-100 text-gray-600', icon: Clock },
-  reviewing: { label: 'Đang xét duyệt', cls: 'bg-amber-50 text-amber-700', icon: Eye },
+  pending: { label: 'Chờ thanh toán', cls: 'bg-amber-50 text-amber-700', icon: Clock },
   success: { label: 'Hoàn tất', cls: 'bg-emerald-50 text-emerald-700', icon: CheckCircle2 },
-  failed: { label: 'Từ chối', cls: 'bg-red-50 text-red-600', icon: XCircle },
-  refunded: { label: 'Hoàn tiền', cls: 'bg-purple-50 text-purple-700', icon: CheckCircle2 },
+  failed: { label: 'Thất bại', cls: 'bg-red-50 text-red-600', icon: XCircle },
+  refunded: { label: 'Hoàn tiền', cls: 'bg-purple-50 text-purple-700', icon: RefreshCw },
 };
 
 function fmtMoney(n?: number) {
@@ -77,8 +84,7 @@ export default function TransactionDetailPage() {
   const [tx, setTx] = useState<TransactionRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
-  const [rejectMode, setRejectMode] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
+  const [refundMode, setRefundMode] = useState(false);
 
   const fetchTx = useCallback(async () => {
     try {
@@ -96,31 +102,16 @@ export default function TransactionDetailPage() {
     if (txId) fetchTx();
   }, [fetchTx, txId]);
 
-  const handleApprove = async () => {
+  const handleRefund = async () => {
     if (!tx) return;
     setActing(true);
     try {
-      await paymentApi.approve(tx._id);
-      toast.success('Đã duyệt giao dịch');
+      await paymentApi.update(tx._id, { status: 'refunded' });
+      toast.success('Đã hoàn tiền giao dịch');
+      setRefundMode(false);
       fetchTx();
     } catch {
-      toast.error('Lỗi khi duyệt giao dịch');
-    } finally {
-      setActing(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!tx) return;
-    setActing(true);
-    try {
-      await paymentApi.reject(tx._id, { rejectReason: rejectReason || undefined });
-      toast.success('Đã từ chối giao dịch');
-      setRejectMode(false);
-      setRejectReason('');
-      fetchTx();
-    } catch {
-      toast.error('Lỗi khi từ chối giao dịch');
+      toast.error('Lỗi khi hoàn tiền giao dịch');
     } finally {
       setActing(false);
     }
@@ -147,7 +138,7 @@ export default function TransactionDetailPage() {
 
   const st = STATUS[tx.status];
   const StIcon = st.icon;
-  const canReview = tx.status === 'reviewing';
+  const canRefund = tx.status === 'success';
   const typeLabel =
     tx.transactionType === 'course'
       ? 'Khoá học'
@@ -181,60 +172,44 @@ export default function TransactionDetailPage() {
             </p>
           </div>
         </div>
-        {canReview && (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={acting}
-              onClick={() => setRejectMode((v) => !v)}
-              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              <XCircle className="w-4 h-4 mr-1.5" /> Từ chối
-            </Button>
-            <Button
-              type="button"
-              disabled={acting}
-              onClick={handleApprove}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white"
-            >
-              {acting ? (
-                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 mr-1.5" />
-              )}
-              Duyệt
-            </Button>
-          </div>
+        {canRefund && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={acting}
+            onClick={() => setRefundMode((v) => !v)}
+            className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+          >
+            <RefreshCw className="w-4 h-4 mr-1.5" /> Hoàn tiền
+          </Button>
         )}
       </motion.div>
 
-      {/* Reject panel */}
-      {canReview && rejectMode && (
+      {/* Refund panel */}
+      {canRefund && refundMode && (
         <motion.div
           variants={item}
-          className="bg-red-50 border border-red-100 rounded-2xl p-5 space-y-3"
+          className="bg-purple-50 border border-purple-100 rounded-2xl p-5 space-y-3"
         >
-          <p className="text-[13px] font-semibold text-red-700">Lý do từ chối (tuỳ chọn)</p>
-          <Textarea
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            rows={3}
-            placeholder="VD: Số tiền không khớp, ảnh minh chứng không hợp lệ..."
-            className="border-red-200 focus:border-red-400 bg-white"
-          />
+          <p className="text-[13px] font-semibold text-purple-700">
+            Hoàn tiền giao dịch này?
+          </p>
+          <p className="text-[12px] text-purple-600">
+            Trạng thái sẽ chuyển sang &quot;Hoàn tiền&quot;. Thao tác này dùng khi cần
+            hoàn lại tiền cho người mua theo thoả thuận.
+          </p>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setRejectMode(false)}>
+            <Button type="button" variant="outline" onClick={() => setRefundMode(false)}>
               Huỷ
             </Button>
             <Button
               type="button"
               disabled={acting}
-              onClick={handleReject}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleRefund}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               {acting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
-              Xác nhận từ chối
+              Xác nhận hoàn tiền
             </Button>
           </div>
         </motion.div>
@@ -259,66 +234,63 @@ export default function TransactionDetailPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-3 pt-2 border-t border-gray-100">
+            <InfoRow icon={UserIcon} label="Người mua">
+              <span className="text-right">
+                <span className="block">{txUserName(tx.userId)}</span>
+                {txUserEmail(tx.userId) && (
+                  <span className="block text-[12px] font-normal text-gray-500">
+                    {txUserEmail(tx.userId)}
+                  </span>
+                )}
+              </span>
+            </InfoRow>
+            <InfoRow icon={BookOpen} label="Nội dung">
+              <span className="text-right text-[13px]">
+                {txItemTitle(tx.courseId) ?? txItemTitle(tx.performanceId) ?? '—'}
+              </span>
+            </InfoRow>
             <InfoRow icon={Tag} label="Loại giao dịch">{typeLabel}</InfoRow>
             <InfoRow icon={CreditCard} label="Phương thức">
               {tx.paymentMethod ?? '—'}
             </InfoRow>
+            {tx.payCode && (
+              <InfoRow icon={Hash} label="Mã thanh toán">
+                <span className="font-mono text-[12px]">{tx.payCode}</span>
+              </InfoRow>
+            )}
+            <InfoRow icon={Ticket} label="Mã giảm giá">
+              {txCouponCode(tx.couponId) ?? '—'}
+            </InfoRow>
             <InfoRow icon={Tag} label="Giảm giá">
               {tx.discountAmount ? fmtMoney(tx.discountAmount) : '—'}
             </InfoRow>
-            <InfoRow icon={UserIcon} label="Người mua">
-              <span className="font-mono text-[12px]">
-                {typeof tx.userId === 'string' ? tx.userId.slice(-8) : '—'}
-              </span>
-            </InfoRow>
+            {tx.reviewedBy && (
+              <InfoRow icon={ShieldCheck} label="Người xử lý">
+                <span className="text-[13px]">{txUserName(tx.reviewedBy)}</span>
+              </InfoRow>
+            )}
             <InfoRow icon={CalendarClock} label="Tạo lúc">
               <span className="text-[13px] font-normal text-gray-600">{fmtDate(tx.createdAt)}</span>
             </InfoRow>
             <InfoRow icon={CalendarClock} label="Thanh toán lúc">
               <span className="text-[13px] font-normal text-gray-600">{fmtDate(tx.paidAt)}</span>
             </InfoRow>
-            {tx.reviewedAt && (
-              <InfoRow icon={CalendarClock} label="Duyệt lúc">
-                <span className="text-[13px] font-normal text-gray-600">{fmtDate(tx.reviewedAt)}</span>
-              </InfoRow>
-            )}
           </div>
-
-          {tx.rejectReason && (
-            <div className="rounded-xl bg-red-50 border border-red-100 p-3">
-              <p className="text-[12px] font-semibold text-red-600 mb-0.5">Lý do từ chối</p>
-              <p className="text-[13px] text-red-700">{tx.rejectReason}</p>
-            </div>
-          )}
         </motion.div>
 
-        {/* Proof */}
+        {/* SePay note */}
         <motion.div
           variants={item}
           className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
         >
           <h3 className="text-[14px] font-bold text-gray-900 mb-3 flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-[#2d6a4f]" /> Minh chứng chuyển khoản
+            <Receipt className="w-4 h-4 text-[#2d6a4f]" /> Thanh toán
           </h3>
-          {tx.proofImageUrl ? (
-            <a href={tx.proofImageUrl} target="_blank" rel="noopener noreferrer" className="block group">
-              <div className="relative w-full aspect-3/4 rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                <Image
-                  src={tx.proofImageUrl}
-                  alt="Minh chứng"
-                  fill
-                  className="object-contain group-hover:scale-[1.02] transition-transform"
-                  unoptimized
-                />
-              </div>
-              <p className="text-[12px] text-center text-gray-400 mt-2">Bấm để xem ảnh gốc ↗</p>
-            </a>
-          ) : (
-            <div className="w-full aspect-3/4 rounded-xl border border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center text-gray-300">
-              <ImageOff className="w-10 h-10 mb-2" />
-              <p className="text-[12px] text-gray-400">Chưa có minh chứng</p>
-            </div>
-          )}
+          <p className="text-[13px] text-gray-500 leading-relaxed">
+            Giao dịch được xác nhận tự động qua webhook SePay khi người mua chuyển
+            khoản đúng nội dung. Admin không cần duyệt thủ công — chỉ xử lý hoàn tiền
+            khi cần.
+          </p>
         </motion.div>
       </div>
     </motion.div>

@@ -9,15 +9,12 @@ export type TransactionRecord = {
   currency: "VND" | "USD";
   paymentMethod: string;
   gatewayTxId: string | null;
-  status: "pending" | "reviewing" | "success" | "failed" | "refunded";
+  status: "pending" | "success" | "failed" | "refunded";
   gatewayProvider: string | null;
   paidAt: string | null;
   couponId: string | null;
   discountAmount: number;
-  proofImageUrl: string | null;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-  rejectReason: string | null;
+  payCode: string | null;
   createdAt: string;
   updatedAt: string;
 };
