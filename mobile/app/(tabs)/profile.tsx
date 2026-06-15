@@ -174,7 +174,7 @@ export default function ProfileTabScreen() {
           <View className="bg-[#E2E8D3] rounded-3xl overflow-hidden border border-[#D6DDC6]/30">
             {/* Item 1: BPM */}
             <TouchableOpacity
-              onPress={() => Alert.alert("Tốc độ mặc định", "Tùy chỉnh BPM sẽ được áp dụng khi backend có API cài đặt học tập.")}
+              onPress={() => Alert.alert("Tốc độ mặc định", "Tính năng tùy chỉnh tốc độ (BPM) sẽ sớm ra mắt.")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
             >
               <View className="flex-row items-center flex-1 pr-4">

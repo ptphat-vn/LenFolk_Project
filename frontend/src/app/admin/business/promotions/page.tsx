@@ -410,6 +410,7 @@ export default function PromotionsPage() {
           emptyIcon={Tag}
           emptyMessage="Không có mã coupon nào"
           keyExtractor={(c) => c._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
 
         {/* Pagination */}

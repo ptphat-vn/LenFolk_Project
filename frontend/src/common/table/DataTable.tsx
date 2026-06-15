@@ -18,18 +18,38 @@ interface DataTableProps<T> {
   keyExtractor: (item: T) => string;
   onRowClick?: (item: T) => void;
   minRows?: number;
+  /** Hàng tổng/footer hiển thị dưới bảng (vd tổng số tiền). Bỏ qua khi loading/không có dữ liệu. */
+  footer?: ReactNode;
+  /** Hiển thị cột STT (số thứ tự) tự động ở đầu bảng. Mặc định bật. */
+  showIndex?: boolean;
+  /** Offset cho STT khi bảng có phân trang (vd (page-1)*pageSize). Mặc định 0. */
+  indexOffset?: number;
 }
 
-export function DataTable<T>({ 
-  columns, 
-  data, 
-  isLoading, 
-  emptyIcon: EmptyIcon, 
+export function DataTable<T>({
+  columns: rawColumns,
+  data,
+  isLoading,
+  emptyIcon: EmptyIcon,
   emptyMessage = "Không có dữ liệu",
   keyExtractor,
   onRowClick,
-  minRows = 10
+  minRows = 10,
+  footer,
+  showIndex = true,
+  indexOffset = 0,
 }: DataTableProps<T>) {
+  const indexColumn: Column<T> = {
+    header: 'STT',
+    className: 'text-center w-14',
+    render: (_item, index) => (
+      <span className="text-[12px] text-gray-400 tabular-nums">
+        {indexOffset + index + 1}
+      </span>
+    ),
+  };
+  const columns = showIndex ? [indexColumn, ...rawColumns] : rawColumns;
+
   return (
     <div className="overflow-x-auto min-h-[400px]">
       <table className="w-full text-left border-collapse">
@@ -93,6 +113,11 @@ export function DataTable<T>({
             </>
           )}
         </tbody>
+        {!isLoading && data.length > 0 && footer && (
+          <tfoot className="border-t-2 border-gray-100 bg-gray-50/60">
+            {footer}
+          </tfoot>
+        )}
       </table>
     </div>
   );

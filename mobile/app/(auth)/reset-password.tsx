@@ -1,23 +1,48 @@
 import React, { useState } from "react";
-import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { ActivityIndicator, Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useResetPassword } from "@/hooks/auth/use-reset-password";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { email, code } = useLocalSearchParams<{ email?: string; code?: string }>();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const resetMutation = useResetPassword();
 
   const handleSubmit = () => {
     if (password.length < 8 || password !== confirmPassword) {
       Alert.alert("Mật khẩu không hợp lệ", "Mật khẩu cần ít nhất 8 ký tự và phải trùng khớp.");
       return;
     }
-    Alert.alert("Chưa hỗ trợ", "Backend chưa có endpoint đặt lại mật khẩu.");
+    if (!email || !code) {
+      Alert.alert("Lỗi", "Thiếu thông tin xác thực. Vui lòng thực hiện lại từ bước quên mật khẩu.");
+      return;
+    }
+
+    resetMutation.mutate(
+      { email, code, newPassword: password },
+      {
+        onSuccess: () => {
+          Alert.alert(
+            "Thành công",
+            "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
+            [{ text: "Đăng nhập", onPress: () => router.replace("/login") }],
+          );
+        },
+        onError: (error: any) => {
+          Alert.alert(
+            "Không thể đặt lại mật khẩu",
+            error?.response?.data?.message || "Mã không đúng hoặc đã hết hạn. Vui lòng thử lại.",
+          );
+        },
+      },
+    );
   };
 
   return (
@@ -100,6 +125,7 @@ export default function ResetPasswordScreen() {
         <AnimatedBlock variant="button" delay={240} className="w-full mb-4">
           <TouchableOpacity
             activeOpacity={0.9}
+            disabled={resetMutation.isPending}
             className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
             onPress={handleSubmit}
           >
@@ -107,10 +133,14 @@ export default function ResetPasswordScreen() {
               className="text-white text-base font-bold ml-4"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
-              Tiếp tục
+              {resetMutation.isPending ? "Đang xử lý..." : "Tiếp tục"}
             </Text>
             <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
+              {resetMutation.isPending ? (
+                <ActivityIndicator color="#8E9E6E" />
+              ) : (
+                <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
+              )}
             </View>
           </TouchableOpacity>
         </AnimatedBlock>

@@ -39,12 +39,12 @@ export const useLogin = () => {
 
       return response.data.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       const token = getAuthToken(data);
       const refreshToken = getRefreshToken(data);
 
       if (data.user && token) {
-        setAuth(data.user, token, refreshToken);
+        await setAuth(data.user, token, refreshToken);
       }
     },
   });

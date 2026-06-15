@@ -16,10 +16,22 @@ export interface CoursePlan {
   isActive?: boolean;
 }
 
+/** Ref giảng viên: string id khi gửi lên, object được populate khi GET. */
+export type InstructorRef =
+  | string
+  | { _id: string; name?: string; email?: string; avatar?: string };
+
+/** Lấy tên giảng viên từ ref (đã populate hoặc id thuần) */
+export function instructorRefName(ref: InstructorRef | null | undefined): string | undefined {
+  if (!ref) return undefined;
+  if (typeof ref === 'string') return undefined;
+  return ref.name || ref.email;
+}
+
 /** Schema Course trả về từ API. Giá KHÔNG nằm trên course — đọc từ `plan`. */
 export interface Course {
   _id: string;
-  instructorId?: string;
+  instructorId?: InstructorRef;
   title: string;
   description?: string;
   thumbnail?: string;

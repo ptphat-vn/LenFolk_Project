@@ -4,17 +4,13 @@ import { User } from '@/types/user.types';
 import { useState } from 'react';
 import {
   BarChart2,
-  BookOpen,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ClipboardCheck,
   LayoutDashboard,
   LogOut,
-  MessageSquare,
-  Users,
   User as UserIcon,
-  PlayCircle
+  PlayCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -41,11 +37,6 @@ const NAV_GROUPS = [
         href: '/instructor/performances',
         icon: PlayCircle,
       },
-      {
-        label: 'Học viên',
-        href: '/instructor/students',
-        icon: Users,
-      },
     ],
   },
   {
@@ -55,16 +46,6 @@ const NAV_GROUPS = [
         label: 'Doanh thu',
         href: '/instructor/revenue',
         icon: BarChart2,
-      },
-    ],
-  },
-  {
-    label: 'Tương tác',
-    items: [
-      {
-        label: 'Tin nhắn',
-        href: '/instructor/messages',
-        icon: MessageSquare,
       },
     ],
   },

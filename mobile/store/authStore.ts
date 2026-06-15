@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "@/lib/secure-storage";
 import { User } from "@/types/users.type";
 
 type AuthState = {
@@ -23,25 +23,25 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAuth: async (user, token, refreshToken) => {
     set({ user, token, refreshToken: refreshToken ?? null });
-    await AsyncStorage.setItem("user", JSON.stringify(user));
-    await AsyncStorage.setItem("token", token);
+    await secureStorage.setItem("user", JSON.stringify(user));
+    await secureStorage.setItem("token", token);
 
     if (refreshToken) {
-      await AsyncStorage.setItem("refreshToken", refreshToken);
+      await secureStorage.setItem("refreshToken", refreshToken);
     }
   },
 
   clearAuth: async () => {
     set({ user: null, token: null, refreshToken: null });
-    await AsyncStorage.multiRemove(["user", "token", "refreshToken"]);
+    await secureStorage.multiRemove(["user", "token", "refreshToken"]);
   },
 
   checkAuth: async () => {
     try {
       const [user, token, refreshToken] = await Promise.all([
-        AsyncStorage.getItem("user"),
-        AsyncStorage.getItem("token"),
-        AsyncStorage.getItem("refreshToken"),
+        secureStorage.getItem("user"),
+        secureStorage.getItem("token"),
+        secureStorage.getItem("refreshToken"),
       ]);
 
       if (user && token) {
@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set((state) => {
       if (!state.user) return state;
       const mergedUser = { ...state.user, ...updatedFields };
-      AsyncStorage.setItem("user", JSON.stringify(mergedUser)).catch(console.error);
+      secureStorage.setItem("user", JSON.stringify(mergedUser)).catch(console.error);
       return { user: mergedUser };
     });
   },

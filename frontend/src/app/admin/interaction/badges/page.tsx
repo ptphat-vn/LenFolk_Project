@@ -324,6 +324,7 @@ export default function AdminBadgesPage() {
           emptyIcon={Award}
           emptyMessage="Chưa có huy hiệu nào"
           keyExtractor={(b) => b._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
         {!isLoading && filtered.length > PAGE_SIZE && (
           <div className="px-5 py-1 border-t border-gray-100">

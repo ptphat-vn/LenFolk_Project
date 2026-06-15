@@ -1,3 +1,5 @@
+import type { InstructorRef } from './course.types';
+
 export type PerformanceStatus = 'pending' | 'published' | 'archived';
 
 export interface PerformanceDocument {
@@ -11,7 +13,7 @@ export interface PerformanceDocument {
 
 export interface Performance {
   _id: string;
-  instructorId?: string | { _id: string; name?: string };
+  instructorId?: InstructorRef;
   title: string;
   description?: string;
   thumbnail?: string;

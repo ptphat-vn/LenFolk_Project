@@ -1,5 +1,6 @@
 import { SplashScreen, Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 
@@ -47,16 +48,18 @@ export default function RootLayout() {
   }, [user, token, segments, navigationState?.key, isCheckingAuth, router]);
 
   return (
-    <QueryProvider>
-      <SafeAreaProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="lesson/[id]" />
-          <Stack.Screen name="practice/[lessonId]" />
-        </Stack>
-        <StatusBar style="dark" />
-      </SafeAreaProvider>
-    </QueryProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryProvider>
+        <SafeAreaProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="lesson/[id]" />
+            <Stack.Screen name="practice/[lessonId]" />
+          </Stack>
+          <StatusBar style="dark" />
+        </SafeAreaProvider>
+      </QueryProvider>
+    </GestureHandlerRootView>
   );
 }

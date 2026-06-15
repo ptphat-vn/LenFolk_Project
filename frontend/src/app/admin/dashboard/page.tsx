@@ -116,13 +116,8 @@ const txStatusStyle: Record<
     cls: 'text-emerald-700 bg-emerald-50 border border-emerald-200',
     icon: CheckCircle2,
   },
-  reviewing: {
-    label: 'Đang xét',
-    cls: 'text-amber-600 bg-amber-50 border border-amber-200',
-    icon: Clock,
-  },
   pending: {
-    label: 'Đang xử lý',
+    label: 'Chờ thanh toán',
     cls: 'text-amber-600 bg-amber-50 border border-amber-200',
     icon: Clock,
   },
@@ -754,7 +749,7 @@ export default function DashboardPage() {
                       className={`w-4 h-4 shrink-0 ${
                         tx.status === 'success'
                           ? 'text-emerald-500'
-                          : tx.status === 'pending' || tx.status === 'reviewing'
+                          : tx.status === 'pending'
                             ? 'text-amber-500'
                             : 'text-red-500'
                       }`}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Clock, XCircle } from 'lucide-react';
 import { loginSchema, type LoginFormValues } from '@/schema/auth.schema';
 import { BrandPanel } from '@/components/auth/BrandPanel';
 import { useAuthStore } from '@/stores/authStore';
@@ -22,6 +22,10 @@ const dashboardFor = (role?: string) =>
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [instructorNotice, setInstructorNotice] = useState<{
+    type: 'pending' | 'rejected';
+    message: string;
+  } | null>(null);
   const setToken = useAuthStore((state) => state.setToken);
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
@@ -49,6 +53,7 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
+    setInstructorNotice(null);
     try {
       const response = await authApi.login(data);
       const { accessToken, refreshToken, user } = response.data;
@@ -70,6 +75,15 @@ export default function LoginPage() {
           } else if (typeof backendMessage.message === 'string') {
             errorMessage = backendMessage.message;
           }
+        }
+
+        // 403 = đơn giảng viên chưa được duyệt (pending) hoặc đã bị từ chối (rejected)
+        if (error.response.status === 403) {
+          const lower = errorMessage.toLowerCase();
+          const type =
+            lower.includes('từ chối') || lower.includes('reject') ? 'rejected' : 'pending';
+          setInstructorNotice({ type, message: errorMessage });
+          return;
         }
 
         setError('root', { message: errorMessage });
@@ -146,6 +160,31 @@ export default function LoginPage() {
             noValidate
             className="flex flex-col gap-6 w-full"
           >
+            {/* Instructor approval notice (403) */}
+            {instructorNotice && (
+              <div
+                className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2.5 ${
+                  instructorNotice.type === 'pending'
+                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                    : 'border-red-200 bg-red-50 text-red-600'
+                }`}
+              >
+                {instructorNotice.type === 'pending' ? (
+                  <Clock className="w-4 h-4 mt-0.5 shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                )}
+                <div>
+                  <p className="font-semibold">
+                    {instructorNotice.type === 'pending'
+                      ? 'Đơn giảng viên đang chờ duyệt'
+                      : 'Đơn giảng viên đã bị từ chối'}
+                  </p>
+                  <p className="mt-0.5">{instructorNotice.message}</p>
+                </div>
+              </div>
+            )}
+
             {/* Server error */}
             {errors.root && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -237,15 +276,15 @@ export default function LoginPage() {
               )}
             </button>
 
-            {/* Register link */}
-            {/* <div className="text-center mt-2">
+            {/* Register instructor link */}
+            <div className="text-center mt-2">
               <Link
-                href="/register"
+                href="/register-instructor"
                 className="text-[14px] text-[#8E9E6E] hover:text-[#10120C] underline underline-offset-4 transition-colors"
               >
-                Chưa có tài khoản? Đăng ký ngay
+                Bạn là giảng viên? Đăng ký tại đây
               </Link>
-            </div> */}
+            </div>
           </form>
         </div>
 

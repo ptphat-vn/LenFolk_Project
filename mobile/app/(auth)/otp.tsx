@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Alert, View, Text, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useForgotPassword } from "@/hooks/auth/use-forgot-password";
+
+const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
   const router = useRouter();
+  const { email } = useLocalSearchParams<{ email?: string }>();
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(59);
+  const forgotMutation = useForgotPassword();
 
   // Timer countdown effect
   useEffect(() => {
@@ -19,7 +24,7 @@ export default function OtpScreen() {
   }, []);
 
   const handleKeyPress = (val: string) => {
-    if (otp.length < 4) {
+    if (otp.length < OTP_LENGTH) {
       setOtp((prev) => prev + val);
     }
   };
@@ -29,14 +34,37 @@ export default function OtpScreen() {
   };
 
   const renderSlot = (index: number) => {
-    if (index >= otp.length) {
-      return "";
+    return index < otp.length ? otp[index] : "";
+  };
+
+  const handleResend = () => {
+    if (timer > 0) return;
+    if (!email) {
+      Alert.alert("Lỗi", "Thiếu email. Vui lòng quay lại bước trước.");
+      return;
     }
-    // Mask all preceding digits as *, and show the last typed digit literally (like in the screenshot: * * 8)
-    if (index === otp.length - 1) {
-      return otp[index];
+    forgotMutation.mutate(email, {
+      onSuccess: () => {
+        setTimer(59);
+        Alert.alert("Đã gửi lại mã", `Mã mới đã được gửi tới ${email}.`);
+      },
+      onError: (error: any) => {
+        Alert.alert("Lỗi", error?.response?.data?.message || "Vui lòng thử lại sau.");
+      },
+    });
+  };
+
+  const handleVerify = () => {
+    if (!email) {
+      Alert.alert("Lỗi", "Thiếu email. Vui lòng quay lại bước trước.");
+      return;
     }
-    return "*";
+    if (otp.length !== OTP_LENGTH) {
+      Alert.alert("Mã không hợp lệ", `Mã gồm ${OTP_LENGTH} chữ số.`);
+      return;
+    }
+    // Mã được xác thực ở bước đặt lại mật khẩu (POST /auth/reset-password).
+    router.push({ pathname: "/reset-password", params: { email, code: otp } });
   };
 
   return (
@@ -67,18 +95,18 @@ export default function OtpScreen() {
             className="text-sm font-semibold text-charcoal/80 text-center mb-10 px-4 leading-6"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
           >
-            Mã đã được gửi đến ( +84 ) ***-***-*999
+            {email ? `Mã xác thực đã được gửi đến ${email}` : "Nhập mã xác thực đã gửi đến email của bạn"}
           </Text>
         </AnimatedBlock>
 
         {/* OTP Input Slots Container */}
-        <AnimatedBlock variant="card" delay={140} className="flex-row justify-center gap-4 mb-6">
-          {[0, 1, 2, 3].map((index) => {
+        <AnimatedBlock variant="card" delay={140} className="flex-row justify-center gap-2 mb-6">
+          {Array.from({ length: OTP_LENGTH }).map((_, index) => {
             const isCurrent = index === otp.length;
             return (
               <View
                 key={index}
-                className={`w-16 h-18 py-3 rounded-2xl bg-white shadow-md border-2 items-center justify-center ${isCurrent ? "border-primary" : "border-gray-100"
+                className={`w-12 h-16 rounded-2xl bg-white shadow-md border-2 items-center justify-center ${isCurrent ? "border-primary" : "border-gray-100"
                   }`}
               >
                 <Text
@@ -94,12 +122,9 @@ export default function OtpScreen() {
 
         {/* Resend Code Countdown */}
         <TouchableOpacity
-          disabled={timer > 0}
+          disabled={timer > 0 || forgotMutation.isPending}
           className="self-center mb-6"
-          onPress={() => {
-            setTimer(59);
-            Alert.alert("Chưa hỗ trợ", "Backend chưa có dịch vụ gửi OTP.");
-          }}
+          onPress={handleResend}
         >
           <Text className="text-sm text-gray-500 font-medium">
             Gửi lại mã trong{" "}
@@ -166,17 +191,8 @@ export default function OtpScreen() {
 
         {/* Row 4 */}
         <View className="flex-row justify-around py-3">
-          <TouchableOpacity
-            className="w-20 h-16 justify-center items-center rounded-2xl active:bg-gray-50"
-            onPress={() => handleKeyPress("*")}
-          >
-            <Text
-              className="text-2xl font-bold text-charcoal"
-              style={{ fontFamily: "BeVietnamPro-Medium" }}
-            >
-              *
-            </Text>
-          </TouchableOpacity>
+          {/* Spacer ô trống để giữ bố cục (mã chỉ gồm chữ số) */}
+          <View className="w-20 h-16" />
 
           <TouchableOpacity
             className="w-20 h-16 justify-center items-center rounded-2xl active:bg-gray-50"
@@ -204,9 +220,7 @@ export default function OtpScreen() {
         <TouchableOpacity
           activeOpacity={0.9}
           className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
-          onPress={() =>
-            Alert.alert("Chưa hỗ trợ", "Backend chưa có endpoint xác minh OTP.")
-          }
+          onPress={handleVerify}
         >
           <Text
             className="text-white text-base font-bold ml-4"

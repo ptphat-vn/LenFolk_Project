@@ -239,6 +239,7 @@ useEffect(() => {
           emptyIcon={Wallet}
           emptyMessage="Không có yêu cầu rút tiền nào"
           keyExtractor={(p) => p._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
         
         {!loading && filteredPayouts.length > PAGE_SIZE && (

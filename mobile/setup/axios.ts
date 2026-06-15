@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "@/lib/secure-storage";
 import { API_URL } from "../constants/api";
 import { useAuthStore } from "@/store/authStore";
 import { User } from "@/types/users.type";
@@ -47,7 +47,7 @@ let refreshPromise: Promise<string> | null = null;
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
-    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    const refreshToken = await secureStorage.getItem("refreshToken");
 
     refreshPromise = axios
       .post<ApiResponse<AuthResponse>>(
@@ -73,10 +73,10 @@ const refreshAccessToken = async () => {
             token,
             refreshToken: nextRefreshToken ?? refreshToken ?? null,
           });
-          await AsyncStorage.setItem("token", token);
+          await secureStorage.setItem("token", token);
 
           if (nextRefreshToken) {
-            await AsyncStorage.setItem("refreshToken", nextRefreshToken);
+            await secureStorage.setItem("refreshToken", nextRefreshToken);
           }
         }
 
@@ -93,12 +93,15 @@ const refreshAccessToken = async () => {
 // Request interceptor
 instance.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem("token");
+    // Ưu tiên token in-memory (đã set ngay sau login) để tránh race với
+    // SecureStore chưa kịp ghi xong → request thiếu header → 401 → văng splash.
+    const token =
+      useAuthStore.getState().token ?? (await secureStorage.getItem("token"));
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {

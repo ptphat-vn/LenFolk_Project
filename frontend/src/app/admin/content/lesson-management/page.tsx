@@ -338,7 +338,7 @@ export default function LessonManagementPage() {
             { value: 'free', label: 'Miễn phí' },
             { value: 'paid', label: 'Trả phí' },
           ]}
-          placeholder="Loại"
+          placeholder="Tất cả loại"
           className="w-32"
         />
         <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} bài học</span>
@@ -353,6 +353,7 @@ export default function LessonManagementPage() {
           emptyIcon={BookOpen}
           emptyMessage="Không có bài học nào"
           keyExtractor={(l) => l._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
 
         {!isLoading && filtered.length > PAGE_SIZE && (

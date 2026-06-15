@@ -375,6 +375,7 @@ export default function RepertoireManagementPage() {
           emptyIcon={Music}
           emptyMessage="Không có tiết mục nào"
           keyExtractor={(p) => p._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
         
         {!isLoading && filtered.length > PAGE_SIZE && (

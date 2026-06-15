@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { motion, Variants } from 'framer-motion';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Plus, PlayCircle,  } from 'lucide-react';
+import { Plus, PlayCircle } from 'lucide-react';
 import { performanceApi } from '@/lib/api/performance.api';
 import { Performance } from '@/types/performance.types';
 import { FilterInput } from '@/common/filter/FilterInput';
@@ -47,7 +47,9 @@ export default function InstructorPerformancesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'pending' | 'archived'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'published' | 'pending' | 'archived'
+  >('all');
   const [page, setPage] = useState(1);
   const user = useAuthStore((state) => state.user);
 
@@ -59,10 +61,13 @@ export default function InstructorPerformancesPage() {
       const res = await performanceApi.getAll();
       if (Array.isArray(res.data)) {
         // Lọc các tiết mục của chính giảng viên này (đề phòng API trả về tất cả)
-        const myPerformances = res.data.filter((p) => typeof p.instructorId === 'object' ? p.instructorId._id === user?._id : p.instructorId === user?._id);
-        // Nhưng nếu backend tự handle thì chỉ cần setPerformances(res.data)
-        // Để an toàn, set thẳng data:
-        setPerformances(res.data);
+        const myPerformances = res.data.filter((p) =>
+          typeof p.instructorId === 'object'
+            ? p.instructorId._id === user?._id
+            : p.instructorId === user?._id,
+        );
+
+        setPerformances(myPerformances);
       }
     } catch (e) {
       console.error('[Performances] fetch error:', e);
@@ -102,7 +107,11 @@ export default function InstructorPerformancesPage() {
       render: (p) => (
         <div className="flex items-center gap-3">
           {p.thumbnail ? (
-            <Image src={p.thumbnail} alt={p.title} className="w-10 h-10 rounded-md object-cover" />
+            <Image
+              src={p.thumbnail}
+              alt={p.title}
+              className="w-10 h-10 rounded-md object-cover"
+            />
           ) : (
             <div className="w-10 h-10 rounded-md bg-blue-100 flex items-center justify-center shrink-0">
               <PlayCircle className="w-5 h-5 text-blue-600" />
@@ -116,18 +125,39 @@ export default function InstructorPerformancesPage() {
     },
     {
       header: 'Thể loại',
-      render: (p) => <span className="text-[13px] text-gray-500">{p.genre || '—'}</span>,
+      render: (p) => (
+        <span className="text-[13px] text-gray-500">{p.genre || '—'}</span>
+      ),
     },
     {
       header: 'Trạng thái',
       render: (p) => {
-        const statusMap: Record<string, { label: string; cls: string; dot: string }> = {
-          published: { label: 'Đã xuất bản', cls: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
-          pending: { label: 'Chờ duyệt', cls: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
-          archived: { label: 'Đã lưu trữ', cls: 'bg-red-50 text-red-600', dot: 'bg-red-400' },
+        const statusMap: Record<
+          string,
+          { label: string; cls: string; dot: string }
+        > = {
+          published: {
+            label: 'Đã xuất bản',
+            cls: 'bg-emerald-50 text-emerald-700',
+            dot: 'bg-emerald-500',
+          },
+          pending: {
+            label: 'Chờ duyệt',
+            cls: 'bg-amber-50 text-amber-700',
+            dot: 'bg-amber-500',
+          },
+          archived: {
+            label: 'Đã lưu trữ',
+            cls: 'bg-red-50 text-red-600',
+            dot: 'bg-red-400',
+          },
         };
-        const s = statusMap[p.status] || { label: p.status, cls: 'bg-gray-100 text-gray-500', dot: 'bg-gray-400' };
-        
+        const s = statusMap[p.status] || {
+          label: p.status,
+          cls: 'bg-gray-100 text-gray-500',
+          dot: 'bg-gray-400',
+        };
+
         return (
           <span
             className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.cls}`}
@@ -148,7 +178,11 @@ export default function InstructorPerformancesPage() {
     },
     {
       header: 'Ngày tạo',
-      render: (p) => <span className="text-[13px] text-gray-400">{formatDate(p.createdAt)}</span>,
+      render: (p) => (
+        <span className="text-[13px] text-gray-400">
+          {formatDate(p.createdAt)}
+        </span>
+      ),
     },
     {
       header: '',
@@ -175,15 +209,16 @@ export default function InstructorPerformancesPage() {
       {/* Header */}
       <motion.div variants={item} className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">
-            Tiết mục của tôi
-          </h1>
+          <h1 className="text-xl font-bold text-gray-900">Tiết mục của tôi</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Quản lý các tiết mục biểu diễn mà bạn đã tạo
           </p>
         </div>
         <Link href="/instructor/performances/create">
-          <ActionButton icon={Plus}>
+          <ActionButton
+            className=" bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            icon={Plus}
+          >
             Thêm tiết mục mới
           </ActionButton>
         </Link>
@@ -204,7 +239,11 @@ export default function InstructorPerformancesPage() {
 
           <FilterSelect
             value={statusFilter}
-            onChange={(val) => setStatusFilter(val as "all" | "published" | "pending" | "archived")}
+            onChange={(val) =>
+              setStatusFilter(
+                val as 'all' | 'published' | 'pending' | 'archived',
+              )
+            }
             options={[
               { label: 'Tất cả', value: 'all' },
               { label: 'Đã xuất bản', value: 'published' },
@@ -226,6 +265,7 @@ export default function InstructorPerformancesPage() {
           emptyIcon={PlayCircle}
           emptyMessage="Bạn chưa tạo tiết mục nào"
           keyExtractor={(p) => p._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
 
         {!isLoading && filtered.length > PAGE_SIZE && (

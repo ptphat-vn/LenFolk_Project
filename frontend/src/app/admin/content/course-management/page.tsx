@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { courseApi } from '@/lib/api/course.api';
 import {
   Course,
@@ -159,8 +160,11 @@ export default function CourseManagementPage() {
       toast.success('Đã xóa khóa học');
       setDeleteTarget(null);
       fetchCourses();
-    } catch {
-      toast.error('Lỗi khi xóa khóa học');
+    } catch (error) {
+      const msg = isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      toast.error(msg || 'Lỗi khi xóa khóa học');
     } finally {
       setIsDeleting(false);
     }
@@ -292,7 +296,14 @@ export default function CourseManagementPage() {
                 icon: Trash2,
                 variant: 'destructive',
                 separatorBefore: true,
-                onClick: () => setDeleteTarget(course),
+                disabled: (course.totalLessons ?? 0) > 0,
+                onClick: () => {
+                  if ((course.totalLessons ?? 0) > 0) {
+                    toast.error('Không thể xoá khóa học còn bài học. Hãy xoá hết bài học trước.');
+                    return;
+                  }
+                  setDeleteTarget(course);
+                },
               },
             ]}
           />
@@ -424,6 +435,7 @@ export default function CourseManagementPage() {
           emptyIcon={BookOpen}
           emptyMessage="Không có khóa học nào"
           keyExtractor={(c) => c._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
 
         {!isLoading && filtered.length > PAGE_SIZE && (

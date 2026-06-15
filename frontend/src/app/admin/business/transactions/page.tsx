@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, Variants } from 'framer-motion';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   Clock,
@@ -10,15 +11,18 @@ import {
   Eye,
   RefreshCw,
   XCircle,
-  ImageOff,
-  AlertTriangle,
 } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { ProofModal } from '@/components/admin/transactions/ProofModal';
-import { TransactionRejectModal } from '@/components/admin/transactions/TransactionRejectModal';
+import { ConfirmDeleteDialog } from '@/components/admin/ConfirmDeleteDialog';
 import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { paymentApi } from '@/lib/api/payment.api';
-import { TransactionRecord, TransactionStatus } from '@/types/payment.types';
+import {
+  TransactionRecord,
+  TransactionStatus,
+  txUserName,
+  txUserEmail,
+  txItemTitle,
+} from '@/types/payment.types';
 import { FilterInput } from '@/common/filter/FilterInput';
 import { Tabs, TabOption } from '@/common/tabs/Tabs';
 import { DataTable, Column } from '@/common/table/DataTable';
@@ -44,15 +48,9 @@ const STATUS_CONFIG: Record<
   { label: string; cls: string; icon: React.ElementType; dot: string }
 > = {
   pending: {
-    label: 'Chờ xử lý',
-    cls: 'bg-gray-100 text-gray-600',
-    icon: Clock,
-    dot: 'bg-gray-400',
-  },
-  reviewing: {
-    label: 'Đang xét',
+    label: 'Chờ thanh toán',
     cls: 'bg-amber-50 text-amber-700',
-    icon: Eye,
+    icon: Clock,
     dot: 'bg-amber-400',
   },
   success: {
@@ -62,7 +60,7 @@ const STATUS_CONFIG: Record<
     dot: 'bg-emerald-500',
   },
   failed: {
-    label: 'Từ chối',
+    label: 'Thất bại',
     cls: 'bg-red-50 text-red-600',
     icon: XCircle,
     dot: 'bg-red-500',
@@ -77,10 +75,10 @@ const STATUS_CONFIG: Record<
 
 const TABS: { id: TransactionStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Tất cả' },
-  { id: 'reviewing', label: 'Đang xét duyệt' },
-  { id: 'pending', label: 'Chờ xử lý' },
+  { id: 'pending', label: 'Chờ thanh toán' },
   { id: 'success', label: 'Hoàn tất' },
-  { id: 'failed', label: 'Từ chối' },
+  { id: 'failed', label: 'Thất bại' },
+  { id: 'refunded', label: 'Hoàn tiền' },
 ];
 
 const PAGE_SIZE = 10;
@@ -103,16 +101,13 @@ const item: Variants = {
 export default function TransactionsPage() {
   const [txs, setTxs] = useState<TransactionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TransactionStatus | 'all'>(
-    'reviewing',
-  );
+  const [activeTab, setActiveTab] = useState<TransactionStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 500);
   const [page, setPage] = useState(1);
 
   // Action states
-  const [proofUrl, setProofUrl] = useState<string | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<TransactionRecord | null>(
+  const [refundTarget, setRefundTarget] = useState<TransactionRecord | null>(
     null,
   );
   const [actionLoading, setActionLoading] = useState<string | null>(null); // tx id
@@ -135,24 +130,30 @@ export default function TransactionsPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const reviewing = txs.filter((t) => t.status === 'reviewing').length;
+    const pending = txs.filter((t) => t.status === 'pending').length;
     const success = txs.filter((t) => t.status === 'success');
     const revenue = success.reduce((s, t) => s + (t.amount || 0), 0);
-    return { total: txs.length, reviewing, success: success.length, revenue };
+    return { total: txs.length, pending, success: success.length, revenue };
   }, [txs]);
 
   // Filtered
   const filtered = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
     return txs.filter((t) => {
       if (activeTab !== 'all' && t.status !== activeTab) return false;
-      if (
-        debouncedSearch &&
-        !t._id.includes(debouncedSearch) &&
-        !(t.paymentMethod ?? '')
-          .toLowerCase()
-          .includes(debouncedSearch.toLowerCase())
-      )
-        return false;
+      if (q) {
+        const haystack = [
+          t._id,
+          t.paymentMethod ?? '',
+          txUserName(t.userId),
+          txUserEmail(t.userId) ?? '',
+          txItemTitle(t.courseId) ?? '',
+          txItemTitle(t.performanceId) ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
   }, [txs, activeTab, debouncedSearch]);
@@ -160,41 +161,24 @@ export default function TransactionsPage() {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   useEffect(() => setPage(1), [activeTab, debouncedSearch]);
 
-  // Approve
-  const handleApprove = async (tx: TransactionRecord) => {
-    setActionLoading(tx._id);
+  // Refund thủ công (PATCH status = refunded)
+  const handleRefund = async () => {
+    if (!refundTarget) return;
+    setActionLoading(refundTarget._id);
     try {
-      await paymentApi.approve(tx._id);
+      await paymentApi.update(refundTarget._id, { status: 'refunded' });
       setTxs((prev) =>
         prev.map((t) =>
-          t._id === tx._id
-            ? { ...t, status: 'success' as TransactionStatus }
+          t._id === refundTarget._id
+            ? { ...t, status: 'refunded' as TransactionStatus }
             : t,
         ),
       );
+      toast.success('Đã hoàn tiền giao dịch');
+      setRefundTarget(null);
     } catch (e) {
-      console.error('[Transactions] approve error:', e);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // Reject
-  const handleReject = async (reason: string) => {
-    if (!rejectTarget) return;
-    setActionLoading(rejectTarget._id);
-    try {
-      await paymentApi.reject(rejectTarget._id, { rejectReason: reason });
-      setTxs((prev) =>
-        prev.map((t) =>
-          t._id === rejectTarget._id
-            ? { ...t, status: 'failed' as TransactionStatus }
-            : t,
-        ),
-      );
-      setRejectTarget(null);
-    } catch (e) {
-      console.error('[Transactions] reject error:', e);
+      console.error('[Transactions] refund error:', e);
+      toast.error('Lỗi khi hoàn tiền giao dịch');
     } finally {
       setActionLoading(null);
     }
@@ -215,9 +199,10 @@ export default function TransactionsPage() {
   }));
 
   const getBadgeClass = (id: string) => {
-    if (id === 'reviewing') return 'bg-amber-100 text-amber-700';
+    if (id === 'pending') return 'bg-amber-100 text-amber-700';
     if (id === 'success') return 'bg-emerald-100 text-emerald-700';
     if (id === 'failed') return 'bg-red-100 text-red-600';
+    if (id === 'refunded') return 'bg-purple-100 text-purple-700';
     return 'bg-gray-100 text-gray-600';
   };
 
@@ -231,20 +216,44 @@ export default function TransactionsPage() {
       ),
     },
     {
+      header: 'Khách hàng',
+      render: (tx) => (
+        <div className="flex flex-col">
+          <span className="text-[13px] font-medium text-gray-900">
+            {txUserName(tx.userId)}
+          </span>
+          {txUserEmail(tx.userId) && (
+            <span className="text-[11px] text-gray-400">{txUserEmail(tx.userId)}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Nội dung',
+      render: (tx) => {
+        const title = txItemTitle(tx.courseId) ?? txItemTitle(tx.performanceId);
+        return (
+          <div className="flex flex-col">
+            <span className="text-[13px] text-gray-900 truncate max-w-44">
+              {title ?? '—'}
+            </span>
+            <span className="text-[11px] text-gray-400">
+              {tx.transactionType === 'course'
+                ? 'Khoá học'
+                : tx.transactionType === 'performance'
+                  ? 'Tiết mục'
+                  : '—'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       header: 'Phương thức',
       render: (tx) => (
-        <>
-          <p className="text-[13px] font-medium text-gray-900">
-            {tx.paymentMethod ?? 'N/A'}
-          </p>
-          <p className="text-[11px] text-gray-400">
-            {tx.transactionType === 'course'
-              ? 'Khoá học'
-              : tx.transactionType === 'performance'
-                ? 'Tiết mục'
-                : '—'}
-          </p>
-        </>
+        <p className="text-[13px] font-medium text-gray-900">
+          {tx.paymentMethod ?? 'N/A'}
+        </p>
       ),
     },
     {
@@ -261,18 +270,11 @@ export default function TransactionsPage() {
         const cfg = STATUS_CONFIG[tx.status] ?? STATUS_CONFIG.pending;
         const StatusIcon = cfg.icon;
         return (
-          <>
-            <span
-              className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}
-            >
-              <StatusIcon className="w-3 h-3" /> {cfg.label}
-            </span>
-            {tx.rejectReason && (
-              <p className="text-[10px] text-red-400 mt-0.5 flex items-center gap-1">
-                <AlertTriangle className="w-2.5 h-2.5" /> {tx.rejectReason}
-              </p>
-            )}
-          </>
+          <span
+            className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}
+          >
+            <StatusIcon className="w-3 h-3" /> {cfg.label}
+          </span>
         );
       },
     },
@@ -285,26 +287,10 @@ export default function TransactionsPage() {
       ),
     },
     {
-      header: 'Chứng từ',
-      render: (tx) =>
-        tx.proofImageUrl ? (
-          <button
-            onClick={() => setProofUrl(tx.proofImageUrl!)}
-            className="flex items-center gap-1.5 text-[12px] text-[#2d6a4f] hover:text-[#1a3a2a] font-medium transition-colors"
-          >
-            <Eye className="w-3.5 h-3.5" /> Xem ảnh
-          </button>
-        ) : (
-          <span className="flex items-center gap-1 text-[12px] text-gray-300">
-            <ImageOff className="w-3.5 h-3.5" /> Chưa có
-          </span>
-        ),
-    },
-    {
       header: 'Hành động',
       className: 'text-right',
       render: (tx) => {
-        const isActionable = tx.status === 'reviewing';
+        const canRefund = tx.status === 'success';
         const isBusy = actionLoading === tx._id;
         return (
           <div className="flex justify-end">
@@ -316,20 +302,13 @@ export default function TransactionsPage() {
                   href: `/admin/business/transactions/${tx._id}`,
                 },
                 {
-                  label: 'Duyệt',
-                  icon: CheckCircle2,
-                  hidden: !isActionable,
+                  label: 'Hoàn tiền',
+                  icon: RefreshCw,
+                  variant: 'destructive',
+                  hidden: !canRefund,
                   disabled: isBusy,
                   separatorBefore: true,
-                  onClick: () => handleApprove(tx),
-                },
-                {
-                  label: 'Từ chối',
-                  icon: XCircle,
-                  variant: 'destructive',
-                  hidden: !isActionable,
-                  disabled: isBusy,
-                  onClick: () => setRejectTarget(tx),
+                  onClick: () => setRefundTarget(tx),
                 },
               ]}
             />
@@ -353,7 +332,7 @@ export default function TransactionsPage() {
             Giao dịch thanh toán
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Xét duyệt và quản lý các giao dịch chuyển khoản
+            SePay tự động xác nhận thanh toán — theo dõi và hoàn tiền khi cần
           </p>
         </div>
         <ActionButton icon={RefreshCw} variant="outline" onClick={fetchTxs}>
@@ -375,9 +354,9 @@ export default function TransactionsPage() {
             iconColor: 'text-blue-600',
           },
           {
-            icon: Eye,
-            label: 'Đang xét duyệt',
-            value: stats.reviewing,
+            icon: Clock,
+            label: 'Chờ thanh toán',
+            value: stats.pending,
             iconBg: 'bg-amber-50',
             iconColor: 'text-amber-600',
           },
@@ -449,6 +428,7 @@ export default function TransactionsPage() {
           emptyIcon={CreditCard}
           emptyMessage="Không có giao dịch nào"
           keyExtractor={(tx) => tx._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
 
         {/* Pagination */}
@@ -465,18 +445,19 @@ export default function TransactionsPage() {
         )}
       </motion.div>
 
-      {/* Modals */}
-      {proofUrl && (
-        <ProofModal url={proofUrl} onClose={() => setProofUrl(null)} />
-      )}
-      {rejectTarget && (
-        <TransactionRejectModal
-          tx={rejectTarget}
-          onCancel={() => setRejectTarget(null)}
-          onConfirm={handleReject}
-          loading={!!actionLoading}
-        />
-      )}
+      {/* Refund confirm */}
+      <ConfirmDeleteDialog
+        open={refundTarget !== null}
+        onOpenChange={(v) => {
+          if (!v) setRefundTarget(null);
+        }}
+        title="Hoàn tiền giao dịch"
+        description={`Xác nhận hoàn tiền cho giao dịch #${refundTarget?._id.slice(-8).toUpperCase()} (${formatCurrency(refundTarget?.amount ?? 0)})? Trạng thái sẽ chuyển sang "Hoàn tiền".`}
+        confirmLabel="Hoàn tiền"
+        loadingLabel="Đang hoàn tiền..."
+        isDeleting={!!actionLoading}
+        onConfirm={handleRefund}
+      />
     </motion.div>
   );
 }

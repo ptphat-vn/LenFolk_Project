@@ -15,17 +15,23 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "@/components/SafeScreen";
+import { useResendVerification } from "@/hooks/auth/use-resend-verification";
+import { useVerifyEmail } from "@/hooks/auth/use-verify-email";
 
 export default function AccountVerificationScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
 
-  const [contactInfo, setContactInfo] = useState(user?.phoneNumber || user?.email || "");
+  const resendMutation = useResendVerification();
+  const verifyMutation = useVerifyEmail();
+
+  // Backend xác thực email bằng OTP gửi qua email → dùng email của tài khoản.
+  const [contactInfo, setContactInfo] = useState(user?.email || "");
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [timer, setTimer] = useState(60);
-  const [isSending, setIsSending] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const isSending = resendMutation.isPending;
+  const isVerifying = verifyMutation.isPending;
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -38,27 +44,62 @@ export default function AccountVerificationScreen() {
   }, [otpSent, timer]);
 
   const handleSendOtp = () => {
-    if (!contactInfo.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại hoặc email.");
+    const email = contactInfo.trim();
+    if (!email) {
+      Alert.alert("Lỗi", "Vui lòng nhập email.");
       return;
     }
 
-    setIsSending(false);
-    Alert.alert(
-      "Chưa hỗ trợ",
-      "Backend chưa có dịch vụ gửi OTP. Tài khoản sẽ không được đánh dấu xác thực trên thiết bị.",
+    resendMutation.mutate(email, {
+      onSuccess: () => {
+        setOtpSent(true);
+        setTimer(60);
+        Alert.alert(
+          "Đã gửi mã",
+          `Mã xác thực đã được gửi tới ${email}. Vui lòng kiểm tra hộp thư (kể cả thư rác).`,
+        );
+      },
+      onError: (error: any) => {
+        Alert.alert("Không gửi được mã", error?.response?.data?.message || "Vui lòng thử lại sau.");
+      },
+    });
+  };
+
+  const handleVerifyOtp = () => {
+    const email = contactInfo.trim();
+    if (otpCode.trim().length !== 6) {
+      Alert.alert("Mã không hợp lệ", "Mã xác thực gồm 6 chữ số.");
+      return;
+    }
+
+    verifyMutation.mutate(
+      { email, code: otpCode.trim() },
+      {
+        onSuccess: () => {
+          Alert.alert("Thành công", "Xác thực email thành công!");
+        },
+        onError: (error: any) => {
+          Alert.alert(
+            "Xác thực thất bại",
+            error?.response?.data?.message || "Mã không đúng hoặc đã hết hạn.",
+          );
+        },
+      },
     );
   };
 
-  const handleVerifyOtp = async () => {
-    setIsVerifying(true);
-    setIsVerifying(false);
-    Alert.alert("Chưa hỗ trợ", "Backend chưa có endpoint xác minh OTP.");
-  };
-
   const handleResendOtp = () => {
-    setTimer(60);
-    Alert.alert("Chưa hỗ trợ", "Backend chưa có dịch vụ gửi lại OTP.");
+    const email = contactInfo.trim();
+    if (!email) return;
+    resendMutation.mutate(email, {
+      onSuccess: () => {
+        setTimer(60);
+        Alert.alert("Đã gửi lại mã", `Mã mới đã được gửi tới ${email}.`);
+      },
+      onError: (error: any) => {
+        Alert.alert("Không gửi được mã", error?.response?.data?.message || "Vui lòng thử lại sau.");
+      },
+    });
   };
 
   return (
@@ -155,12 +196,14 @@ export default function AccountVerificationScreen() {
                 /* STEP 1: ENTER PHONE/EMAIL */
                 <View className="gap-5">
                   <View>
-                    <Text className="text-xs font-bold text-[#8E9E6E] mb-2">SỐ ĐIỆN THOẠI / EMAIL</Text>
+                    <Text className="text-xs font-bold text-[#8E9E6E] mb-2">EMAIL</Text>
                     <TextInput
                       value={contactInfo}
                       onChangeText={setContactInfo}
-                      placeholder="Nhập số điện thoại hoặc email của bạn"
+                      placeholder="Nhập email của bạn"
                       placeholderTextColor="#9CA3AF"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
                       className="w-full bg-[#F3F4F6]/50 border border-gray-200 rounded-2xl px-4 py-3.5 text-charcoal text-sm"
                     />
                   </View>
