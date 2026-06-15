@@ -1,11 +1,23 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const { generateOtp, hashOtp, otpExpiry, OTP_TTL_MINUTES } = require('../utils/otp');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email.service');
 
 const signToken = (id, email, role, expiresIn) => {
   return jwt.sign({ id, email, role }, config.jwt.secret, {
     expiresIn,
   });
+};
+
+// Sinh OTP mới, lưu (đã hash) vào user và gửi email xác thực. Trả về mã thô để (tùy chọn) log khi dev.
+const issueVerificationCode = async (user) => {
+  const code = generateOtp();
+  user.verificationCode = hashOtp(code);
+  user.verificationCodeExpires = otpExpiry();
+  await user.save({ validateBeforeSave: false });
+  await sendVerificationEmail(user, code); // service tự nuốt lỗi, không làm hỏng request
+  return code;
 };
 
 exports.register = async (req, res, next) => {
@@ -22,6 +34,9 @@ exports.register = async (req, res, next) => {
     }
 
     const newUser = await User.create({ name, email, passwordHash: password });
+
+    // Gửi mã OTP xác thực email (không chặn đăng ký nếu mail lỗi)
+    await issueVerificationCode(newUser);
 
     const accessToken = signToken(
       newUser._id,
@@ -44,11 +59,129 @@ exports.register = async (req, res, next) => {
     res.status(201).json({
       success: true,
       data: {
-        message: 'Đăng ký tài khoản thành công',
+        message: 'Đăng ký thành công. Vui lòng kiểm tra email để lấy mã xác thực.',
         user: userData,
         accessToken,
         refreshToken,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/verify-email  { email, code }
+ * Xác thực tài khoản bằng mã OTP đã gửi qua email.
+ */
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+
+    const user = await User.findOne({ email }).select(
+      '+verificationCode +verificationCodeExpires',
+    );
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+    if (user.isVerified)
+      return res.status(400).json({ success: false, message: 'Tài khoản đã được xác thực' });
+    if (!user.verificationCode || !user.verificationCodeExpires)
+      return res.status(400).json({ success: false, message: 'Chưa có mã xác thực. Vui lòng yêu cầu gửi lại.' });
+    if (user.verificationCodeExpires < new Date())
+      return res.status(400).json({ success: false, message: 'Mã xác thực đã hết hạn. Vui lòng yêu cầu gửi lại.' });
+    if (user.verificationCode !== hashOtp(code))
+      return res.status(400).json({ success: false, message: 'Mã xác thực không đúng' });
+
+    user.isVerified = true;
+    user.verificationCode = null;
+    user.verificationCodeExpires = null;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      data: { message: 'Xác thực email thành công', user: user.toJSON() },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/resend-verification  { email }
+ * Gửi lại mã OTP xác thực. Luôn trả message trung tính để tránh dò email.
+ */
+exports.resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user && !user.isVerified) {
+      await issueVerificationCode(user);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { message: `Nếu email tồn tại và chưa xác thực, mã mới đã được gửi (hiệu lực ${OTP_TTL_MINUTES} phút).` },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/forgot-password  { email }
+ * Sinh mã OTP đặt lại mật khẩu và gửi qua email. Trả message trung tính để tránh dò email.
+ */
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user) {
+      const code = generateOtp();
+      user.resetPasswordCode = hashOtp(code);
+      user.resetPasswordExpires = otpExpiry();
+      await user.save({ validateBeforeSave: false });
+      await sendPasswordResetEmail(user, code); // service tự nuốt lỗi
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { message: `Nếu email tồn tại, mã đặt lại mật khẩu đã được gửi (hiệu lực ${OTP_TTL_MINUTES} phút).` },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/reset-password  { email, code, newPassword }
+ * Xác minh mã OTP rồi đặt mật khẩu mới. Đăng xuất mọi phiên (xóa refreshToken).
+ */
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    const user = await User.findOne({ email }).select(
+      '+resetPasswordCode +resetPasswordExpires +passwordHash',
+    );
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản' });
+    if (!user.resetPasswordCode || !user.resetPasswordExpires)
+      return res.status(400).json({ success: false, message: 'Chưa có yêu cầu đặt lại mật khẩu. Vui lòng thử lại.' });
+    if (user.resetPasswordExpires < new Date())
+      return res.status(400).json({ success: false, message: 'Mã đặt lại đã hết hạn. Vui lòng yêu cầu lại.' });
+    if (user.resetPasswordCode !== hashOtp(code))
+      return res.status(400).json({ success: false, message: 'Mã đặt lại không đúng' });
+
+    // pre('save') của model tự hash passwordHash khi field này thay đổi
+    user.passwordHash = newPassword;
+    user.resetPasswordCode = null;
+    user.resetPasswordExpires = null;
+    user.refreshToken = null; // buộc đăng nhập lại trên mọi thiết bị
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' },
     });
   } catch (err) {
     next(err);

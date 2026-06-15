@@ -14,7 +14,7 @@ module.exports = {
       isPaid: { type: 'boolean', example: true },
       startDate: { type: 'string', format: 'date-time' },
       endDate: { type: 'string', format: 'date-time', nullable: true, description: 'null = mua đứt vĩnh viễn (performance)' },
-      platform: { type: 'string', example: 'qr_manual' },
+      platform: { type: 'string', example: 'sepay' },
     },
   },
   TransactionRecord: {
@@ -28,7 +28,7 @@ module.exports = {
       transactionType: { type: 'string', enum: ['subscription', 'course', 'performance'], example: 'course' },
       amount: { type: 'number', example: 199000 },
       currency: { type: 'string', enum: ['VND', 'USD'], example: 'VND' },
-      paymentMethod: { type: 'string', example: 'qr_manual' },
+      paymentMethod: { type: 'string', example: 'sepay' },
       payCode: { type: 'string', nullable: true, description: 'Mã thanh toán nhúng trong nội dung CK (khớp webhook SePay)', example: 'LF1A2B3C4D' },
       status: { type: 'string', enum: ['pending', 'success', 'failed', 'refunded'], example: 'pending' },
       couponId: { type: 'string', nullable: true },
