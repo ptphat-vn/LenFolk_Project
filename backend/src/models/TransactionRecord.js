@@ -40,7 +40,7 @@ const transactionRecordSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      comment: 'e.g. qr_manual, sepay, momo',
+      comment: 'e.g. sepay, momo, stripe',
     },
     gatewayTxId: {
       type: String,

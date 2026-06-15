@@ -1,5 +1,6 @@
 const Course = require('../models/Course');
 const CoursePlan = require('../models/CoursePlan');
+const Lesson = require('../models/Lesson');
 const { hasCourseAccess } = require('../utils/access');
 const { writeAuditLog } = require('../utils/audit');
 
@@ -172,11 +173,22 @@ exports.updateOne = async (req, res, next) => {
 
 exports.deleteOne = async (req, res, next) => {
   try {
-    const doc = await Course.findByIdAndDelete(req.params.id);
-    if (!doc)
+    const course = await Course.findById(req.params.id);
+    if (!course)
       return res
         .status(404)
         .json({ success: false, message: 'No document found with that ID' });
+
+    // Ràng buộc: không cho xóa khi khóa học còn bài học
+    const lessonCount = await Lesson.countDocuments({ courseId: course._id });
+    if (lessonCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Không thể xóa khóa học khi vẫn còn ${lessonCount} bài học. Vui lòng xóa hết bài học trước.`,
+      });
+    }
+
+    const doc = await Course.findByIdAndDelete(course._id);
 
     // Dọn CoursePlan liên kết
     await CoursePlan.deleteMany({ courseId: doc._id });

@@ -21,6 +21,19 @@ import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "@/components/SafeScreen";
 import { useUpdateMe } from "@/hooks/user/use-update-me";
 
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateOfBirth = (value: string) => {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+};
+
 export default function EditProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -31,7 +44,7 @@ export default function EditProfileScreen() {
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || "");
   
   const [dateOfBirth, setDateOfBirth] = useState(
-    user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : ""
+    user?.dateOfBirth ? toDateInputValue(new Date(user.dateOfBirth)) : ""
   );
   const [dob, setDob] = useState<Date>(
     user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date()
@@ -53,7 +66,7 @@ export default function EditProfileScreen() {
     }
     if (selectedDate) {
       setDob(selectedDate);
-      setDateOfBirth(selectedDate.toISOString().split("T")[0]);
+      setDateOfBirth(toDateInputValue(selectedDate));
     }
   };
 
@@ -171,8 +184,8 @@ export default function EditProfileScreen() {
                   <Ionicons name="person" size={44} color="#C4C9B8" />
                 )}
               </TouchableOpacity>
-              {user?.isSubscribed && (
-                <View className="absolute -top-4 -left-2 rotate-[-15deg] z-10">
+              {user?.currentSubscription === "Technique" && (
+                <View className="absolute -top-4 -left-2 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={30} color="#FFB800" />
                 </View>
               )}
@@ -235,7 +248,7 @@ export default function EditProfileScreen() {
               className="w-full bg-[#F3F4F6]/50 border border-gray-200 rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
             >
               <Text className={dateOfBirth ? "text-[#10120C] text-sm" : "text-[#9CA3AF] text-sm"}>
-                {dateOfBirth || "Chọn ngày sinh của bạn"}
+                {formatDateOfBirth(dateOfBirth) || "Chọn ngày sinh của bạn"}
               </Text>
               <Ionicons name="calendar-outline" size={20} color="#8E9E6E" />
             </TouchableOpacity>
@@ -314,8 +327,12 @@ export default function EditProfileScreen() {
                 value={dob}
                 mode="date"
                 display="spinner"
+                locale="vi-VN"
+                themeVariant="light"
+                textColor="#10120C"
                 maximumDate={new Date()}
                 onChange={onChangeDob}
+                style={{ width: "100%", height: 180 }}
               />
             </View>
           </View>
@@ -327,6 +344,7 @@ export default function EditProfileScreen() {
           value={dob}
           mode="date"
           display="default"
+          locale="vi-VN"
           maximumDate={new Date()}
           onChange={onChangeDob}
         />

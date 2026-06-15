@@ -29,7 +29,6 @@ export default function SignupScreen() {
     registerMutation.mutate(
       { name, email, password },
       {
-        onSuccess: () => router.replace("/(tabs)"),
         onError: (error) => {
           Alert.alert(
             "Đăng ký thất bại",

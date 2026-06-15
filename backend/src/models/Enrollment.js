@@ -55,8 +55,8 @@ const enrollmentSchema = new mongoose.Schema(
     },
     platform: {
       type: String,
-      enum: ['qr_manual', 'stripe', 'ios', 'android', 'google_play'],
-      default: 'qr_manual',
+      enum: ['sepay', 'stripe', 'ios', 'android', 'google_play'],
+      default: 'sepay',
     },
   },
   { timestamps: true },

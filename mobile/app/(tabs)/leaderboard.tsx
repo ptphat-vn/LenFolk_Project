@@ -34,13 +34,13 @@ export default function ProgressScreen() {
 
   const stats = [
     { title: "Vai trò", value: user?.role || "learner", icon: "person-outline", type: "ionicons" },
-    { title: "Xác thực", value: user?.isVerified ? "Đã xác thực" : "Chưa xác thực", icon: "shield-checkmark", type: "ionicons" },
-    { title: "Gói học", value: user?.currentSubscription ? "Premium" : "Cơ bản", icon: "book-open-page-variant", type: "material" },
+    { title: "Trạng thái", value: user?.isActive ? "Hoạt động" : "Tạm khóa", icon: "pulse-outline", type: "ionicons" },
+    { title: "Gói học", value: user?.currentSubscription === "Technique" ? "Technique" : "Foundations", icon: "book-open-page-variant", type: "material" },
     { title: "Đăng nhập", value: formatDate(user?.lastLoginAt), icon: "music", type: "feather" },
   ];
 
   const badges = [
-    { name: "Email xác thực", icon: "shield-checkmark-outline", checked: Boolean(user?.isVerified), progress: user?.isVerified ? null : "0%" },
+    { name: "Đã thêm email", icon: "mail-outline", checked: Boolean(user?.email), progress: user?.email ? null : "0%" },
     { name: "Có ảnh đại diện", icon: "person-circle-outline", checked: Boolean(user?.avatar), progress: user?.avatar ? null : "0%" },
     { name: "Số điện thoại", icon: "call-outline", checked: Boolean(user?.phoneNumber), progress: user?.phoneNumber ? null : "0%" },
     { name: "Ngày sinh", icon: "calendar-outline", checked: Boolean(user?.dateOfBirth), progress: user?.dateOfBirth ? null : "0%" },
@@ -51,7 +51,7 @@ export default function ProgressScreen() {
   const staticHistory = [
     { title: "Tạo tài khoản", time: formatDate(user?.createdAt), score: user?.isActive ? "Đang hoạt động" : "Tạm khóa" },
     { title: "Cập nhật hồ sơ", time: formatDate(user?.updatedAt), score: `${profileProgress}%` },
-    { title: "Lần đăng nhập gần nhất", time: formatDate(user?.lastLoginAt), score: user?.isVerified ? "Hợp lệ" : "Cần xác thực" },
+    { title: "Lần đăng nhập gần nhất", time: formatDate(user?.lastLoginAt), score: "Thành công" },
   ];
 
   const practiceHistory = (() => {
@@ -156,8 +156,8 @@ export default function ProgressScreen() {
                 style={{ width: 48, height: 48, borderRadius: 24 }}
                 className="shadow-sm border border-gray-100"
               />
-              {user?.isSubscribed && (
-                <View className="absolute -top-3.5 -left-1.5 rotate-[-15deg] z-10">
+              {user?.currentSubscription === "Technique" && (
+                <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
                 </View>
               )}
@@ -298,7 +298,7 @@ export default function ProgressScreen() {
                     </View>
                   ) : (
                     <View className="bg-[#FFF9E6] px-1 py-0.5 rounded-full border border-primary/20 items-center justify-center">
-                      <Text className="text-[12px] text-primary font-extrabold">{badge.progress}</Text>
+                      <Text className="text-[11px] text-primary font-extrabold">{badge.progress}</Text>
                     </View>
                   )}
                 </View>
@@ -309,7 +309,7 @@ export default function ProgressScreen() {
                 </View>
 
                 {/* Badge title */}
-                <Text className="text-[12px] text-charcoal font-bold text-center leading-3">{badge.name}</Text>
+                <Text className="text-[12px] text-charcoal font-bold text-center leading-3 py-1">{badge.name}</Text>
               </View>
             ))}
           </ScrollView>

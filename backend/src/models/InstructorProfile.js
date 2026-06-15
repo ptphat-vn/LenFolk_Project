@@ -8,6 +8,26 @@ const instructorProfileSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    // Trạng thái duyệt đơn đăng ký giảng viên.
+    // pending → chờ admin duyệt (chưa đăng nhập được); approved → đã duyệt; rejected → bị từ chối.
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    rejectReason: {
+      type: String,
+      default: null,
+    },
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    reviewedAt: {
+      type: Date,
+      default: null,
+    },
     bio: {
       type: String,
       default: null,

@@ -57,6 +57,28 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Mã OTP xác thực email (đã hash) + thời điểm hết hạn
+    verificationCode: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    verificationCodeExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    // Mã OTP đặt lại mật khẩu (đã hash) + thời điểm hết hạn
+    resetPasswordCode: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     refreshToken: {
       type: String,
       default: null,

@@ -8,7 +8,9 @@ type AuthResponse = {
   user?: User;
   token?: string;
   accessToken?: string;
+  access_token?: string;
   refreshToken?: string;
+  refresh_token?: string;
 };
 
 type ApiResponse<T> = {
@@ -22,10 +24,10 @@ type LoginPayload = {
 };
 
 const getAuthToken = (data: AuthResponse) =>
-  data.token ?? data.accessToken;
+  data.token ?? data.accessToken ?? data.access_token;
 
 const getRefreshToken = (data: AuthResponse) =>
-  data.refreshToken;
+  data.refreshToken ?? data.refresh_token;
 
 export const useLogin = () => {
   const { setAuth } = useAuthStore();
@@ -37,14 +39,20 @@ export const useLogin = () => {
         password,
       });
 
-      return response.data.data;
+      const authData = response.data.data;
+
+      if (!authData.user || !getAuthToken(authData)) {
+        throw new Error("Phản hồi đăng nhập không có thông tin xác thực.");
+      }
+
+      return authData;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       const token = getAuthToken(data);
       const refreshToken = getRefreshToken(data);
 
       if (data.user && token) {
-        setAuth(data.user, token, refreshToken);
+        await setAuth(data.user, token, refreshToken);
       }
     },
   });

@@ -1,7 +1,10 @@
 const InstructorProfile = require('../models/InstructorProfile');
-
-
-
+const User = require('../models/User');
+const { writeAuditLog } = require('../utils/audit');
+const {
+  sendInstructorApprovedEmail,
+  sendInstructorRejectedEmail,
+} = require('../services/email.service');
 
 
 
@@ -47,4 +50,83 @@ exports.deleteOne = async (req, res, next) => {
   if (!doc) return res.status(404).json({ success: false, message: 'No document found with that ID' });
   res.status(200).json({ success: true, message: 'Xóa thành công', data: null });
   } catch (err) { next(err); }
+};
+
+/**
+ * PATCH /api/instructor-profiles/:id/approve — Admin duyệt đơn đăng ký giảng viên.
+ * Sau khi duyệt: giảng viên đăng nhập được và đăng tiết mục được.
+ */
+exports.approve = async (req, res, next) => {
+  try {
+    const profile = await InstructorProfile.findById(req.params.id);
+    if (!profile) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
+    if (profile.status === 'approved')
+      return res.status(400).json({ success: false, message: 'Hồ sơ này đã được duyệt' });
+
+    profile.status = 'approved';
+    profile.rejectReason = null;
+    profile.reviewedBy = req.user._id;
+    profile.reviewedAt = new Date();
+    await profile.save();
+
+    // Đảm bảo user có role instructor
+    const user = await User.findByIdAndUpdate(
+      profile.userId,
+      { role: 'instructor' },
+      { new: true },
+    ).select('name email');
+
+    if (user?.email) await sendInstructorApprovedEmail(user);
+
+    await writeAuditLog(req, {
+      action: 'APPROVE',
+      resource: 'InstructorProfile',
+      resourceId: profile._id,
+      after: { status: 'approved', userId: profile.userId },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { message: 'Đã duyệt giảng viên', profileId: profile._id },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PATCH /api/instructor-profiles/:id/reject — Admin từ chối đơn đăng ký giảng viên.
+ * Body: { reason }
+ */
+exports.reject = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    const profile = await InstructorProfile.findById(req.params.id);
+    if (!profile) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
+    if (profile.status === 'approved')
+      return res.status(400).json({ success: false, message: 'Hồ sơ đã duyệt, không thể từ chối' });
+
+    profile.status = 'rejected';
+    profile.rejectReason = reason || null;
+    profile.reviewedBy = req.user._id;
+    profile.reviewedAt = new Date();
+    await profile.save();
+
+    const user = await User.findById(profile.userId).select('name email');
+    if (user?.email) await sendInstructorRejectedEmail(user, reason);
+
+    await writeAuditLog(req, {
+      action: 'REJECT',
+      resource: 'InstructorProfile',
+      resourceId: profile._id,
+      after: { status: 'rejected', rejectReason: reason || null },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: { message: 'Đã từ chối đơn giảng viên', profileId: profile._id },
+    });
+  } catch (err) {
+    next(err);
+  }
 };

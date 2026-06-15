@@ -21,6 +21,15 @@ const envSchema = z.object({
   SEPAY_BANK_CODE: z.string().default(''),
   // Tên chủ tài khoản (chỉ để hiển thị)
   SEPAY_ACCOUNT_NAME: z.string().default(''),
+  // ── Email (Nodemailer / SMTP) ────────────────────────────────────────────
+  MAIL_HOST: z.string().default(''),
+  MAIL_PORT: z.coerce.number().default(587),
+  MAIL_SECURE: z.coerce.boolean().default(false), // true nếu dùng cổng 465
+  MAIL_USER: z.string().default(''),
+  MAIL_PASS: z.string().default(''),
+  MAIL_FROM: z.string().default('LenFolk <no-reply@lenfolk.com>'),
+  APP_NAME: z.string().default('LenFolk'),
+  CLIENT_URL: z.string().default('http://localhost:3000'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -55,4 +64,14 @@ module.exports = {
     // Bộ sinh ảnh VietQR động của SePay
     qrImageBase: 'https://qr.sepay.vn/img',
   },
+  mail: {
+    host: env.MAIL_HOST,
+    port: env.MAIL_PORT,
+    secure: env.MAIL_SECURE,
+    user: env.MAIL_USER,
+    pass: env.MAIL_PASS,
+    from: env.MAIL_FROM,
+  },
+  appName: env.APP_NAME,
+  clientUrl: env.CLIENT_URL,
 };

@@ -246,6 +246,8 @@ export default function CoursesScreen() {
                         {lesson.category}
                       </Text>
                       <Text
+                        numberOfLines={2}
+                        ellipsizeMode="tail"
                         className="text-[16px] font-bold text-charcoal leading-5"
                         style={{ fontFamily: "BeVietnamPro-Medium" }}
                       >
@@ -265,7 +267,10 @@ export default function CoursesScreen() {
                   </View>
 
                   {/* Right Column: Duration duration */}
-                  <Text className="text-sm font-bold text-charcoal/90">
+                  <Text
+                    numberOfLines={1}
+                    className="shrink-0 text-sm font-bold text-charcoal/90"
+                  >
                     {lesson.duration}
                   </Text>
                 </TouchableOpacity>
