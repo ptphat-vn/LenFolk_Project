@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { motion, Variants } from 'framer-motion';
 import {
@@ -116,13 +117,8 @@ const txStatusStyle: Record<
     cls: 'text-emerald-700 bg-emerald-50 border border-emerald-200',
     icon: CheckCircle2,
   },
-  reviewing: {
-    label: 'Đang xét',
-    cls: 'text-amber-600 bg-amber-50 border border-amber-200',
-    icon: Clock,
-  },
   pending: {
-    label: 'Đang xử lý',
+    label: 'Chờ thanh toán',
     cls: 'text-amber-600 bg-amber-50 border border-amber-200',
     icon: Clock,
   },
@@ -186,6 +182,7 @@ function EmptyState({ label }: { label: string }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
   // KPI
@@ -382,7 +379,15 @@ export default function DashboardPage() {
   }
 
   // ── KPI cards config ──────────────────────────────────────────────────────
-  const KPI_CARDS = [
+  const KPI_CARDS: {
+    label: string;
+    value: string;
+    sub: string;
+    icon: typeof Users;
+    iconBg: string;
+    iconColor: string;
+    href?: string;
+  }[] = [
     {
       label: 'Tổng người dùng',
       value: totalUsers.toLocaleString('vi-VN'),
@@ -390,6 +395,7 @@ export default function DashboardPage() {
       icon: Users,
       iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
+      href: '/admin/users/user-management',
     },
     {
       label: 'Doanh thu',
@@ -398,6 +404,7 @@ export default function DashboardPage() {
       icon: DollarSign,
       iconBg: 'bg-emerald-50',
       iconColor: 'text-[#2d6a4f]',
+      href: '/admin/business/revenue-reports',
     },
     {
       label: 'Bài học',
@@ -406,6 +413,7 @@ export default function DashboardPage() {
       icon: Music,
       iconBg: 'bg-violet-50',
       iconColor: 'text-violet-600',
+      href: '/admin/content/lesson-management',
     },
     {
       label: 'Khoá học',
@@ -414,6 +422,7 @@ export default function DashboardPage() {
       icon: Layers,
       iconBg: 'bg-amber-50',
       iconColor: 'text-amber-600',
+      href: '/admin/content/course-management',
     },
     {
       label: 'Giảng viên',
@@ -422,6 +431,7 @@ export default function DashboardPage() {
       icon: GraduationCap,
       iconBg: 'bg-rose-50',
       iconColor: 'text-rose-500',
+      href: '/admin/users/instructor-management',
     },
     {
       label: 'Điểm AI trung bình',
@@ -460,7 +470,10 @@ export default function DashboardPage() {
           return (
             <div
               key={card.label}
-              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+              onClick={card.href ? () => router.push(card.href!) : undefined}
+              className={`bg-white border border-gray-200 rounded-xl p-4 shadow-sm transition-shadow duration-300 ${
+                card.href ? 'hover:shadow-md cursor-pointer' : ''
+              }`}
             >
               <div className="flex items-center justify-between mb-3">
                 <div
@@ -487,7 +500,10 @@ export default function DashboardPage() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-4"
       >
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/business/revenue-reports')}
+          className="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
@@ -515,7 +531,10 @@ export default function DashboardPage() {
         </div>
 
         {/* User role breakdown */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/users/user-management')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="px-5 pt-5 pb-4 border-b border-gray-100">
             <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-500" />
@@ -567,7 +586,10 @@ export default function DashboardPage() {
         className="grid grid-cols-1 lg:grid-cols-2 gap-4"
       >
         {/* Lesson status breakdown */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/content/lesson-management')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
@@ -623,7 +645,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Đăng ký gần đây */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/business/users-plans')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="px-5 pt-5 pb-4 border-b border-gray-100">
             <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
@@ -638,8 +663,12 @@ export default function DashboardPage() {
               enrollments.slice(0, 6).map((en) => {
                 const item =
                   en.itemType === 'course'
-                    ? (typeof en.courseId === 'object' ? en.courseId?.title : undefined)
-                    : (typeof en.performanceId === 'object' ? en.performanceId?.title : undefined);
+                    ? typeof en.courseId === 'object'
+                      ? en.courseId?.title
+                      : undefined
+                    : typeof en.performanceId === 'object'
+                      ? en.performanceId?.title
+                      : undefined;
                 const ACTIVE = en.status === 'active';
                 return (
                   <div
@@ -648,7 +677,8 @@ export default function DashboardPage() {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-gray-900 truncate">
-                        {item || (en.itemType === 'course' ? 'Khóa học' : 'Tiết mục')}
+                        {item ||
+                          (en.itemType === 'course' ? 'Khóa học' : 'Tiết mục')}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {en.itemType === 'course' ? 'Khóa học' : 'Tiết mục'}
@@ -675,7 +705,10 @@ export default function DashboardPage() {
         className="grid grid-cols-1 lg:grid-cols-2 gap-4"
       >
         {/* Recent Courses */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/content/course-management')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
@@ -726,7 +759,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Transactions */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/business/transactions')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
@@ -754,7 +790,7 @@ export default function DashboardPage() {
                       className={`w-4 h-4 shrink-0 ${
                         tx.status === 'success'
                           ? 'text-emerald-500'
-                          : tx.status === 'pending' || tx.status === 'reviewing'
+                          : tx.status === 'pending'
                             ? 'text-amber-500'
                             : 'text-red-500'
                       }`}
@@ -794,7 +830,10 @@ export default function DashboardPage() {
         className="grid grid-cols-1 lg:grid-cols-2 gap-4"
       >
         {/* Recent users */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/users/user-management')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
@@ -843,7 +882,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent lessons */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div
+          onClick={() => router.push('/admin/content/lesson-management')}
+          className="bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+        >
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">

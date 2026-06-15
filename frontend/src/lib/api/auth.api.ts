@@ -1,11 +1,26 @@
 import axiosInstance from '../axios';
-import { LoginForm, RegisterInput, RefreshTokenInput } from '@/types/auth.types';
+import {
+  LoginForm,
+  RegisterInput,
+  RefreshTokenInput,
+  RegisterInstructorInput,
+  RegisterInstructorResponse,
+} from '@/types/auth.types';
 import { APIResponse, LoginResponse, LogoutResponse, RefreshTokenResponse } from '@/types/response.type';
 
 export const authApi = {
   /** POST /auth/register — Đăng ký tài khoản mới (role mặc định: guest) */
   register: async (data: RegisterInput) => {
     const res = await axiosInstance.post<APIResponse<LoginResponse>>('/auth/register', data);
+    return res.data;
+  },
+
+  /** POST /auth/register-instructor — Đăng ký tài khoản giảng viên (chờ admin duyệt, KHÔNG trả token) */
+  registerInstructor: async (data: RegisterInstructorInput) => {
+    const res = await axiosInstance.post<APIResponse<RegisterInstructorResponse>>(
+      '/auth/register-instructor',
+      data,
+    );
     return res.data;
   },
 

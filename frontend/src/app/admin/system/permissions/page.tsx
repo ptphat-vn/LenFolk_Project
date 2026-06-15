@@ -274,6 +274,7 @@ export default function AdminPermissionsPage() {
           emptyIcon={Shield}
           emptyMessage="Chưa có quyền hạn nào"
           keyExtractor={(p) => p._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
         {!isLoading && filtered.length > PAGE_SIZE && (
           <div className="px-5 py-1 border-t border-gray-100">

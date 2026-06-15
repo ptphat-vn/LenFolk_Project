@@ -211,7 +211,7 @@ export default function GameScreen() {
                     onPress={() =>
                       Alert.alert(
                         game.title,
-                        "Backend hiện chưa có API game. Bạn vẫn có thể luyện nốt bằng AI trong mục Bài học.",
+                        "Trò chơi đang được phát triển. Bạn vẫn có thể luyện nốt bằng AI trong mục Bài học.",
                         [
                           { text: "Đóng", style: "cancel" },
                           { text: "Mở bài học", onPress: () => router.push("/(tabs)/courses") },

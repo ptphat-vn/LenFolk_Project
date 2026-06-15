@@ -196,19 +196,6 @@ export const couponSchema = z
     },
   );
 
-// Cấu hình thanh toán hệ thống (PUT /system-settings) — 1 QR cố định + bank dùng chung
-export const systemSettingSchema = z.object({
-  qrCode: fileSchema.optional(),
-  bankName: optionalString,
-  bankAccountNumber: optionalString,
-  bankAccountName: optionalString,
-  transferNote: optionalString,
-  defaultCommissionPercentage: optionalNonNegativeNumber.refine(
-    (value) => value === undefined || value <= 100,
-    'Hoa hồng tối đa 100%',
-  ),
-});
-
 export const bankInfoSchema = z.object({
   bankName: z
     .string()

@@ -41,4 +41,21 @@ export const instructorApi = {
     const res = await axiosInstance.delete<APIResponse<null>>(`/instructor-profiles/${id}`);
     return res.data;
   },
+
+  /** PATCH /instructor-profiles/:id/approve — Duyệt giảng viên (Admin only) */
+  approve: async (id: string) => {
+    const res = await axiosInstance.patch<APIResponse<{ message: string; profileId: string }>>(
+      `/instructor-profiles/${id}/approve`,
+    );
+    return res.data;
+  },
+
+  /** PATCH /instructor-profiles/:id/reject — Từ chối đơn giảng viên (Admin only) */
+  reject: async (id: string, reason?: string) => {
+    const res = await axiosInstance.patch<APIResponse<{ message: string; profileId: string }>>(
+      `/instructor-profiles/${id}/reject`,
+      reason ? { reason } : {},
+    );
+    return res.data;
+  },
 };

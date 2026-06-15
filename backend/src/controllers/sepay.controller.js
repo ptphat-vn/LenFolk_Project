@@ -33,7 +33,7 @@ exports.webhook = async (req, res) => {
       const provided = header.replace(/^Apikey\s+/i, '').trim();
       if (provided !== expected) {
         logger.warn('[SePay] Webhook rejected: invalid Api Key');
-        return res.status(401).json({ success: false, message: 'Invalid Api Key' });
+        return res.status(401).json({ success: false, message: 'Api Key không hợp lệ' });
       }
     }
 
@@ -41,37 +41,37 @@ exports.webhook = async (req, res) => {
 
     // 2) Chỉ xử lý tiền vào
     if (payload.transferType && payload.transferType !== 'in') {
-      return res.status(200).json({ success: true, message: 'Ignored (not an incoming transfer)' });
+      return res.status(200).json({ success: true, message: 'Bỏ qua (không phải giao dịch tiền vào)' });
     }
 
     // 3) Tách mã thanh toán từ content (hoặc trường code SePay đã tách sẵn)
     const payCode = extractPayCode(payload.code) || extractPayCode(payload.content);
     if (!payCode) {
       logger.info(`[SePay] No payCode found in content: "${payload.content}"`);
-      return res.status(200).json({ success: true, message: 'No matching payCode' });
+      return res.status(200).json({ success: true, message: 'Không tìm thấy mã thanh toán phù hợp' });
     }
 
     // 4) Khớp giao dịch
     const transaction = await TransactionRecord.findOne({ payCode });
     if (!transaction) {
       logger.warn(`[SePay] payCode ${payCode} not matched to any transaction`);
-      return res.status(200).json({ success: true, message: 'Transaction not found' });
+      return res.status(200).json({ success: true, message: 'Không tìm thấy giao dịch' });
     }
 
     // 5) Idempotent — đã xử lý rồi thì bỏ qua
     if (transaction.status === 'success') {
-      return res.status(200).json({ success: true, message: 'Already processed' });
+      return res.status(200).json({ success: true, message: 'Giao dịch đã được xử lý trước đó' });
     }
     if (transaction.status !== 'pending') {
       logger.warn(`[SePay] payCode ${payCode} in non-payable status '${transaction.status}'`);
-      return res.status(200).json({ success: true, message: `Ignored (status ${transaction.status})` });
+      return res.status(200).json({ success: true, message: `Bỏ qua (trạng thái ${transaction.status})` });
     }
 
     // 6) Đối chiếu số tiền (chống chuyển thiếu)
     const paidAmount = Number(payload.transferAmount) || 0;
     if (paidAmount < transaction.amount) {
       logger.warn(`[SePay] ${payCode}: underpaid ${paidAmount}/${transaction.amount}`);
-      return res.status(200).json({ success: true, message: 'Amount mismatch (underpaid)' });
+      return res.status(200).json({ success: true, message: 'Số tiền không khớp (chuyển thiếu)' });
     }
 
     // 7) Hoàn tất giao dịch (kích hoạt enrollment, chia tiền instructor...)
@@ -82,10 +82,10 @@ exports.webhook = async (req, res) => {
     });
 
     logger.info(`[SePay] ✅ Fulfilled transaction ${transaction._id} via payCode ${payCode}`);
-    return res.status(200).json({ success: true, message: 'Payment confirmed' });
+    return res.status(200).json({ success: true, message: 'Đã xác nhận thanh toán' });
   } catch (err) {
     logger.error('[SePay] Webhook error', err);
     // Trả 200 để SePay không retry vô hạn; lỗi đã được log để xử lý tay nếu cần.
-    return res.status(200).json({ success: false, message: 'Internal error logged' });
+    return res.status(200).json({ success: false, message: 'Đã ghi log lỗi nội bộ' });
   }
 };

@@ -15,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useLogin } from "@/hooks/auth/use-login";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import SlideToConfirm from "@/components/SlideToConfirm";
 
 type BouncingNoteProps = {
   delay: number;
@@ -236,24 +237,15 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Login Button */}
-            <TouchableOpacity
-              activeOpacity={0.9}
-              className="w-full bg-primary py-4.5 rounded-2xl items-center justify-center shadow-lg shadow-primary/20 mb-6 py-4"
-              onPress={handleLogin}
-              disabled={loginMutation.isPending}
-            >
-              {loginMutation.isPending ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text
-                  className="text-white text-base font-bold"
-                  style={{ fontFamily: "BeVietnamPro-Medium" }}
-                >
-                  Đăng nhập
-                </Text>
-              )}
-            </TouchableOpacity>
+            {/* Login Button — trượt mũi tên để xác nhận */}
+            <View className="mb-6">
+              <SlideToConfirm
+                label="Trượt để đăng nhập"
+                loadingLabel="Đang đăng nhập..."
+                onConfirm={handleLogin}
+                loading={loginMutation.isPending}
+              />
+            </View>
 
             {/* Or Separator */}
             <View className="flex-row justify-center items-center mb-6">
@@ -265,7 +257,7 @@ export default function LoginScreen() {
             {/* Google Sign-in Alternative */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => Alert.alert("Google", "Backend chưa cấu hình đăng nhập Google OAuth.")}
+              onPress={() => Alert.alert("Google", "Đăng nhập bằng Google sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.")}
               className="w-full bg-white py-4 rounded-2xl flex-row justify-center items-center border border-gray-100 shadow-sm mb-6"
             >
               <Image

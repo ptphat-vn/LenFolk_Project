@@ -331,7 +331,7 @@ export default function UsersPage() {
             value={roleFilter}
             onChange={(val) => setRoleFilter(val as Role | 'all')}
             options={ROLES.map((r) => ({ label: ROLE_STYLE[r].label, value: r }))}
-            placeholder="Tất cả vai all"
+            placeholder="Tất cả vai trò"
             icon
           />
 
@@ -357,6 +357,7 @@ export default function UsersPage() {
           emptyIcon={Users}
           emptyMessage="Không tìm thấy người dùng nào"
           keyExtractor={(u) => u._id}
+          indexOffset={(page - 1) * PAGE_SIZE}
         />
 
         {!isLoading && filtered.length > PAGE_SIZE && (

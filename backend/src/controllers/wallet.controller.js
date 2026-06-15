@@ -46,7 +46,7 @@ exports.updateBankInfo = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: 'Please provide bankName, accountName and accountNumber',
+          message: 'Vui lòng cung cấp tên ngân hàng, tên chủ tài khoản và số tài khoản',
         });
     }
 
@@ -54,7 +54,7 @@ exports.updateBankInfo = async (req, res, next) => {
     if (!profile) {
       return res
         .status(404)
-        .json({ success: false, message: 'Instructor profile not found' });
+        .json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
     }
 
     profile.bankDetails = { bankName, accountName, accountNumber };
@@ -82,7 +82,7 @@ exports.requestPayout = async (req, res, next) => {
     if (!amount || amount < 100000) {
       return res
         .status(400)
-        .json({ success: false, message: 'Minimum payout amount is 100,000' });
+        .json({ success: false, message: 'Số tiền rút tối thiểu là 100.000' });
     }
 
     // Check if bank info exists
@@ -92,7 +92,7 @@ exports.requestPayout = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: 'Please update your bank details before requesting a payout',
+          message: 'Vui lòng cập nhật thông tin ngân hàng trước khi yêu cầu rút tiền',
         });
     }
 
@@ -106,7 +106,7 @@ exports.requestPayout = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: 'You already have a pending payout request',
+          message: 'Bạn đang có một yêu cầu rút tiền chờ xử lý',
         });
     }
 
@@ -120,7 +120,7 @@ exports.requestPayout = async (req, res, next) => {
       );
       if (!wallet || wallet.balance < amount) {
         (() => {
-          const _e = new Error('Insufficient balance');
+          const _e = new Error('Số dư không đủ');
           _e.statusCode = 400;
           throw _e;
         })();
@@ -192,7 +192,7 @@ exports.processPayout = async (req, res, next) => {
         .status(400)
         .json({
           success: false,
-          message: 'Status must be approved or rejected',
+          message: 'Trạng thái phải là approved hoặc rejected',
         });
     }
 
@@ -206,13 +206,13 @@ exports.processPayout = async (req, res, next) => {
 
       if (!payout)
         (() => {
-          const _e = new Error('Payout request not found');
+          const _e = new Error('Không tìm thấy yêu cầu rút tiền');
           _e.statusCode = 404;
           throw _e;
         })();
       if (payout.status !== 'pending')
         (() => {
-          const _e = new Error(`Cannot process a ${payout.status} request`);
+          const _e = new Error(`Không thể xử lý yêu cầu khi trạng thái là '${payout.status}'`);
           _e.statusCode = 400;
           throw _e;
         })();

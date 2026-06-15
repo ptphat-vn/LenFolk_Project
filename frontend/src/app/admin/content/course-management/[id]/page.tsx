@@ -234,6 +234,7 @@ export default function CourseDetailPage() {
           emptyIcon={Video}
           emptyMessage="Khóa học này chưa có bài học nào"
           keyExtractor={(l) => l._id}
+          showIndex={false}
         />
       </motion.div>
     </motion.div>

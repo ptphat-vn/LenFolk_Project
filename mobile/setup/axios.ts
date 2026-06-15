@@ -1,19 +1,19 @@
-import axios, { AxiosError, AxiosRequestConfig } from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "../constants/api";
-import { useAuthStore } from "@/store/authStore";
-import { User } from "@/types/users.type";
+import { secureStorage } from '@/lib/secure-storage';
+import { useAuthStore } from '@/store/authStore';
+import { User } from '@/types/users.type';
+import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { API_URL } from '../constants/api';
 
 // Lấy base URL từ environment variables
 const BASE_URL = API_URL;
 
 // Tạo axios instance
 const instance = axios.create({
-    baseURL: BASE_URL,
-    timeout: 10000,
-    headers: {
-        'Content-Type': 'application/json',
-    }
+  baseURL: BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 instance.defaults.withCredentials = true;
@@ -46,17 +46,17 @@ const getRefreshToken = (data: AuthResponse) =>
 let refreshPromise: Promise<string> | null = null;
 
 const isAuthSessionRequest = (url?: string) =>
-  url?.includes("/auth/login") || url?.includes("/auth/refresh-token");
+  url?.includes('/auth/login') || url?.includes('/auth/refresh-token');
 
 const refreshAccessToken = async () => {
   if (!refreshPromise) {
-    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    const refreshToken = await secureStorage.getItem('refreshToken');
 
     refreshPromise = axios
       .post<ApiResponse<AuthResponse>>(
         `${BASE_URL}/auth/refresh-token`,
         refreshToken ? { refreshToken } : undefined,
-        { withCredentials: true }
+        { withCredentials: true },
       )
       .then(async (response) => {
         const authData = response.data.data;
@@ -64,22 +64,28 @@ const refreshAccessToken = async () => {
         const nextRefreshToken = getRefreshToken(authData);
 
         if (!token) {
-          throw new Error("Refresh token response did not include access token");
+          throw new Error(
+            'Refresh token response did not include access token',
+          );
         }
 
         if (authData.user) {
           await useAuthStore
             .getState()
-            .setAuth(authData.user, token, nextRefreshToken ?? refreshToken ?? undefined);
+            .setAuth(
+              authData.user,
+              token,
+              nextRefreshToken ?? refreshToken ?? undefined,
+            );
         } else {
           useAuthStore.setState({
             token,
             refreshToken: nextRefreshToken ?? refreshToken ?? null,
           });
-          await AsyncStorage.setItem("token", token);
+          await secureStorage.setItem('token', token);
 
           if (nextRefreshToken) {
-            await AsyncStorage.setItem("refreshToken", nextRefreshToken);
+            await secureStorage.setItem('refreshToken', nextRefreshToken);
           }
         }
 
@@ -96,18 +102,22 @@ const refreshAccessToken = async () => {
 // Request interceptor
 instance.interceptors.request.use(
   async (config) => {
+    // Ưu tiên token in-memory (đã set ngay sau login) để tránh race với
+    // SecureStore chưa kịp ghi xong → request thiếu header → 401 → văng splash.
     const token =
-      useAuthStore.getState().token ?? await AsyncStorage.getItem("token");
+      useAuthStore.getState().token ?? (await secureStorage.getItem('token'));
 
     if (token && !isAuthSessionRequest(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
-    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
-  }
+    return Promise.reject(
+      error instanceof Error ? error : new Error(String(error)),
+    );
+  },
 );
 
 // Response interceptor
@@ -117,7 +127,9 @@ instance.interceptors.response.use(
   },
   async (error) => {
     const axiosError = error as AxiosError;
-    const originalRequest = axiosError.config as RetriableRequestConfig | undefined;
+    const originalRequest = axiosError.config as
+      | RetriableRequestConfig
+      | undefined;
 
     if (
       axiosError.response?.status === 401 &&
@@ -140,13 +152,15 @@ instance.interceptors.response.use(
         return Promise.reject(
           refreshError instanceof Error
             ? refreshError
-            : new Error(String(refreshError))
+            : new Error(String(refreshError)),
         );
       }
     }
 
-    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
-  }
+    return Promise.reject(
+      error instanceof Error ? error : new Error(String(error)),
+    );
+  },
 );
 
 export default instance;

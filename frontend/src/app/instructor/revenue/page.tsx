@@ -8,7 +8,12 @@ import { walletApi } from '@/lib/api/wallet.api';
 import { BankInfoForm } from '@/components/instructor/revenue/BankInfoForm';
 import { PayoutRequestModal } from '@/components/instructor/revenue/PayoutRequestModal';
 import { PayoutHistoryTable } from '@/components/instructor/revenue/PayoutHistoryTable';
-import { Wallet as WalletIcon, TrendingUp, HandCoins, Loader2 } from 'lucide-react';
+import {
+  Wallet as WalletIcon,
+  TrendingUp,
+  HandCoins,
+  Loader2,
+} from 'lucide-react';
 import { ActionButton } from '@/common/button/ActionButton';
 
 // ─── Animations ───────────────────────────────────────────────────────────────
@@ -43,7 +48,9 @@ export default function InstructorRevenuePage() {
       }
     } catch (err: any) {
       console.error(err);
-      toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi tải dữ liệu ví');
+      toast.error(
+        err.response?.data?.message || 'Có lỗi xảy ra khi tải dữ liệu ví',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +77,8 @@ export default function InstructorRevenuePage() {
             Quản lý số dư, cập nhật ngân hàng và tạo yêu cầu thanh toán
           </p>
         </div>
-        <ActionButton 
+        <ActionButton
+          className=" bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           icon={HandCoins}
           onClick={() => setIsModalOpen(true)}
           disabled={isLoading || !wallet || wallet.balance <= 0}
@@ -79,11 +87,8 @@ export default function InstructorRevenuePage() {
         </ActionButton>
       </motion.div>
 
-      
-
       {/* Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* Left Column: Wallet Stats & Bank Form */}
         <motion.div variants={item} className="space-y-6 lg:col-span-1">
           {/* Stats Cards */}
@@ -100,11 +105,12 @@ export default function InstructorRevenuePage() {
                 <div className="h-9 w-32 bg-gray-100 animate-pulse rounded" />
               ) : (
                 <p className="text-3xl font-bold text-emerald-600">
-                  {wallet?.balance ? wallet.balance.toLocaleString('vi-VN') : 0} <span className="text-lg">đ</span>
+                  {wallet?.balance ? wallet.balance.toLocaleString('vi-VN') : 0}{' '}
+                  <span className="text-lg">đ</span>
                 </p>
               )}
             </div>
-            
+
             <div className="mt-6 pt-6 border-t border-gray-100 relative z-10">
               <div className="flex items-center gap-2 text-gray-500 mb-1">
                 <TrendingUp className="w-4 h-4" />
@@ -114,7 +120,10 @@ export default function InstructorRevenuePage() {
                 <div className="h-6 w-24 bg-gray-100 animate-pulse rounded" />
               ) : (
                 <p className="text-lg font-bold text-gray-900">
-                  {wallet?.totalEarned ? wallet.totalEarned.toLocaleString('vi-VN') : 0} đ
+                  {wallet?.totalEarned
+                    ? wallet.totalEarned.toLocaleString('vi-VN')
+                    : 0}{' '}
+                  đ
                 </p>
               )}
             </div>

@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRegister } from "@/hooks/auth/use-register";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import SlideToConfirm from "@/components/SlideToConfirm";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -134,28 +135,14 @@ export default function SignupScreen() {
             </TouchableOpacity>
           </AnimatedBlock>
 
-          {/* Register Button - Custom green pill with arrow-forward in white circle */}
-          <AnimatedBlock variant="button" delay={230}>
-            <TouchableOpacity
-              activeOpacity={0.9}
-              className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20 mb-8"
-              onPress={handleRegister}
-              disabled={registerMutation.isPending}
-            >
-            <Text 
-              className="text-white text-base font-bold ml-4"
-              style={{ fontFamily: "BeVietnamPro-Medium" }}
-            >
-              Đăng ký
-            </Text>
-            <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-              {registerMutation.isPending ? (
-                <ActivityIndicator color="#8E9E6E" />
-              ) : (
-                <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
-              )}
-            </View>
-            </TouchableOpacity>
+          {/* Register Button — trượt mũi tên để xác nhận */}
+          <AnimatedBlock variant="button" delay={230} className="mb-8">
+            <SlideToConfirm
+              label="Trượt để đăng ký"
+              loadingLabel="Đang đăng ký..."
+              onConfirm={handleRegister}
+              loading={registerMutation.isPending}
+            />
           </AnimatedBlock>
 
           {/* Social login separator */}
@@ -168,7 +155,7 @@ export default function SignupScreen() {
             {/* Google Button */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => Alert.alert("Google", "Backend chưa cấu hình đăng ký Google OAuth.")}
+              onPress={() => Alert.alert("Google", "Đăng ký bằng Google sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.")}
               className="w-16 h-16 rounded-full bg-white justify-center items-center border border-gray-100 shadow-md"
             >
               <Image 
@@ -180,7 +167,7 @@ export default function SignupScreen() {
             {/* Apple Button */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => Alert.alert("Apple", "Backend chưa cấu hình đăng ký Apple.")}
+              onPress={() => Alert.alert("Apple", "Đăng ký bằng Apple sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.")}
               className="w-16 h-16 rounded-full bg-white justify-center items-center border border-gray-100 shadow-md"
             >
               <Image 

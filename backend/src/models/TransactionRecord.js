@@ -81,6 +81,12 @@ const transactionRecordSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    // Admin xử lý giao dịch (vd refund thủ công) — populate name/email khi GET
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   { timestamps: true },
 );

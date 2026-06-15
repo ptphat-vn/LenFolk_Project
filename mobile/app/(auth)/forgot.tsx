@@ -1,13 +1,38 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Alert, TextInput, View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { AnimatedBlock } from "@/components/AnimatedPage";
+import { useForgotPassword } from "@/hooks/auth/use-forgot-password";
 
 export default function ForgotChoiceScreen() {
   const router = useRouter();
   const [method, setMethod] = useState<"email" | "sms">("email");
+  const [email, setEmail] = useState("");
+  const forgotMutation = useForgotPassword();
+
+  const handleSend = () => {
+    if (method === "sms") {
+      Alert.alert("Chưa hỗ trợ", "Hiện tại chỉ hỗ trợ đặt lại mật khẩu qua Email.");
+      return;
+    }
+    const value = email.trim();
+    if (!value) {
+      Alert.alert("Lỗi", "Vui lòng nhập email của bạn.");
+      return;
+    }
+
+    forgotMutation.mutate(value, {
+      // Backend trả message trung tính (không lộ email tồn tại hay không) → luôn sang bước nhập mã.
+      onSuccess: () => {
+        router.push({ pathname: "/otp", params: { email: value } });
+      },
+      onError: (error: any) => {
+        Alert.alert("Lỗi", error?.response?.data?.message || "Vui lòng thử lại sau.");
+      },
+    });
+  };
 
   return (
     <View className="flex-1 bg-white pt-14 px-6 pb-12 justify-between">
@@ -74,24 +99,45 @@ export default function ForgotChoiceScreen() {
               SMS
             </Text>
           </TouchableOpacity>
+
+          {/* Email input (chỉ hỗ trợ phương thức Email) */}
+          {method === "email" && (
+            <View className="w-full flex-row items-center bg-white border border-primary rounded-2xl px-4 py-1 shadow-sm mt-1">
+              <Feather name="mail" size={20} color="#8E9E6E" />
+              <TextInput
+                className="flex-1 text-charcoal text-base ml-3 py-4"
+                placeholder="Nhập email của bạn"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+          )}
         </AnimatedBlock>
       </AnimatedBlock>
 
-      {/* Action Button at Bottom - styled exactly like the screenshot with "Đăng nhập" and a right arrow inside a white circle */}
+      {/* Action Button at Bottom */}
       <AnimatedBlock variant="button" delay={240} className="w-full">
         <TouchableOpacity
           activeOpacity={0.9}
+          disabled={forgotMutation.isPending}
           className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
-          onPress={() => router.push("/otp")}
+          onPress={handleSend}
         >
           <Text
             className="text-white text-base font-bold ml-4"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
           >
-            Đăng nhập
+            {forgotMutation.isPending ? "Đang gửi mã..." : "Gửi mã"}
           </Text>
           <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
+            {forgotMutation.isPending ? (
+              <ActivityIndicator color="#8E9E6E" />
+            ) : (
+              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
+            )}
           </View>
         </TouchableOpacity>
       </AnimatedBlock>

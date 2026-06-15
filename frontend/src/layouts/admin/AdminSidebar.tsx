@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Tag,
   Users,
-  Zap,
   UserCheck,
   Wallet,
   Award,
@@ -83,11 +82,6 @@ const NAV_GROUPS = [
         label: 'Doanh thu & Báo cáo',
         href: '/admin/business/revenue-reports',
         icon: BarChart2,
-      },
-      {
-        label: 'Cấu hình thanh toán',
-        href: '/admin/business/subscriptions',
-        icon: Zap,
       },
       {
         label: 'Giao dịch',

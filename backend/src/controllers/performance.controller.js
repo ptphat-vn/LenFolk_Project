@@ -45,7 +45,11 @@ exports.getAll = async (req, res, next) => {
     query = req.query.sort
       ? query.sort(req.query.sort.split(',').join(' '))
       : query.sort('-createdAt');
-    query = query.skip(skip).limit(limit).select('-__v');
+    query = query
+      .skip(skip)
+      .limit(limit)
+      .select('-__v')
+      .populate({ path: 'instructorId', select: 'name email avatar' });
 
     const docs = await query;
     res.status(200).json({ success: true, results: docs.length, data: docs });
@@ -62,23 +66,25 @@ exports.getAll = async (req, res, next) => {
  */
 exports.getOne = async (req, res, next) => {
   try {
-    const performance = await Performance.findById(req.params.id).select('-__v');
+    const performance = await Performance.findById(req.params.id)
+      .select('-__v')
+      .populate({ path: 'instructorId', select: 'name email avatar' });
     if (!performance)
-      return res.status(404).json({ success: false, message: 'No performance found with that ID' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tiết mục' });
 
     const isPrivileged =
       req.user && (req.user.role === 'admin' || req.user.role === 'instructor');
 
     if (!isPrivileged && performance.status !== 'published') {
-      return res.status(403).json({ success: false, message: 'This performance is not available' });
+      return res.status(403).json({ success: false, message: 'Tiết mục này hiện không khả dụng' });
     }
 
     if (!isPrivileged && !performance.isFree) {
       if (!req.user)
-        return res.status(401).json({ success: false, message: 'Please log in to access this performance' });
+        return res.status(401).json({ success: false, message: 'Vui lòng đăng nhập để truy cập tiết mục này' });
       const hasAccess = await hasPerformanceAccess(req.user._id, performance._id);
       if (!hasAccess) {
-        return res.status(403).json({ success: false, message: 'You need to purchase this performance to access it' });
+        return res.status(403).json({ success: false, message: 'Bạn cần mua tiết mục này để truy cập' });
       }
     }
 
@@ -137,11 +143,11 @@ exports.updateOne = async (req, res, next) => {
   try {
     const performance = await Performance.findById(req.params.id);
     if (!performance)
-      return res.status(404).json({ success: false, message: 'No performance found with that ID' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tiết mục' });
 
     if (req.user.role === 'instructor') {
       if (performance.instructorId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ success: false, message: 'You do not have permission to update this performance' });
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền sửa tiết mục này' });
       }
       if (req.body.status) delete req.body.status;
     }
@@ -188,10 +194,10 @@ exports.approveOne = async (req, res, next) => {
   try {
     const performance = await Performance.findById(req.params.id);
     if (!performance)
-      return res.status(404).json({ success: false, message: 'No performance found with that ID' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tiết mục' });
 
     if (performance.status !== 'pending') {
-      return res.status(400).json({ success: false, message: `Cannot approve a performance with status '${performance.status}'. Only 'pending' performances can be approved.` });
+      return res.status(400).json({ success: false, message: `Không thể duyệt tiết mục đang ở trạng thái '${performance.status}'. Chỉ duyệt được tiết mục 'pending'.` });
     }
 
     const { adminCommissionPercentage } = req.body;
@@ -231,10 +237,10 @@ exports.rejectOne = async (req, res, next) => {
   try {
     const performance = await Performance.findById(req.params.id);
     if (!performance)
-      return res.status(404).json({ success: false, message: 'No performance found with that ID' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tiết mục' });
 
     if (performance.status !== 'pending') {
-      return res.status(400).json({ success: false, message: `Cannot reject a performance with status '${performance.status}'. Only 'pending' performances can be rejected.` });
+      return res.status(400).json({ success: false, message: `Không thể từ chối tiết mục đang ở trạng thái '${performance.status}'. Chỉ từ chối được tiết mục 'pending'.` });
     }
 
     const updated = await Performance.findByIdAndUpdate(
@@ -270,7 +276,7 @@ exports.rejectOne = async (req, res, next) => {
 exports.deleteOne = async (req, res, next) => {
   try {
     const doc = await Performance.findByIdAndDelete(req.params.id);
-    if (!doc) return res.status(404).json({ success: false, message: 'No performance found with that ID' });
+    if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy tiết mục' });
 
     await writeAuditLog(req, {
       action: 'DELETE',
