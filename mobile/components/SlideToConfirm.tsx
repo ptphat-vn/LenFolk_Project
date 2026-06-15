@@ -10,6 +10,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 type SlideToConfirmProps = {
   /** Chữ hiển thị trên thanh trượt khi rảnh. */
@@ -43,6 +44,9 @@ export default function SlideToConfirm({
 
   const handleConfirm = () => {
     if (isLocked) return;
+    Haptics.notificationAsync(
+      Haptics.NotificationFeedbackType.Success,
+    ).catch(() => undefined);
     onConfirm();
   };
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from "react-native";
 import { Href, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -211,12 +212,33 @@ export default function CoursesScreen() {
                 <TouchableOpacity
                   key={lesson.id}
                   activeOpacity={0.9}
+                  delayLongPress={350}
                   onPress={() =>
                     router.push({
                       pathname: "/lesson/[id]",
                       params: { id: String(lesson.id) },
                     } as unknown as Href)
                   }
+                  onLongPress={() => {
+                    Haptics.impactAsync(
+                      Haptics.ImpactFeedbackStyle.Medium,
+                    ).catch(() => undefined);
+                    Alert.alert(
+                      lesson.title,
+                      `${lesson.category} • ${lesson.duration}`,
+                      [
+                        { text: "Đóng", style: "cancel" },
+                        {
+                          text: "Mở bài học",
+                          onPress: () =>
+                            router.push({
+                              pathname: "/lesson/[id]",
+                              params: { id: String(lesson.id) },
+                            } as unknown as Href),
+                        },
+                      ],
+                    );
+                  }}
                   className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
                 >
                   {/* Left Column: Icon Status badge + Title & Category */}

@@ -20,6 +20,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useAuthStore } from "@/store/authStore";
 import SafeScreen from "@/components/SafeScreen";
 import { useUpdateMe } from "@/hooks/user/use-update-me";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 
 const toDateInputValue = (date: Date) => {
   const year = date.getFullYear();
@@ -38,6 +39,7 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const updateMe = useUpdateMe();
+  const { hasPremiumAccess } = useCurrentSubscription();
 
   const [name, setName] = useState(user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
@@ -184,7 +186,7 @@ export default function EditProfileScreen() {
                   <Ionicons name="person" size={44} color="#C4C9B8" />
                 )}
               </TouchableOpacity>
-              {user?.currentSubscription === "Technique" && (
+              {hasPremiumAccess && (
                 <View className="absolute -top-4 -left-2 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={30} color="#FFB800" />
                 </View>

@@ -10,11 +10,17 @@ import SafeScreen from "../../components/SafeScreen";
 import { useGetPracticeSessions } from "@/hooks/practice-session/use-get-practice-sessions";
 import NotificationButton from "@/components/NotificationButton";
 import { useRouter } from "expo-router";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 
 export default function ProgressScreen() {
   const scrollRef = useScrollToTopOnFocus();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const {
+    label: subscriptionLabel,
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const displayName = user?.name?.trim() || "Bạn";
   const avatarSource = user?.avatar
     ? { uri: user.avatar }
@@ -35,7 +41,7 @@ export default function ProgressScreen() {
   const stats = [
     { title: "Vai trò", value: user?.role || "learner", icon: "person-outline", type: "ionicons" },
     { title: "Trạng thái", value: user?.isActive ? "Hoạt động" : "Tạm khóa", icon: "pulse-outline", type: "ionicons" },
-    { title: "Gói học", value: user?.currentSubscription === "Technique" ? "Technique" : "Foundations", icon: "book-open-page-variant", type: "material" },
+    { title: "Gói học", value: subscriptionLoading ? "Đang tải..." : subscriptionLabel, icon: "book-open-page-variant", type: "material" },
     { title: "Đăng nhập", value: formatDate(user?.lastLoginAt), icon: "music", type: "feather" },
   ];
 
@@ -156,7 +162,7 @@ export default function ProgressScreen() {
                 style={{ width: 48, height: 48, borderRadius: 24 }}
                 className="shadow-sm border border-gray-100"
               />
-              {user?.currentSubscription === "Technique" && (
+              {hasPremiumAccess && (
                 <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
                 </View>

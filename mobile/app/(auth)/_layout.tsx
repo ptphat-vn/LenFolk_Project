@@ -12,5 +12,14 @@ export default function AuthLayout() {
     return <Redirect href="/(tabs)" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true,
+        animation: "slide_from_right",
+      }}
+    />
+  );
 }
