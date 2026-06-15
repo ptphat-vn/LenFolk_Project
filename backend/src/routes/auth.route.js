@@ -14,6 +14,24 @@ const registerSchema = z.object({
   }),
 });
 
+const registerInstructorSchema = z.object({
+  body: z.object({
+    name: z.string({ required_error: 'Name is required' }).min(2, 'Name must be at least 2 characters'),
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+    password: z.string({ required_error: 'Password is required' }).min(8, 'Password must be at least 8 characters'),
+    bio: z.string().max(1000).optional(),
+    expertise: z.string().optional(),
+    websiteUrl: z.string().url('Invalid URL').optional(),
+    bankDetails: z
+      .object({
+        bankName: z.string().optional(),
+        accountName: z.string().optional(),
+        accountNumber: z.string().optional(),
+      })
+      .optional(),
+  }),
+});
+
 const loginSchema = z.object({
   body: z.object({
     email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
@@ -56,6 +74,9 @@ const resetPasswordSchema = z.object({
 
 // POST /api/auth/register
 router.post('/register', validate(registerSchema), authController.register);
+
+// POST /api/auth/register-instructor — đăng ký giảng viên (chờ admin duyệt)
+router.post('/register-instructor', validate(registerInstructorSchema), authController.registerInstructor);
 
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), authController.login);

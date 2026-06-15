@@ -24,6 +24,32 @@ module.exports = {
       refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
     },
   },
+  RegisterInstructorInput: {
+    type: 'object',
+    required: ['name', 'email', 'password'],
+    properties: {
+      name: { type: 'string', example: 'Trần Văn Sư' },
+      email: { type: 'string', format: 'email', example: 'giangvien@lenfolk.vn' },
+      password: { type: 'string', minLength: 8, example: 'MatKhau@123' },
+      bio: { type: 'string', example: 'Giảng viên đàn tranh 10 năm kinh nghiệm' },
+      expertise: { type: 'string', example: 'Đàn tranh, Đàn bầu' },
+      websiteUrl: { type: 'string', example: 'https://example.com' },
+      bankDetails: {
+        type: 'object',
+        properties: {
+          bankName: { type: 'string', example: 'Vietcombank' },
+          accountName: { type: 'string', example: 'TRAN VAN SU' },
+          accountNumber: { type: 'string', example: '0123456789' },
+        },
+      },
+    },
+  },
+  RejectInstructorInput: {
+    type: 'object',
+    properties: {
+      reason: { type: 'string', example: 'Hồ sơ thiếu thông tin chuyên môn' },
+    },
+  },
   VerifyEmailInput: {
     type: 'object',
     required: ['email', 'code'],

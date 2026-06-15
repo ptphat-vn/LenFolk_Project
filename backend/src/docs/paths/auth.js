@@ -14,12 +14,31 @@ module.exports = {
       responses: { 201: authOk, 400: err('Email đã tồn tại / mật khẩu yếu') },
     },
   },
+  '/auth/register-instructor': {
+    post: {
+      tags: ['Auth'],
+      summary: 'Đăng ký tài khoản giảng viên (chờ admin duyệt)',
+      description:
+        'Tạo tài khoản role=instructor ở trạng thái **pending**. CHƯA trả token — ' +
+        'phải được admin duyệt (`PATCH /instructor-profiles/{id}/approve`) mới đăng nhập được.',
+      requestBody: jsonBody('RegisterInstructorInput'),
+      responses: {
+        201: { description: 'Đã gửi đơn, chờ duyệt' },
+        400: err('Email đã tồn tại'),
+      },
+    },
+  },
   '/auth/login': {
     post: {
       tags: ['Auth'],
       summary: 'Đăng nhập',
+      description: 'Giảng viên chưa được duyệt (pending/rejected) sẽ bị chặn với mã 403.',
       requestBody: jsonBody('LoginInput'),
-      responses: { 200: authOk, 401: err('Sai email hoặc mật khẩu') },
+      responses: {
+        200: authOk,
+        401: err('Sai email hoặc mật khẩu'),
+        403: err('Giảng viên đang chờ duyệt / bị từ chối'),
+      },
     },
   },
   '/auth/refresh-token': {

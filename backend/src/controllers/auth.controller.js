@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const InstructorProfile = require('../models/InstructorProfile');
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 const { generateOtp, hashOtp, otpExpiry, OTP_TTL_MINUTES } = require('../utils/otp');
@@ -63,6 +64,54 @@ exports.register = async (req, res, next) => {
         user: userData,
         accessToken,
         refreshToken,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/register-instructor
+ * Đăng ký tài khoản giảng viên (role=instructor) ở trạng thái CHỜ DUYỆT.
+ * Chưa trả token — phải được admin duyệt mới đăng nhập được.
+ */
+exports.registerInstructor = async (req, res, next) => {
+  try {
+    const { name, email, password, bio, expertise, websiteUrl, bankDetails } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: 'Email already in use' });
+    }
+
+    const newUser = await User.create({
+      name,
+      email,
+      passwordHash: password,
+      role: 'instructor',
+    });
+
+    // Tạo hồ sơ giảng viên ở trạng thái pending. Rollback user nếu tạo hồ sơ lỗi.
+    try {
+      await InstructorProfile.create({
+        userId: newUser._id,
+        status: 'pending',
+        bio: bio || null,
+        expertise: expertise || null,
+        websiteUrl: websiteUrl || null,
+        bankDetails: bankDetails || undefined,
+      });
+    } catch (profileErr) {
+      await User.deleteOne({ _id: newUser._id });
+      throw profileErr;
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        message: 'Đăng ký giảng viên thành công. Đơn của bạn đang chờ admin duyệt — bạn sẽ nhận email khi được duyệt.',
+        userId: newUser._id,
       },
     });
   } catch (err) {
@@ -200,6 +249,25 @@ exports.login = async (req, res, next) => {
 
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Giảng viên phải được admin duyệt mới đăng nhập được
+    if (user.role === 'instructor') {
+      const profile = await InstructorProfile.findOne({ userId: user._id }).select('status rejectReason');
+      if (profile && profile.status === 'pending') {
+        return res.status(403).json({
+          success: false,
+          message: 'Đơn đăng ký giảng viên đang chờ admin duyệt. Vui lòng thử lại sau khi được duyệt.',
+        });
+      }
+      if (profile && profile.status === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          message: profile.rejectReason
+            ? `Đơn đăng ký giảng viên đã bị từ chối. Lý do: ${profile.rejectReason}`
+            : 'Đơn đăng ký giảng viên đã bị từ chối.',
+        });
+      }
     }
 
     const accessToken = signToken(

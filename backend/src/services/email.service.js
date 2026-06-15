@@ -82,4 +82,42 @@ const sendPaymentSuccessEmail = (user, info) => {
   return sendMail({ to: user.email, subject: `[${APP}] Thanh toán thành công`, html });
 };
 
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendPaymentSuccessEmail };
+/**
+ * Email báo đơn đăng ký giảng viên ĐƯỢC DUYỆT.
+ */
+const sendInstructorApprovedEmail = (user) => {
+  const loginUrl = `${config.clientUrl}/login`;
+  const html = layout(
+    'Đơn đăng ký giảng viên đã được duyệt 🎉',
+    `<p>Chào <b>${user.name}</b>,</p>
+     <p>Chúc mừng! Đơn đăng ký giảng viên của bạn đã được duyệt. Bạn có thể đăng nhập và bắt đầu đăng tiết mục ngay.</p>
+     <div style="text-align:center;margin:24px 0;">
+       <a href="${loginUrl}" style="display:inline-block;background:${BRAND};color:#fff;
+         text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:bold;">Đăng nhập ngay</a>
+     </div>`,
+  );
+  return sendMail({ to: user.email, subject: `[${APP}] Đơn giảng viên đã được duyệt`, html });
+};
+
+/**
+ * Email báo đơn đăng ký giảng viên BỊ TỪ CHỐI.
+ */
+const sendInstructorRejectedEmail = (user, reason) => {
+  const html = layout(
+    'Đơn đăng ký giảng viên chưa được duyệt',
+    `<p>Chào <b>${user.name}</b>,</p>
+     <p>Rất tiếc, đơn đăng ký giảng viên của bạn chưa được duyệt lần này.</p>
+     ${reason ? `<p style="background:#fef2f2;border-left:3px solid #ef4444;padding:10px 14px;color:#991b1b;">
+        <b>Lý do:</b> ${reason}</p>` : ''}
+     <p style="color:#666;">Bạn có thể liên hệ đội ngũ ${APP} để biết thêm chi tiết.</p>`,
+  );
+  return sendMail({ to: user.email, subject: `[${APP}] Đơn giảng viên chưa được duyệt`, html });
+};
+
+module.exports = {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendPaymentSuccessEmail,
+  sendInstructorApprovedEmail,
+  sendInstructorRejectedEmail,
+};
