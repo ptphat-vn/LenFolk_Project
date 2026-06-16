@@ -3,6 +3,8 @@ import {
   AudioModule,
   RecordingPresets,
   setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
@@ -12,6 +14,7 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
+  Modal,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -33,6 +36,15 @@ import { useAdvancedAnalysis } from "@/hooks/ai-analytic/use-advanced";
 import { useGetMe } from "@/hooks/user/use-get-me";
 import { useAuthStore } from "@/store/authStore";
 import type { AnalysisResult } from "@/types/ai-analysis.type";
+
+type RecordedAudioFile = {
+  uri: string;
+  name: string;
+  note: string;
+  noteLabel: string;
+  durationSeconds: number;
+  createdAt: number;
+};
 
 export default function NotePracticeScreen() {
   const router = useRouter();
@@ -64,14 +76,21 @@ export default function NotePracticeScreen() {
   const targetNoteLabel = getNoteLabel(targetNote);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
+  const playbackPlayer = useAudioPlayer(undefined, { updateInterval: 250 });
+  const playbackStatus = useAudioPlayerStatus(playbackPlayer);
   const basicAnalysis = useBasicAnalysis<AnalysisResult>();
   const advancedAnalysis = useAdvancedAnalysis<AnalysisResult>();
   const hasAdvancedAccess = freshUser?.isSubscribed ?? user?.isSubscribed ?? false;
   const analysis = hasAdvancedAccess ? advancedAnalysis : basicAnalysis;
   const [recordingUri, setRecordingUri] = useState<string>();
+  const [recordedFiles, setRecordedFiles] = useState<RecordedAudioFile[]>([]);
+  const [playingUri, setPlayingUri] = useState<string>();
+  const [pendingPlaybackUri, setPendingPlaybackUri] = useState<string>();
   const [permissionGranted, setPermissionGranted] = useState<boolean>();
   const [isPreparingRecorder, setIsPreparingRecorder] = useState(false);
+  const [isResultModalVisible, setIsResultModalVisible] = useState(false);
   const recorderOperationRef = useRef(false);
+  const playbackStartedAtRef = useRef(0);
 
   useEffect(() => {
     if (freshUser) {
@@ -115,6 +134,80 @@ export default function NotePracticeScreen() {
     return { fileInfo, summary };
   }, [analysis.data]);
 
+  const compactResult = useMemo(() => {
+    const summary = parsedData?.summary as Record<string, any> | undefined;
+    const rawData = analysis.data;
+
+    if (!summary) {
+      return rawData
+        ? {
+            score: null,
+            label: "Đã phân tích",
+            description: "AI đã trả kết quả, nhưng chưa đúng định dạng tóm tắt.",
+            issues: [],
+            recommendations: [],
+          }
+        : null;
+    }
+
+    const toStringList = (value: unknown) =>
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
+
+    const shorten = (value: unknown, maxLength = 120) => {
+      if (typeof value !== "string") return "";
+      const text = value.trim();
+      return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+    };
+
+    return {
+      score: typeof summary.score === "number" ? Math.round(summary.score) : null,
+      label: typeof summary.label === "string" ? summary.label : "Đã phân tích",
+      description: shorten(summary.summary || summary.description || summary.feedback, 130),
+      issues: toStringList(summary.issues).slice(0, 2).map((item) => shorten(item, 80)),
+      recommendations: toStringList(summary.recommendations || summary.suggestions)
+        .slice(0, 2)
+        .map((item) => shorten(item, 90)),
+    };
+  }, [analysis.data, parsedData]);
+
+  useEffect(() => {
+    if (analysis.isSuccess) {
+      setIsResultModalVisible(true);
+    }
+  }, [analysis.isSuccess]);
+
+  useEffect(() => {
+    if (
+      playingUri &&
+      playbackStatus.didJustFinish &&
+      Date.now() - playbackStartedAtRef.current > 600
+    ) {
+      setPlayingUri(undefined);
+    }
+  }, [playbackStatus.didJustFinish, playingUri]);
+
+  useEffect(() => {
+    if (!pendingPlaybackUri || pendingPlaybackUri !== playingUri) return;
+    if (!playbackStatus.isLoaded || playbackStatus.isBuffering) return;
+
+    playbackPlayer.seekTo(0).catch(() => undefined);
+    playbackPlayer.play();
+    setPendingPlaybackUri(undefined);
+  }, [
+    pendingPlaybackUri,
+    playbackPlayer,
+    playbackStatus.isBuffering,
+    playbackStatus.isLoaded,
+    playingUri,
+  ]);
+
+  const selectedRecordedFile = useMemo(
+    () => recordedFiles.find((file) => file.uri === recordingUri),
+    [recordedFiles, recordingUri],
+  );
+
   useEffect(() => {
     const prepareAudio = async () => {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
@@ -138,6 +231,14 @@ export default function NotePracticeScreen() {
     });
   };
 
+  const configurePlaybackSession = async () => {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      allowsRecording: false,
+      shouldRouteThroughEarpiece: false,
+    });
+  };
+
   const prepareRecorderWithRetry = async () => {
     try {
       await configureRecordingSession();
@@ -151,6 +252,13 @@ export default function NotePracticeScreen() {
       await configureRecordingSession();
       await recorder.prepareToRecordAsync();
     }
+  };
+
+  const stopPlayback = async () => {
+    playbackPlayer.pause();
+    await playbackPlayer.seekTo(0).catch(() => undefined);
+    setPendingPlaybackUri(undefined);
+    setPlayingUri(undefined);
   };
 
   const startRecording = async () => {
@@ -183,16 +291,15 @@ export default function NotePracticeScreen() {
         return;
       }
 
+      await stopPlayback();
       analysis.reset();
+      setIsResultModalVisible(false);
       setRecordingUri(undefined);
       await prepareRecorderWithRetry();
       recorder.record();
     } catch (error) {
       console.warn("Failed to start audio recording", error);
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: false,
-      }).catch(() => undefined);
+      await configurePlaybackSession().catch(() => undefined);
       Alert.alert(
         "Không thể bật micro",
         "Audio đang được ứng dụng khác sử dụng hoặc phiên ghi âm chưa sẵn sàng. Hãy dừng nhạc/cuộc gọi và thử lại.",
@@ -210,6 +317,17 @@ export default function NotePracticeScreen() {
     try {
       await recorder.stop();
       if (recorder.uri) {
+        const createdAt = Date.now();
+        const recordedFile: RecordedAudioFile = {
+          uri: recorder.uri,
+          name: `note-${targetNote}-${createdAt}.m4a`,
+          note: targetNote,
+          noteLabel: targetNoteLabel,
+          durationSeconds: Math.max(durationSeconds, 1),
+          createdAt,
+        };
+
+        setRecordedFiles([recordedFile]);
         setRecordingUri(recorder.uri);
       }
     } catch (error) {
@@ -219,10 +337,7 @@ export default function NotePracticeScreen() {
         "Phiên ghi âm gặp sự cố. Vui lòng thử lại.",
       );
     } finally {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: false,
-      }).catch(() => undefined);
+      await configurePlaybackSession().catch(() => undefined);
       recorderOperationRef.current = false;
     }
   };
@@ -232,6 +347,7 @@ export default function NotePracticeScreen() {
 
     Haptics.selectionAsync().catch(() => undefined);
     analysis.reset();
+    setIsResultModalVisible(false);
     setRecordingUri(undefined);
     setTargetNote(pitch);
   };
@@ -248,14 +364,38 @@ export default function NotePracticeScreen() {
     await startRecording();
   };
 
+  const playRecordedFile = async (file: RecordedAudioFile) => {
+    if (recorderState.isRecording || analysis.isPending) return;
+
+    Haptics.selectionAsync().catch(() => undefined);
+    analysis.reset();
+    setIsResultModalVisible(false);
+    setTargetNote(file.note);
+    setRecordingUri(file.uri);
+
+    if (playingUri === file.uri && playbackStatus.playing) {
+      await stopPlayback();
+      return;
+    }
+
+    await configurePlaybackSession().catch(() => undefined);
+    playbackPlayer.pause();
+    setPendingPlaybackUri(file.uri);
+    playbackPlayer.replace({ uri: file.uri });
+    playbackStartedAtRef.current = Date.now();
+    setPlayingUri(file.uri);
+  };
+
   const analyzeRecording = () => {
     if (!recordingUri) return;
+
+    const fileName = selectedRecordedFile?.name || `note-${targetNote}-${Date.now()}.m4a`;
 
     analysis.mutate(
       {
         file: {
           uri: recordingUri,
-          name: `note-${targetNote}-${Date.now()}.m4a`,
+          name: fileName,
           type: "audio/mp4",
         },
         message: `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là ${targetNote} (${targetNoteLabel}). Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện.`,
@@ -445,6 +585,68 @@ export default function NotePracticeScreen() {
           </Text>
         </View>
 
+        {recordedFiles.length > 0 && (
+          <View className="gap-3 rounded-[26px] bg-white p-5">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                File đã ghi âm
+              </Text>
+              <Text className="text-xs font-semibold text-[#8A8D84]">
+                {recordedFiles.length} file
+              </Text>
+            </View>
+
+            {recordedFiles.map((file) => {
+              const isSelected = file.uri === recordingUri;
+              const isPlaying = file.uri === playingUri && playbackStatus.playing;
+
+              return (
+                <TouchableOpacity
+                  key={file.uri}
+                  activeOpacity={0.85}
+                  disabled={recorderState.isRecording || analysis.isPending}
+                  onPress={() => playRecordedFile(file)}
+                  className={`flex-row items-center gap-3 rounded-[18px] border px-4 py-3 ${
+                    isSelected
+                      ? "border-[#8E9E6E] bg-[#F7F8F3]"
+                      : "border-[#E5E7E1] bg-white"
+                  }`}
+                >
+                  <View
+                    className={`h-10 w-10 items-center justify-center rounded-full ${
+                      isSelected ? "bg-[#8E9E6E]" : "bg-[#F1F2EC]"
+                    }`}
+                  >
+                    <Ionicons
+                      name={
+                        isPlaying
+                          ? "pause"
+                          : isSelected
+                            ? "play"
+                            : "musical-notes-outline"
+                      }
+                      size={18}
+                      color={isSelected ? "white" : "#687451"}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text selectable className="text-sm font-bold text-[#10120C]">
+                      {file.name}
+                    </Text>
+                    <Text className="mt-0.5 text-xs text-[#777B70]">
+                      {isPlaying ? "Đang phát" : file.noteLabel} · {file.durationSeconds}s ·{" "}
+                      {new Date(file.createdAt).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {recordingUri && !recorderState.isRecording && (
           <TouchableOpacity
             activeOpacity={0.9}
@@ -482,135 +684,81 @@ export default function NotePracticeScreen() {
             )}
           </View>
         )}
+      </ScrollView>
 
-        {analysis.isSuccess && (() => {
-          const { fileInfo, summary } = parsedData || {};
-          
-          if (!summary) {
-            return (
-              <View className="gap-4 rounded-[28px] bg-white p-6">
-                <Text className="text-sm font-bold text-[#10120C]">Kết quả gốc:</Text>
-                <Text className="text-xs font-mono text-[#777B70]">{JSON.stringify(analysis.data)}</Text>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={practiceAnotherNote}
-                  className="flex-row items-center justify-center gap-2 rounded-full border border-[#D6DDC6] py-3 mt-4"
-                >
-                  <Ionicons name="refresh" size={18} color="#687451" />
-                  <Text className="font-bold text-[#687451]">Ghi lại nốt khác</Text>
-                </TouchableOpacity>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isResultModalVisible && !!compactResult}
+        onRequestClose={() => setIsResultModalVisible(false)}
+      >
+        <View className="flex-1 justify-center bg-black/45 px-6">
+          <View className="gap-4 rounded-[28px] bg-white p-6">
+            <View className="flex-row items-start justify-between gap-4">
+              <View className="flex-1">
+                <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                  Kết quả phân tích
+                </Text>
+                <Text className="mt-1 text-lg font-bold text-[#10120C]">
+                  {compactResult?.label}
+                </Text>
               </View>
-            );
-          }
-          
-          const score = summary.score ?? 0;
-          const label = summary.label ?? "Đã phân tích";
-          const description = summary.summary ?? "";
-          const issues: string[] = summary.issues ?? [];
-          const recommendations: string[] = summary.recommendations ?? [];
-          
-          let scoreBg = "bg-[#E2E8D3]";
-          let scoreText = "text-[#687451]";
-          if (score < 50) {
-            scoreBg = "bg-[#FFF2F0]";
-            scoreText = "text-[#A84236]";
-          } else if (score < 80) {
-            scoreBg = "bg-[#FFF9E6]";
-            scoreText = "text-[#7C672D]";
-          }
-
-          return (
-            <View className="gap-5 rounded-[30px] bg-white p-6 shadow-sm">
-              <View className="flex-row items-center gap-3 border-b border-gray-100 pb-4">
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-[#E2E8D3]">
-                  <Ionicons name="sparkles" size={20} color="#687451" />
-                </View>
-                <View>
-                  <Text className="text-base font-bold text-[#10120C]">
-                    Kết quả phân tích
-                  </Text>
-                  <Text className="text-xs text-[#777B70]">
-                    {hasAdvancedAccess ? "Advanced AI Analysis" : "Basic AI Analysis"} · Đã tối ưu hiển thị
-                  </Text>
-                </View>
-              </View>
-
-              <View className="items-center py-4 bg-[#F7F8F3] rounded-[24px] gap-2">
-                <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider">ĐIỂM ĐÁNH GIÁ</Text>
-                <View className="flex-row items-baseline">
-                  <Text className="text-5xl font-black text-[#10120C]">{score}</Text>
-                  <Text className="text-lg font-bold text-[#777B70]">/100</Text>
-                </View>
-                <View className={`px-4 py-1.5 rounded-full ${scoreBg} mt-1`}>
-                  <Text className={`text-sm font-bold ${scoreText}`}>{label}</Text>
-                </View>
-              </View>
-
-              {description ? (
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider">NHẬN XÉT CHUNG</Text>
-                  <Text className="text-sm leading-6 text-[#34372F] text-justify">
-                    {description}
-                  </Text>
-                </View>
-              ) : null}
-
-              {issues.length > 0 && (
-                <View className="gap-2.5 rounded-[22px] bg-[#FFF2F0] p-5 border border-[#F0C7C2]">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="alert-circle" size={20} color="#A84236" />
-                    <Text className="text-sm font-bold text-[#A84236]">Cần cải thiện</Text>
-                  </View>
-                  <View className="gap-2">
-                    {issues.map((issue, idx) => (
-                      <View key={idx} className="flex-row gap-2.5">
-                        <Text className="text-xs text-[#A84236]">•</Text>
-                        <Text className="flex-1 text-xs leading-5 text-[#7C4B46]">{issue}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {recommendations.length > 0 && (
-                <View className="gap-2.5 rounded-[22px] bg-[#E2E8D3]/30 p-5 border border-[#C5D0B4]">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="bulb" size={20} color="#687451" />
-                    <Text className="text-sm font-bold text-[#687451]">Gợi ý luyện tập</Text>
-                  </View>
-                  <View className="gap-2">
-                    {recommendations.map((rec, idx) => (
-                      <View key={idx} className="flex-row gap-2.5">
-                        <Text className="text-xs text-[#687451]">•</Text>
-                        <Text className="flex-1 text-xs leading-5 text-[#4A533B]">{rec}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {fileInfo && (
-                <View className="gap-1.5 border-t border-gray-100 pt-4">
-                  <Text className="text-[10px] font-bold text-[#8E9E6E] uppercase tracking-wider">Thông tin tệp âm thanh</Text>
-                  <Text className="text-[10px] text-[#777B70] leading-4">
-                    Thời lượng: {fileInfo.duration?.toFixed(2)} giây · Tốc độ lấy mẫu: {fileInfo.sample_rate} Hz {"\n"}
-                    Tên tệp: {fileInfo.original_filename || fileInfo.filename}
-                  </Text>
-                </View>
-              )}
-
               <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={practiceAnotherNote}
-                className="flex-row items-center justify-center gap-2 rounded-full bg-[#10120C] py-4 mt-2"
+                activeOpacity={0.8}
+                onPress={() => setIsResultModalVisible(false)}
+                className="h-9 w-9 items-center justify-center rounded-full bg-[#F1F2EC]"
               >
-                <Ionicons name="refresh" size={18} color="white" />
-                <Text className="font-bold text-white text-sm">Thử lại nốt khác</Text>
+                <Ionicons name="close" size={20} color="#10120C" />
               </TouchableOpacity>
             </View>
-          );
-        })()}
-      </ScrollView>
+
+            {compactResult?.score != null && (
+              <View className="items-center rounded-[22px] bg-[#F7F8F3] py-4">
+                <Text className="text-5xl font-black text-[#10120C]">
+                  {compactResult?.score}
+                  <Text className="text-lg text-[#777B70]">/100</Text>
+                </Text>
+              </View>
+            )}
+
+            {!!compactResult?.description && (
+              <Text selectable className="text-sm leading-6 text-[#34372F]">
+                {compactResult.description}
+              </Text>
+            )}
+
+            {compactResult?.issues.map((issue, index) => (
+              <View key={`issue-${index}`} className="flex-row gap-2">
+                <Ionicons name="alert-circle" size={16} color="#A84236" />
+                <Text selectable className="flex-1 text-sm leading-5 text-[#7C4B46]">
+                  {issue}
+                </Text>
+              </View>
+            ))}
+
+            {compactResult?.recommendations.map((recommendation, index) => (
+              <View key={`recommendation-${index}`} className="flex-row gap-2">
+                <Ionicons name="bulb" size={16} color="#687451" />
+                <Text selectable className="flex-1 text-sm leading-5 text-[#4A533B]">
+                  {recommendation}
+                </Text>
+              </View>
+            ))}
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                setIsResultModalVisible(false);
+                practiceAnotherNote();
+              }}
+              className="mt-1 flex-row items-center justify-center gap-2 rounded-full bg-[#10120C] py-4"
+            >
+              <Ionicons name="refresh" size={18} color="white" />
+              <Text className="font-bold text-white">Thử nốt khác</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeScreen>
   );
 }
