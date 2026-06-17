@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { lessonApi } from '@/lib/api/lesson.api';
 import { courseApi } from '@/lib/api/course.api';
 import { Lesson, CreateLessonInput } from '@/types/lesson.types';
@@ -144,14 +145,29 @@ export default function LessonManagementPage() {
     {
       header: 'Tên bài học',
       render: (lesson) => (
-        <>
-          <p className="font-medium text-gray-900 truncate max-w-56">{lesson.title}</p>
-          {lesson.description && (
-            <p className="text-gray-400 text-[11px] truncate max-w-56 mt-0.5">
-              {lesson.description}
-            </p>
+        <div className="flex items-center gap-3">
+          {lesson.imageUrls?.[0] ? (
+            <Image
+              src={lesson.imageUrls[0]}
+              alt={lesson.title}
+              width={44}
+              height={44}
+              className="h-11 w-11 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+              <BookOpen className="h-4 w-4 text-[#2d6a4f]" />
+            </div>
           )}
-        </>
+          <div className="min-w-0">
+            <p className="font-medium text-gray-900 truncate max-w-56">{lesson.title}</p>
+            {lesson.description && (
+              <p className="text-gray-400 text-[11px] truncate max-w-56 mt-0.5">
+                {lesson.description}
+              </p>
+            )}
+          </div>
+        </div>
       ),
     },
     {

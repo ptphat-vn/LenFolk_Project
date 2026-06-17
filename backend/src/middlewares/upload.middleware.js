@@ -19,6 +19,41 @@ const lessonVideoStorage = new CloudinaryStorage({
   },
 });
 
+// Combined storage: a lesson can carry a video and/or a PDF. Cloudinary needs a
+// different resource_type/folder per file kind, so resolve params per file.
+const lessonMaterialStorage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => {
+    if (file.fieldname === 'pdf') {
+      return {
+        folder: 'lenfolk/lesson-pdfs',
+        resource_type: 'raw',
+        allowed_formats: ['pdf'],
+      };
+    }
+    if (file.fieldname === 'images') {
+      return {
+        folder: 'lenfolk/lesson-images',
+        resource_type: 'image',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      };
+    }
+    if (file.fieldname === 'audio') {
+      return {
+        folder: 'lenfolk/lesson-audios',
+        // Cloudinary xử lý audio qua pipeline 'video'
+        resource_type: 'video',
+        allowed_formats: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'webm'],
+      };
+    }
+    return {
+      folder: 'lenfolk/lesson-videos',
+      resource_type: 'video',
+      allowed_formats: ['mp4', 'mov', 'webm', 'mkv'],
+    };
+  },
+});
+
 const performanceDocumentStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -33,6 +68,34 @@ const videoFileFilter = (req, file, cb) => {
     return cb(new Error('Only video files are allowed for lesson uploads'));
   }
   cb(null, true);
+};
+
+const lessonMaterialFileFilter = (req, file, cb) => {
+  if (file.fieldname === 'pdf') {
+    if (file.mimetype !== 'application/pdf') {
+      return cb(new Error('Only PDF files are allowed for the pdf field'));
+    }
+    return cb(null, true);
+  }
+  if (file.fieldname === 'video') {
+    if (!file.mimetype.startsWith('video/')) {
+      return cb(new Error('Only video files are allowed for the video field'));
+    }
+    return cb(null, true);
+  }
+  if (file.fieldname === 'images') {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed for the images field'));
+    }
+    return cb(null, true);
+  }
+  if (file.fieldname === 'audio') {
+    if (!file.mimetype.startsWith('audio/')) {
+      return cb(new Error('Only audio files are allowed for the audio field'));
+    }
+    return cb(null, true);
+  }
+  return cb(new Error('Unexpected file field'));
 };
 
 const documentFileFilter = (req, file, cb) => {
@@ -57,6 +120,11 @@ const upload = multer({ storage: avatarStorage });
 upload.lessonVideo = multer({
   storage: lessonVideoStorage,
   fileFilter: videoFileFilter,
+  limits: { fileSize: 500 * 1024 * 1024 },
+});
+upload.lessonMaterial = multer({
+  storage: lessonMaterialStorage,
+  fileFilter: lessonMaterialFileFilter,
   limits: { fileSize: 500 * 1024 * 1024 },
 });
 upload.performanceDocuments = multer({

@@ -35,13 +35,7 @@ import { DataTable, Column } from '@/common/table/DataTable';
 import { ActionButton } from '@/common/button/ActionButton';
 import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { InstructorFormModal } from '@/components/admin/users/InstructorFormModal';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Button } from '@/components/ui/button';
 
 const STATUS_META: Record<
@@ -400,7 +394,7 @@ export default function AdminInstructorsPage() {
       />
 
       {/* Reject reason dialog */}
-      <Dialog
+      <FormDialog
         open={!!rejectTarget}
         onOpenChange={(o) => {
           if (!o) {
@@ -408,26 +402,13 @@ export default function AdminInstructorsPage() {
             setRejectReason('');
           }
         }}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <XCircle className="w-5 h-5" />
-              Từ chối đơn giảng viên
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 mt-2">
-            <p className="text-sm text-gray-600">
-              Nhập lý do từ chối (tùy chọn). Lý do sẽ được gửi qua email cho giảng viên.
-            </p>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="VD: Hồ sơ thiếu thông tin chuyên môn..."
-              className="w-full h-28 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none"
-            />
-          </div>
-          <DialogFooter className="mt-4">
+        icon={XCircle}
+        title="Từ chối đơn giảng viên"
+        description="Lý do từ chối sẽ được gửi qua email cho giảng viên."
+        tone="danger"
+        className="sm:max-w-md"
+        footer={
+          <>
             <Button
               type="button"
               variant="outline"
@@ -446,9 +427,21 @@ export default function AdminInstructorsPage() {
             >
               Xác nhận từ chối
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">
+              Nhập lý do từ chối (tùy chọn). Lý do sẽ được gửi qua email cho giảng viên.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="VD: Hồ sơ thiếu thông tin chuyên môn..."
+              className="w-full h-28 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none"
+            />
+          </div>
+      </FormDialog>
     </div>
   );
 }

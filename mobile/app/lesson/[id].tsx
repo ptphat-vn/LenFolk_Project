@@ -12,6 +12,7 @@ import { useGetCourses } from "@/hooks/course/use-get-courses";
 import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useCreateProgress } from "@/hooks/progress/use-create-progress";
 import { useUpdateProgress } from "@/hooks/progress/use-update-progress";
+import { getNoteLabel } from "@/constants/practice-notes";
 
 function getYoutubeVideoId(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -229,7 +230,7 @@ export default function LessonDetailScreen() {
             {lesson.practiceTip}
           </Text>
           <Text selectable className="text-xs font-bold text-[#7C672D]">
-            Nốt mục tiêu: {lesson.targetNote}
+            Nốt mục tiêu: {getNoteLabel(lesson.targetNote)}
           </Text>
         </View>
 

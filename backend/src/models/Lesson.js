@@ -24,6 +24,14 @@ const lessonSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    pdfUrl: {
+      type: String,
+      default: null,
+    },
+    imageUrls: {
+      type: [String],
+      default: [],
+    },
     order: {
       type: Number,
       required: true,

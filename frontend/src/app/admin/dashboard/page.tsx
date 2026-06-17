@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RevenueChart } from '@/components/admin/dashboard/RevenueChart';
 import { motion, Variants } from 'framer-motion';
@@ -27,7 +27,7 @@ import { instructorApi } from '@/lib/api/instructor.api';
 import { enrollmentApi } from '@/lib/api/enrollment.api';
 import { User } from '@/types/user.types';
 import { Lesson } from '@/types/lesson.types';
-import { TransactionRecord } from '@/types/payment.types';
+import { TransactionRecord, txUserName } from '@/types/payment.types';
 import { Course } from '@/types/course.types';
 import { PracticeSession } from '@/types/practice-session.types';
 import { InstructorProfile } from '@/types/instructor.types';
@@ -60,40 +60,31 @@ function timeAgo(dateStr?: string): string {
   return `${days} ngày trước`;
 }
 
-function getMonthlyRevenue(
+// Doanh thu theo từng ngày trong 1 tháng (year, month 0-based) — đơn vị: triệu VND
+function getDailyRevenue(
   payments: TransactionRecord[],
+  year: number,
+  month: number,
 ): { month: string; revenue: number }[] {
-  const map: Record<string, number> = {};
-  const monthNames = [
-    'T1',
-    'T2',
-    'T3',
-    'T4',
-    'T5',
-    'T6',
-    'T7',
-    'T8',
-    'T9',
-    'T10',
-    'T11',
-    'T12',
-  ];
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totals = new Array<number>(daysInMonth).fill(0);
   payments.forEach((p) => {
     if (!p.paidAt && !p.createdAt) return;
     const d = new Date(p.paidAt || p.createdAt!);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    map[key] = (map[key] || 0) + (p.amount || 0);
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      totals[d.getDate() - 1] += p.amount || 0;
+    }
   });
-  return Object.entries(map)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-6)
-    .map(([key, total]) => {
-      const [, month] = key.split('-');
-      return {
-        month: monthNames[Number(month)],
-        revenue: parseFloat((total / 1_000_000).toFixed(2)),
-      };
-    });
+  return totals.map((total, i) => ({
+    month: String(i + 1),
+    revenue: parseFloat((total / 1_000_000).toFixed(2)),
+  }));
+}
+
+// "YYYY-MM" của tháng hiện tại, dùng làm giá trị mặc định cho ô chọn tháng
+function currentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -201,9 +192,8 @@ export default function DashboardPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
 
   // Derived
-  const [chartData, setChartData] = useState<
-    { month: string; revenue: number }[]
-  >([]);
+  const [allPayments, setAllPayments] = useState<TransactionRecord[]>([]);
+  const [revenueMonth, setRevenueMonth] = useState(currentMonthValue);
   const [userRoleBreakdown, setUserRoleBreakdown] = useState<
     { role: string; count: number }[]
   >([]);
@@ -245,7 +235,7 @@ export default function DashboardPage() {
                 new Date(b.createdAt || 0).getTime() -
                 new Date(a.createdAt || 0).getTime(),
             )
-            .slice(0, 6),
+            .slice(0, 3),
         );
 
         // Role breakdown
@@ -300,7 +290,7 @@ export default function DashboardPage() {
           0,
         );
         setTotalRevenue(revenue);
-        setChartData(getMonthlyRevenue(paymentsData));
+        setAllPayments(paymentsData);
         setRecentPayments(
           [...paymentsData]
             .sort(
@@ -366,6 +356,28 @@ export default function DashboardPage() {
     };
     fetch();
   }, []);
+
+  // ── Doanh thu theo ngày trong tháng được chọn ────────────────────────────
+  const [revYear, revMonth] = useMemo(() => {
+    const [y, m] = revenueMonth.split('-').map(Number);
+    return [y, m - 1] as const;
+  }, [revenueMonth]);
+  const chartData = useMemo(
+    () => getDailyRevenue(allPayments, revYear, revMonth),
+    [allPayments, revYear, revMonth],
+  );
+  const monthRevenue = useMemo(
+    () =>
+      allPayments
+        .filter((p) => {
+          if (!p.paidAt && !p.createdAt) return false;
+          const d = new Date(p.paidAt || p.createdAt!);
+          return d.getFullYear() === revYear && d.getMonth() === revMonth;
+        })
+        .reduce((sum, p) => sum + (p.amount || 0), 0),
+    [allPayments, revYear, revMonth],
+  );
+  const revenuePeriodLabel = `${String(revMonth + 1).padStart(2, '0')}/${revYear}`;
 
   if (isLoading) {
     return (
@@ -504,28 +516,44 @@ export default function DashboardPage() {
           onClick={() => router.push('/admin/business/revenue-reports')}
           className="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
         >
-          <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between gap-4">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-[#2d6a4f]" />
-                Doanh thu theo tháng
+                Doanh thu trong tháng
               </h2>
               <p className="text-[12px] text-gray-400 mt-0.5">
-                Đơn vị: triệu đồng (VND)
+                Theo từng ngày (đơn vị: triệu VND)
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-xl font-bold text-[#2d6a4f]">
-                {formatCurrency(totalRevenue)}
-              </p>
-              <p className="text-[11px] text-gray-400">Tổng doanh thu</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="month"
+                value={revenueMonth}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setRevenueMonth(e.target.value);
+                }}
+                className="h-9 rounded-lg border border-gray-200 px-3 text-[13px] text-gray-700 outline-none focus:border-[#2d6a4f] focus:ring-2 focus:ring-[#2d6a4f]/20"
+              />
+              <div className="text-right">
+                <p className="text-xl font-bold text-[#2d6a4f]">
+                  {formatCurrency(monthRevenue)}
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  Tháng {revenuePeriodLabel}
+                </p>
+              </div>
             </div>
           </div>
           <div className="p-5">
-            {chartData.length > 0 ? (
-              <RevenueChart data={chartData} />
+            {monthRevenue > 0 ? (
+              <RevenueChart data={chartData} periodLabel={revenuePeriodLabel} />
             ) : (
-              <EmptyState label="Chưa có dữ liệu giao dịch" />
+              <EmptyState
+                label={`Chưa có doanh thu trong tháng ${revenuePeriodLabel}`}
+              />
             )}
           </div>
         </div>
@@ -797,8 +825,7 @@ export default function DashboardPage() {
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-gray-900 truncate">
-                        {tx.paymentMethod ?? 'Giao dịch'} ·{' '}
-                        {tx.transactionType ?? '—'}
+                        {txUserName(tx.userId)}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {timeAgo(tx.paidAt || tx.createdAt)}
@@ -841,7 +868,7 @@ export default function DashboardPage() {
                 Người dùng mới nhất
               </h2>
               <p className="text-[12px] text-gray-400 mt-0.5">
-                6 tài khoản đăng ký gần đây
+                3 tài khoản đăng ký gần đây
               </p>
             </div>
           </div>
