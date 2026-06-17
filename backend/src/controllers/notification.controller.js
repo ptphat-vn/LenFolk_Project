@@ -48,7 +48,7 @@ exports.updateOne = async (req, res, next) => {
         };
 
   const doc = await Notification.findByIdAndUpdate(req.params.id, updates, {
-    new: true,
+    returnDocument: 'after',
     runValidators: true,
   });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });

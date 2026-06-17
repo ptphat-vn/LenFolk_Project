@@ -63,6 +63,22 @@ const performanceDocumentStorage = new CloudinaryStorage({
   },
 });
 
+const courseThumbnailStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'lenfolk/course-thumbnails',
+    resource_type: 'image',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
+});
+
+const imageFileFilter = (req, file, cb) => {
+  if (!file.mimetype.startsWith('image/')) {
+    return cb(new Error('Only image files are allowed'));
+  }
+  cb(null, true);
+};
+
 const videoFileFilter = (req, file, cb) => {
   if (!file.mimetype.startsWith('video/')) {
     return cb(new Error('Only video files are allowed for lesson uploads'));
@@ -131,6 +147,11 @@ upload.performanceDocuments = multer({
   storage: performanceDocumentStorage,
   fileFilter: documentFileFilter,
   limits: { fileSize: 50 * 1024 * 1024 },
+});
+upload.courseThumbnail = multer({
+  storage: courseThumbnailStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 module.exports = upload;
