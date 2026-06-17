@@ -60,6 +60,7 @@ exports.getAll = async (req, res, next) => {
         if (!unlocked) {
           lesson.videoUrl = null;
           lesson.audioUrl = null;
+          lesson.pdfUrl = null;
           lesson.transcript = null;
         }
       });
@@ -135,8 +136,20 @@ exports.getOne = async (req, res, next) => {
 // Verify instructor owns the course before creating a lesson; update totalLessons
 exports.createOne = async (req, res, next) => {
   try {
-    if (req.file) {
-      req.body.videoUrl = req.file.path;
+    if (req.files?.video?.[0]) {
+      req.body.videoUrl = req.files.video[0].path;
+    }
+    if (req.files?.audio?.[0]) {
+      req.body.audioUrl = req.files.audio[0].path;
+    }
+    if (req.files?.pdf?.[0]) {
+      req.body.pdfUrl = req.files.pdf[0].path;
+    }
+    // Ảnh: gộp các URL giữ lại (từ body) với các file mới upload lên Cloudinary
+    if (req.files?.images?.length) {
+      const uploaded = req.files.images.map((f) => f.path);
+      const kept = Array.isArray(req.body.imageUrls) ? req.body.imageUrls : [];
+      req.body.imageUrls = [...kept, ...uploaded];
     }
 
     const course = await Course.findById(req.body.courseId);
@@ -176,8 +189,20 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
-    if (req.file) {
-      req.body.videoUrl = req.file.path;
+    if (req.files?.video?.[0]) {
+      req.body.videoUrl = req.files.video[0].path;
+    }
+    if (req.files?.audio?.[0]) {
+      req.body.audioUrl = req.files.audio[0].path;
+    }
+    if (req.files?.pdf?.[0]) {
+      req.body.pdfUrl = req.files.pdf[0].path;
+    }
+    // Ảnh: gộp các URL giữ lại (từ body) với các file mới upload lên Cloudinary
+    if (req.files?.images?.length) {
+      const uploaded = req.files.images.map((f) => f.path);
+      const kept = Array.isArray(req.body.imageUrls) ? req.body.imageUrls : [];
+      req.body.imageUrls = [...kept, ...uploaded];
     }
 
     const doc = await Lesson.findByIdAndUpdate(req.params.id, req.body, {

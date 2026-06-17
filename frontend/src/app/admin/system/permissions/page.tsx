@@ -20,13 +20,7 @@ import { FilterSelect } from '@/common/filter/FilterSelect';
 import { DataTable, Column } from '@/common/table/DataTable';
 import { ActionButton } from '@/common/button/ActionButton';
 import { useDebounce } from '@/hooks/useDebounce';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -284,15 +278,29 @@ export default function AdminPermissionsPage() {
       </motion.div>
 
       {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[#2d6a4f]" />
-              {editTarget ? 'Chỉnh sửa quyền hạn' : 'Tạo quyền hạn mới'}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSave} noValidate className="space-y-4 mt-2">
+      <FormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        icon={Shield}
+        title={editTarget ? 'Chỉnh sửa quyền hạn' : 'Tạo quyền hạn mới'}
+        description={
+          editTarget
+            ? 'Cập nhật thông tin quyền hạn.'
+            : 'Tạo quyền hạn mới cho hệ thống phân quyền.'
+        }
+        className="sm:max-w-md"
+        onSubmit={handleSave}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Hủy</Button>
+            <Button type="submit" disabled={isSaving} className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSaving ? 'Đang lưu...' : editTarget ? 'Cập nhật' : 'Tạo quyền'}
+            </Button>
+          </>
+        }
+      >
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Tài nguyên (Resource) *</Label>
               <Input value={form.resource} onChange={(e) => setForm({ ...form, resource: e.target.value })} placeholder="vd: course, lesson, user..." />
@@ -313,16 +321,8 @@ export default function AdminPermissionsPage() {
               <Label>Mô tả</Label>
               <Input value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Mô tả ngắn về quyền này" />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Hủy</Button>
-              <Button type="submit" disabled={isSaving} className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSaving ? 'Đang lưu...' : editTarget ? 'Cập nhật' : 'Tạo quyền'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </FormDialog>
     </motion.div>
   );
 }

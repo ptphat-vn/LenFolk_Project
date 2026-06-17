@@ -8,6 +8,8 @@ export interface Lesson {
   description?: string;
   videoUrl?: string;
   audioUrl?: string;
+  pdfUrl?: string;
+  imageUrls?: string[];
   order: number;
   duration?: number;      // giây
   status: LessonStatus;
@@ -26,6 +28,11 @@ export interface CreateLessonInput {
   videoUrl?: string;
   video?: File;
   audioUrl?: string;
+  audio?: File;
+  pdfUrl?: string;
+  pdf?: File;
+  imageUrls?: string[];
+  images?: File[];
   order: number;          // tối thiểu 1
   duration?: number;      // tối thiểu 0
   status?: LessonStatus;

@@ -14,11 +14,14 @@ import {
   CheckCircle2,
   Clock,
   Edit2,
+  FileText,
+  Image as ImageIcon,
   Layers,
   Mic,
   Tag,
   Video,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -95,8 +98,18 @@ export default function LessonDetailPage() {
         <div className="col-span-2 space-y-4">
           {/* Hero card */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="h-40 bg-linear-to-br from-[#1a3a2a] to-[#2d6a4f] flex items-center justify-center">
-              <BookOpen className="w-14 h-14 text-white/30" />
+            <div className="relative h-40 overflow-hidden bg-linear-to-br from-[#1a3a2a] to-[#2d6a4f] flex items-center justify-center">
+              {lesson?.imageUrls?.[0] ? (
+                <Image
+                  src={lesson.imageUrls[0]}
+                  alt={lesson.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                  className="object-cover"
+                />
+              ) : (
+                <BookOpen className="w-14 h-14 text-white/30" />
+              )}
             </div>
             <div className="px-6 py-5">
               {isLoading ? (
@@ -154,6 +167,35 @@ export default function LessonDetailPage() {
             </div>
           </div>
 
+          {/* Image gallery */}
+          {lesson?.imageUrls && lesson.imageUrls.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <h3 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                <ImageIcon className="w-4 h-4 text-[#2d6a4f]" />
+                Hình ảnh ({lesson.imageUrls.length})
+              </h3>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                {lesson.imageUrls.map((url, i) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 transition-opacity hover:opacity-90"
+                  >
+                    <Image
+                      src={url}
+                      alt={`${lesson.title} ${i + 1}`}
+                      fill
+                      sizes="160px"
+                      className="object-cover"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Video preview */}
           {lesson?.videoUrl && (
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
@@ -190,11 +232,35 @@ export default function LessonDetailPage() {
                 <Mic className="w-4 h-4 text-[#2d6a4f]" />
                 Audio bài học
               </h3>
-              <div className="h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                <p className="text-[13px] text-gray-400 px-4 text-center break-all">
-                  {lesson.audioUrl}
-                </p>
+              <audio src={lesson.audioUrl} controls className="w-full">
+                Trình duyệt không hỗ trợ audio.
+              </audio>
+            </div>
+          )}
+
+          {/* PDF document */}
+          {lesson?.pdfUrl && (
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#2d6a4f]" />
+                  Tài liệu PDF
+                </h3>
+                <a
+                  href={lesson.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[12px] font-medium text-[#2d6a4f] hover:underline"
+                >
+                  Mở trong tab mới
+                </a>
               </div>
+              <iframe
+                src={lesson.pdfUrl}
+                className="w-full rounded-lg border border-gray-200"
+                style={{ height: '480px' }}
+                title="Tài liệu PDF bài học"
+              />
             </div>
           )}
 

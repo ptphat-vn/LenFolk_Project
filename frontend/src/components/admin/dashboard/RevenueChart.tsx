@@ -29,13 +29,17 @@ interface TooltipProps {
   active?: boolean;
   payload?: Array<{ value: number }>;
   label?: string;
+  /** Khi vẽ doanh thu theo ngày: "MM/YYYY" của tháng đang xem */
+  periodLabel?: string;
 }
 
-function RevenueTooltip({ active, payload, label }: TooltipProps) {
+function RevenueTooltip({ active, payload, label, periodLabel }: TooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2.5 text-[13px]">
-      <p className="text-gray-400 text-[11px] mb-0.5">Tháng {label}/2026</p>
+      <p className="text-gray-400 text-[11px] mb-0.5">
+        {periodLabel ? `Ngày ${label}/${periodLabel}` : `Tháng ${label}`}
+      </p>
       <p className="font-bold text-[#2d6a4f] text-base">
         {payload[0].value}M ₫
       </p>
@@ -43,7 +47,13 @@ function RevenueTooltip({ active, payload, label }: TooltipProps) {
   );
 }
 
-export function RevenueChart({ data }: { data?: { month: string; revenue: number }[] }) {
+export function RevenueChart({
+  data,
+  periodLabel,
+}: {
+  data?: { month: string; revenue: number }[];
+  periodLabel?: string;
+}) {
   const chartData = data?.length ? data : DATA;
   return (
     <ResponsiveContainer width="100%" height={200}>
@@ -72,7 +82,7 @@ export function RevenueChart({ data }: { data?: { month: string; revenue: number
           tickFormatter={(v: number) => `${v}M`}
           width={38}
         />
-        <Tooltip content={<RevenueTooltip />} />
+        <Tooltip content={<RevenueTooltip periodLabel={periodLabel} />} />
         <Area
           type="monotone"
           dataKey="revenue"

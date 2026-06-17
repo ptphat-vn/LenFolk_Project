@@ -40,39 +40,33 @@ function formatDateTime(d?: string) {
   });
 }
 
-function getMonthlyRevenue(payments: TransactionRecord[]) {
-  const map: Record<string, number> = {};
-  const monthNames = [
-    'T1',
-    'T2',
-    'T3',
-    'T4',
-    'T5',
-    'T6',
-    'T7',
-    'T8',
-    'T9',
-    'T10',
-    'T11',
-    'T12',
-  ];
+// Doanh thu theo từng ngày trong 1 tháng (year, month 0-based) — đơn vị: triệu VND
+function getDailyRevenue(
+  payments: TransactionRecord[],
+  year: number,
+  month: number,
+) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totals = new Array<number>(daysInMonth).fill(0);
   payments
     .filter((p) => p.status === 'success')
     .forEach((p) => {
+      if (!p.paidAt && !p.createdAt) return;
       const d = new Date(p.paidAt || p.createdAt!);
-      const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
-      map[key] = (map[key] || 0) + (p.amount || 0);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        totals[d.getDate() - 1] += p.amount || 0;
+      }
     });
-  return Object.entries(map)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-6)
-    .map(([key, total]) => {
-      const [, month] = key.split('-');
-      return {
-        month: monthNames[Number(month)],
-        revenue: parseFloat((total / 1_000_000).toFixed(2)),
-      };
-    });
+  return totals.map((total, i) => ({
+    month: String(i + 1),
+    revenue: parseFloat((total / 1_000_000).toFixed(2)),
+  }));
+}
+
+// "YYYY-MM" của tháng hiện tại, dùng làm giá trị mặc định cho ô chọn tháng
+function currentMonthValue() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
 const STATUS_CONFIG: Record<
@@ -118,6 +112,7 @@ export default function RevenueReportsPage() {
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>(
     'all',
   );
+  const [revenueMonth, setRevenueMonth] = useState(currentMonthValue);
   const [page, setPage] = useState(1);
 
   const fetchTxs = useCallback(async () => {
@@ -173,7 +168,26 @@ export default function RevenueReportsPage() {
     };
   }, [txs]);
 
-  const chartData = useMemo(() => getMonthlyRevenue(txs), [txs]);
+  const [revYear, revMonth] = useMemo(() => {
+    const [y, m] = revenueMonth.split('-').map(Number);
+    return [y, m - 1] as const;
+  }, [revenueMonth]);
+  const chartData = useMemo(
+    () => getDailyRevenue(txs, revYear, revMonth),
+    [txs, revYear, revMonth],
+  );
+  const monthRevenue = useMemo(
+    () =>
+      txs
+        .filter((t) => {
+          if (t.status !== 'success' || (!t.paidAt && !t.createdAt)) return false;
+          const d = new Date(t.paidAt || t.createdAt!);
+          return d.getFullYear() === revYear && d.getMonth() === revMonth;
+        })
+        .reduce((sum, t) => sum + (t.amount || 0), 0),
+    [txs, revYear, revMonth],
+  );
+  const revenuePeriodLabel = `${String(revMonth + 1).padStart(2, '0')}/${revYear}`;
 
   const filtered = useMemo(
     () =>
@@ -369,28 +383,39 @@ export default function RevenueReportsPage() {
         variants={item}
         className="bg-white border border-gray-200 rounded-xl shadow-sm"
       >
-        <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between gap-4">
           <div>
             <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-[#2d6a4f]" />
-              Doanh thu theo tháng
+              Doanh thu trong tháng
             </h2>
             <p className="text-[12px] text-gray-400 mt-0.5">
-              6 tháng gần nhất (đơn vị: triệu VND)
+              Theo từng ngày (đơn vị: triệu VND)
             </p>
           </div>
-          <p className="text-lg font-bold text-[#2d6a4f]">
-            {formatCurrency(stats.totalRevenue)}
-          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="month"
+              value={revenueMonth}
+              onChange={(e) => setRevenueMonth(e.target.value)}
+              className="h-9 rounded-lg border border-gray-200 px-3 text-[13px] text-gray-700 outline-none focus:border-[#2d6a4f] focus:ring-2 focus:ring-[#2d6a4f]/20"
+            />
+            <div className="text-right">
+              <p className="text-lg font-bold text-[#2d6a4f]">
+                {formatCurrency(monthRevenue)}
+              </p>
+              <p className="text-[11px] text-gray-400">Doanh thu tháng {revenuePeriodLabel}</p>
+            </div>
+          </div>
         </div>
         <div className="p-5">
           {isLoading ? (
             <div className="h-48 bg-gray-50 rounded-xl animate-pulse" />
-          ) : chartData.length > 0 ? (
-            <RevenueChart data={chartData} />
+          ) : monthRevenue > 0 ? (
+            <RevenueChart data={chartData} periodLabel={revenuePeriodLabel} />
           ) : (
             <p className="text-center py-12 text-[13px] text-gray-400">
-              Chưa có dữ liệu doanh thu
+              Chưa có doanh thu trong tháng {revenuePeriodLabel}
             </p>
           )}
         </div>

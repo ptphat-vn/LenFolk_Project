@@ -13,13 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { CircleDollarSign, Layers, Loader2 } from 'lucide-react';
 import { courseSchema, zodFieldErrors } from '@/schema/form.schema';
 
@@ -125,16 +119,35 @@ export function CourseFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#2d6a4f]" />
-            {course ? 'Chỉnh sửa khóa học' : 'Thêm khóa học mới'}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-4">
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Layers}
+      title={course ? 'Chỉnh sửa khóa học' : 'Thêm khóa học mới'}
+      description={
+        course
+          ? 'Cập nhật thông tin khóa học.'
+          : 'Tạo khóa học mới cho nền tảng Lenfolk.'
+      }
+      className="sm:max-w-2xl"
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? 'Đang lưu...' : course ? 'Cập nhật' : 'Tạo khóa học'}
+          </Button>
+        </>
+      }
+    >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label>Tên khóa học *</Label>
               <Input
@@ -242,21 +255,6 @@ export function CourseFormDialog({
               </Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Đang lưu...' : course ? 'Cập nhật' : 'Tạo khóa học'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

@@ -17,14 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Layers, Loader2 } from 'lucide-react';
+import { FormDialog } from '@/components/admin/FormDialog';
+import { Music, Loader2 } from 'lucide-react';
 import { performanceSchema, zodFieldErrors } from '@/schema/form.schema';
 
 type PerformanceFormField =
@@ -143,16 +137,35 @@ export function PerformanceFormModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#2d6a4f]" />
-            {performance ? 'Chỉnh sửa tiết mục' : 'Thêm tiết mục mới'}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-4">
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Music}
+      title={performance ? 'Chỉnh sửa tiết mục' : 'Thêm tiết mục mới'}
+      description={
+        performance
+          ? 'Cập nhật thông tin, video và tài liệu cho tiết mục.'
+          : 'Tạo tiết mục mới cho thư viện biểu diễn.'
+      }
+      className="sm:max-w-2xl"
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? 'Đang lưu...' : performance ? 'Cập nhật' : 'Tạo tiết mục'}
+          </Button>
+        </>
+      }
+    >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="col-span-2 space-y-1.5">
               <Label>Tên tiết mục *</Label>
               <Input
@@ -310,26 +323,6 @@ export function PerformanceFormModal({
               </Label>
             </div>
           </div>
-
-          <DialogFooter className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Đang lưu...' : performance ? 'Cập nhật' : 'Tạo tiết mục'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
