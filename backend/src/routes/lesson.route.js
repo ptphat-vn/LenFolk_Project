@@ -20,7 +20,12 @@ router
   .post(
     verifyToken,
     verifyAdmin,
-    upload.lessonVideo.single('video'),
+    upload.lessonMaterial.fields([
+      { name: 'video', maxCount: 1 },
+      { name: 'audio', maxCount: 1 },
+      { name: 'pdf', maxCount: 1 },
+      { name: 'images', maxCount: 10 },
+    ]),
     validate(createLessonSchema),
     lessonController.createOne,
   );
@@ -36,7 +41,12 @@ router
   .patch(
     verifyToken,
     verifyAdmin,
-    upload.lessonVideo.single('video'),
+    upload.lessonMaterial.fields([
+      { name: 'video', maxCount: 1 },
+      { name: 'audio', maxCount: 1 },
+      { name: 'pdf', maxCount: 1 },
+      { name: 'images', maxCount: 10 },
+    ]),
     validate(updateLessonSchema),
     lessonController.updateOne,
   )

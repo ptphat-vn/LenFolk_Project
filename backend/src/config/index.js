@@ -27,7 +27,11 @@ const envSchema = z.object({
   MAIL_SECURE: z.coerce.boolean().default(false), // true nếu dùng cổng 465
   MAIL_USER: z.string().default(''),
   MAIL_PASS: z.string().default(''),
-  MAIL_FROM: z.string().default('LenFolk <no-reply@lenfolk.com>'),
+  MAIL_FROM: z.string().default('LenFolk <onboarding@resend.dev>'),
+  // ── Resend (HTTP email API qua HTTPS 443 — không bị Render chặn như SMTP) ──
+  RESEND_API_KEY: z.string().default(''),
+  // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
+  MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
   CLIENT_URL: z.string().default('http://localhost:3000'),
 });
@@ -71,6 +75,8 @@ module.exports = {
     user: env.MAIL_USER,
     pass: env.MAIL_PASS,
     from: env.MAIL_FROM,
+    resendApiKey: env.RESEND_API_KEY,
+    replyTo: env.MAIL_REPLY_TO,
   },
   appName: env.APP_NAME,
   clientUrl: env.CLIENT_URL,

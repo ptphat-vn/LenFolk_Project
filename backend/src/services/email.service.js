@@ -2,7 +2,8 @@ const { sendMail } = require('../config/mailer');
 const config = require('../config');
 
 const APP = config.appName;
-const BRAND = '#7c3aed';
+const BRAND = '#2d6a4f';
+const BRAND_SOFT = '#e7f3ec'; // nền xanh nhạt cho hộp mã OTP
 
 // Khung HTML dùng chung cho mọi email.
 const layout = (title, bodyHtml) => `
@@ -34,7 +35,7 @@ const sendVerificationEmail = (user, code) => {
      <p>Cảm ơn bạn đã đăng ký ${APP}. Nhập mã xác thực dưới đây để kích hoạt tài khoản:</p>
      <div style="text-align:center;margin:24px 0;">
        <span style="display:inline-block;font-size:32px;letter-spacing:8px;font-weight:bold;
-         color:${BRAND};background:#f3e8ff;padding:14px 24px;border-radius:10px;">${code}</span>
+         color:${BRAND};background:${BRAND_SOFT};padding:14px 24px;border-radius:10px;">${code}</span>
      </div>
      <p style="color:#666;">Mã có hiệu lực trong <b>10 phút</b>. Nếu bạn không đăng ký, hãy bỏ qua email này.</p>`,
   );
@@ -51,7 +52,7 @@ const sendPasswordResetEmail = (user, code) => {
      <p>Bạn vừa yêu cầu đặt lại mật khẩu. Nhập mã dưới đây để tiếp tục:</p>
      <div style="text-align:center;margin:24px 0;">
        <span style="display:inline-block;font-size:32px;letter-spacing:8px;font-weight:bold;
-         color:${BRAND};background:#f3e8ff;padding:14px 24px;border-radius:10px;">${code}</span>
+         color:${BRAND};background:${BRAND_SOFT};padding:14px 24px;border-radius:10px;">${code}</span>
      </div>
      <p style="color:#666;">Mã có hiệu lực trong <b>10 phút</b>. Nếu bạn không yêu cầu, hãy bỏ qua email này —
         mật khẩu của bạn vẫn an toàn.</p>`,

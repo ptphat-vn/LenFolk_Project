@@ -13,13 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { CircleDollarSign, Loader2 } from 'lucide-react';
 import { coursePlanSchema, firstZodError } from '@/schema/form.schema';
 
@@ -67,20 +61,35 @@ export function CoursePlanDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CircleDollarSign className="w-4 h-4 text-amber-600" />
-            Đặt giá khóa học
-          </DialogTitle>
-        </DialogHeader>
-        {course && (
-          <p className="text-[13px] text-gray-500 -mt-1">
-            <span className="font-medium text-gray-700">{course.title}</span> — bán theo gói chu kỳ.
-          </p>
-        )}
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={CircleDollarSign}
+      title="Đặt giá khóa học"
+      description={
+        course
+          ? `${course.title} — bán theo gói chu kỳ.`
+          : 'Đặt giá bán theo gói chu kỳ cho khóa học.'
+      }
+      className="sm:max-w-md"
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? 'Đang lưu...' : 'Lưu giá'}
+          </Button>
+        </>
+      }
+    >
+        <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Giá (VNĐ) *</Label>
             <Input
@@ -106,21 +115,7 @@ export function CoursePlanDialog({
             </Select>
           </div>
           {error && <p className="text-[11px] font-medium text-red-500">{error}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Đang lưu...' : 'Lưu giá'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </FormDialog>
   );
 }

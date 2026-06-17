@@ -25,13 +25,7 @@ import { DataTable, Column } from '@/common/table/DataTable';
 import { ActionButton } from '@/common/button/ActionButton';
 import { RowActionsMenu } from '@/components/admin/RowActionsMenu';
 import { useDebounce } from '@/hooks/useDebounce';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -334,13 +328,29 @@ export default function AdminBadgesPage() {
       </motion.div>
 
       {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editTarget ? 'Chỉnh sửa huy hiệu' : 'Thêm huy hiệu mới'}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSave} noValidate className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-4">
+      <FormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        icon={Award}
+        title={editTarget ? 'Chỉnh sửa huy hiệu' : 'Thêm huy hiệu mới'}
+        description={
+          editTarget
+            ? 'Cập nhật thông tin huy hiệu.'
+            : 'Tạo huy hiệu mới cho hệ thống thành tích.'
+        }
+        className="sm:max-w-lg"
+        onSubmit={handleSave}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Hủy</Button>
+            <Button type="submit" disabled={isSaving} className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSaving ? 'Đang lưu...' : editTarget ? 'Cập nhật' : 'Tạo huy hiệu'}
+            </Button>
+          </>
+        }
+      >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1.5">
                 <Label>Tên huy hiệu *</Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nhập tên huy hiệu" />
@@ -393,16 +403,7 @@ export default function AdminBadgesPage() {
                 <Label htmlFor="badge-active" className="cursor-pointer">Kích hoạt ngay</Label>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Hủy</Button>
-              <Button type="submit" disabled={isSaving} className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSaving ? 'Đang lưu...' : editTarget ? 'Cập nhật' : 'Tạo huy hiệu'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      </FormDialog>
     </motion.div>
   );
 }

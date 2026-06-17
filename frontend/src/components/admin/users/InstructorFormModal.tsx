@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,16 +83,35 @@ export function InstructorFormModal({ open, onClose, onSave, editInstructor }: I
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-[#2d6a4f]" />
-            {editInstructor ? 'Cập nhật hồ sơ giảng viên' : 'Thêm hồ sơ giảng viên'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} noValidate className="space-y-4 mt-2">
+    <FormDialog
+      open={open}
+      onOpenChange={onClose}
+      icon={UserCheck}
+      title={editInstructor ? 'Cập nhật hồ sơ giảng viên' : 'Thêm hồ sơ giảng viên'}
+      description={
+        editInstructor
+          ? 'Cập nhật thông tin hồ sơ giảng viên.'
+          : 'Tạo hồ sơ giảng viên mới cho người dùng.'
+      }
+      className="sm:max-w-lg"
+      onSubmit={handleSubmit}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSaving || (!editInstructor && !form.userId)}
+            className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2"
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? 'Đang lưu...' : editInstructor ? 'Cập nhật' : 'Tạo mới'}
+          </Button>
+        </>
+      }
+    >
+        <div className="space-y-4">
           {!editInstructor && (
             <div className="space-y-1.5">
               <Label>User ID *</Label>
@@ -150,22 +169,7 @@ export function InstructorFormModal({ open, onClose, onSave, editInstructor }: I
           </div>
 
           {error && <p className="text-sm text-red-500">{error}</p>}
-
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSaving || (!editInstructor && !form.userId)}
-              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white flex items-center gap-2"
-            >
-              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSaving ? 'Đang lưu...' : editInstructor ? 'Cập nhật' : 'Tạo mới'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </FormDialog>
   );
 }

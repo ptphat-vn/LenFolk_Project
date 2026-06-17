@@ -151,6 +151,15 @@
   }
 }
 
+/* Ẩn thanh cuộn nhưng vẫn cho phép cuộn */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* ─── Brand Theme ──────────────────────────────────────────────────────────── */
 @theme inline {
   --color-bamboo: #2d5016;

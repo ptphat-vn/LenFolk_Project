@@ -1,13 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Loader2, Trash2 } from 'lucide-react';
 
 interface ConfirmDeleteDialogProps {
@@ -34,18 +28,16 @@ export function ConfirmDeleteDialog({
   loadingLabel = 'Đang xóa...',
 }: ConfirmDeleteDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-              <Trash2 className="w-4 h-4 text-red-500" />
-            </div>
-            {title}
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-[13px] text-gray-500 -mt-1">{description}</p>
-        <DialogFooter>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Trash2}
+      title={title}
+      description="Hành động này cần được xác nhận."
+      tone="danger"
+      className="sm:max-w-md"
+      footer={
+        <>
           <Button
             type="button"
             variant="outline"
@@ -63,8 +55,10 @@ export function ConfirmDeleteDialog({
             {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
             {isDeleting ? loadingLabel : confirmLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <p className="text-[13px] leading-relaxed text-gray-600">{description}</p>
+    </FormDialog>
   );
 }

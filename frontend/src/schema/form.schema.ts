@@ -111,6 +111,11 @@ export const lessonSchema = z.object({
   videoUrl: optionalUrl,
   video: fileSchema.optional(),
   audioUrl: optionalUrl,
+  audio: fileSchema.optional(),
+  pdfUrl: optionalUrl,
+  pdf: fileSchema.optional(),
+  imageUrls: z.array(z.string()).optional(),
+  images: z.array(fileSchema).optional(),
   order: z.coerce
     .number({ error: 'Thứ tự phải là số' })
     .int('Thứ tự phải là số nguyên')

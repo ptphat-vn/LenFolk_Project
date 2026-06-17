@@ -1,16 +1,10 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Loader2, XCircle } from 'lucide-react';
 import { useState } from 'react';
 
 interface RejectModalProps {
@@ -45,7 +39,7 @@ export function RejectModal({
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
       onOpenChange={(v) => {
         if (!v) {
@@ -54,13 +48,35 @@ export function RejectModal({
         }
         onOpenChange(v);
       }}
+      icon={XCircle}
+      title="Từ chối nội dung"
+      description="Nhập lý do từ chối để gửi cho tác giả."
+      tone="danger"
+      className="sm:max-w-md"
+      footer={
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+            className="text-[13px]"
+          >
+            Hủy
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleConfirm}
+            disabled={loading}
+            className="bg-red-600 hover:bg-red-700 text-white text-[13px] min-w-25"
+          >
+            {loading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            Từ chối
+          </Button>
+        </>
+      }
     >
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-[15px]">Từ chối nội dung</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-3 py-2">
+        <div className="space-y-3">
           <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
             <p className="text-[11px] text-gray-400 mb-0.5">Nội dung</p>
             <p className="text-[13px] font-medium text-gray-800 line-clamp-2">
@@ -89,28 +105,6 @@ export function RejectModal({
             Tác giả sẽ nhận được thông báo từ chối kèm theo lý do này.
           </div>
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-            className="text-[13px]"
-          >
-            Hủy
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleConfirm}
-            disabled={loading}
-            className="bg-red-600 hover:bg-red-700 text-white text-[13px] min-w-25"
-          >
-            {loading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-            Từ chối
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

@@ -3,13 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Performance } from '@/types/performance.types';
 import { performanceApi } from '@/lib/api/performance.api';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { FormDialog } from '@/components/admin/FormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -121,16 +115,75 @@ export function ApprovePerformanceDialog({
   const adminRevenue = price ? Math.round(price * (commission / 100)) : undefined;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Music className="w-4 h-4 text-[#2d6a4f]" />
-            Duyệt tiết mục
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 mt-2">
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={Music}
+      title="Duyệt tiết mục"
+      description="Xem chi tiết và duyệt hoặc từ chối tiết mục."
+      className="sm:max-w-xl"
+      footer={
+        mode === 'view' ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="text-gray-600"
+            >
+              Đóng
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMode('reject')}
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <XCircle className="w-4 h-4 mr-1.5" />
+              Từ chối
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApprove}
+              disabled={isApproving}
+              className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white"
+            >
+              {isApproving ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+              )}
+              Duyệt & Xuất bản
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMode('view')}
+              disabled={isRejecting}
+            >
+              Quay lại
+            </Button>
+            <Button
+              type="button"
+              onClick={handleReject}
+              disabled={isRejecting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isRejecting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+              ) : (
+                <XCircle className="w-4 h-4 mr-1.5" />
+              )}
+              Xác nhận từ chối
+            </Button>
+          </>
+        )
+      }
+    >
+        <div className="space-y-4">
           {/* Thumbnail + Title */}
           <div className="flex gap-3 items-start">
             {performance.thumbnail ? (
@@ -291,68 +344,6 @@ export function ApprovePerformanceDialog({
             </div>
           )}
         </div>
-
-        <DialogFooter className="mt-4 flex gap-2 justify-end">
-          {mode === 'view' ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="text-gray-600"
-              >
-                Đóng
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMode('reject')}
-                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-              >
-                <XCircle className="w-4 h-4 mr-1.5" />
-                Từ chối
-              </Button>
-              <Button
-                type="button"
-                onClick={handleApprove}
-                disabled={isApproving}
-                className="bg-[#1a3a2a] hover:bg-[#2d6a4f] text-white"
-              >
-                {isApproving ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                )}
-                Duyệt & Xuất bản
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMode('view')}
-                disabled={isRejecting}
-              >
-                Quay lại
-              </Button>
-              <Button
-                type="button"
-                onClick={handleReject}
-                disabled={isRejecting}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {isRejecting ? (
-                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
-                ) : (
-                  <XCircle className="w-4 h-4 mr-1.5" />
-                )}
-                Xác nhận từ chối
-              </Button>
-            </>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }

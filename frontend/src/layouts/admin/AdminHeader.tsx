@@ -1,8 +1,9 @@
 'use client';
 
 import { User } from '@/types/user.types';
-import { Bell, ChevronRight, Search } from 'lucide-react';
+import { ChevronRight, Search } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { NotificationBell } from '@/components/admin/NotificationBell';
 
 const BREADCRUMB_MAP: Record<string, string> = {
   admin: 'Quản trị viên',
@@ -67,13 +68,7 @@ export default function AdminHeader({ user }: { user: User }) {
           </kbd>
         </button>
 
-        <button
-          className="relative w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all duration-150"
-          aria-label="Thông báo"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-        </button>
+        <NotificationBell />
 
         <button
           title={`${user.name} (${user.email})`}
