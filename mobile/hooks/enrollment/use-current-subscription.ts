@@ -2,21 +2,13 @@ import { useGetMyEnrollments } from "@/hooks/enrollment/use-get-my-enrollments";
 import { useAuthStore } from "@/store/authStore";
 import { MyEnrollmentItem } from "@/types/enrollments.type";
 
-export type SubscriptionTier = "foundation" | "technique" | "repertoire";
+export type SubscriptionTier = "foundation" | "technique";
 
 const getTier = (enrollment?: MyEnrollmentItem): SubscriptionTier => {
   if (!enrollment?.item) return "foundation";
 
   const courseType = enrollment.item.courseType?.toLowerCase();
   const title = enrollment.item.title.toLowerCase();
-
-  if (
-    courseType === "repertoire" ||
-    title.includes("repertoire") ||
-    title.includes("biểu diễn")
-  ) {
-    return "repertoire";
-  }
 
   if (
     courseType === "technique" ||
@@ -26,8 +18,12 @@ const getTier = (enrollment?: MyEnrollmentItem): SubscriptionTier => {
     return "technique";
   }
 
-  if (enrollment.item.level === "advanced") return "repertoire";
-  if (enrollment.item.level === "intermediate") return "technique";
+  if (
+    enrollment.item.level === "intermediate" ||
+    enrollment.item.level === "advanced"
+  ) {
+    return "technique";
+  }
 
   return "foundation";
 };

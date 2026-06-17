@@ -46,6 +46,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="lesson/[id]" />
             <Stack.Screen name="practice/[lessonId]" />
+            <Stack.Screen name="privacy" />
           </Stack>
           <StatusBar style="dark" />
         </SafeAreaProvider>
