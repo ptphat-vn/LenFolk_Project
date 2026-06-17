@@ -75,7 +75,7 @@ exports.updateOne = async (req, res, next) => {
       req.params.id,
       safeBody,
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true,
       },
     );

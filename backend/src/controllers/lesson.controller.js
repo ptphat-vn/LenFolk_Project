@@ -206,7 +206,7 @@ exports.updateOne = async (req, res, next) => {
     }
 
     const doc = await Lesson.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
     if (!doc)

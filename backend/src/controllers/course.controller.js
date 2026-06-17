@@ -109,6 +109,7 @@ exports.getOne = async (req, res, next) => {
 
 exports.createOne = async (req, res, next) => {
   try {
+    if (req.file) req.body.thumbnail = req.file.path;
     // Course KHÔNG có giá — giá đặt qua CoursePlan (POST /courses/:id/plan).
     const doc = await Course.create({
       ...req.body,
@@ -134,6 +135,7 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
+    if (req.file) req.body.thumbnail = req.file.path;
     const course = await Course.findById(req.params.id);
     if (!course)
       return res
@@ -155,7 +157,7 @@ exports.updateOne = async (req, res, next) => {
     }
 
     const updated = await Course.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 
@@ -248,7 +250,7 @@ exports.upsertPlan = async (req, res, next) => {
         },
         $setOnInsert: { courseId: course._id, currency: 'VND' },
       },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+      { returnDocument: 'after', upsert: true, runValidators: true, setDefaultsOnInsert: true },
     );
 
     await writeAuditLog(req, {

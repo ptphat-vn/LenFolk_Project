@@ -88,7 +88,7 @@ const fulfillTransaction = async (transaction, opts = {}) => {
   const user = await User.findByIdAndUpdate(
     transaction.userId,
     { isSubscribed: true },
-    { new: true },
+    { returnDocument: 'after' },
   ).select('name email');
 
   await transaction.save();
@@ -100,7 +100,7 @@ const fulfillTransaction = async (transaction, opts = {}) => {
     await Wallet.findOneAndUpdate(
       { instructorId },
       { $inc: { balance: instructorShare, totalEarned: instructorShare } },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
     );
   }
 
