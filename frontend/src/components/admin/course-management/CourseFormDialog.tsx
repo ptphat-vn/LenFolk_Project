@@ -14,13 +14,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FormDialog } from '@/components/admin/FormDialog';
-import { CircleDollarSign, Layers, Loader2 } from 'lucide-react';
+import Image from 'next/image';
+import { CircleDollarSign, Image as ImageIcon, Layers, Loader2 } from 'lucide-react';
 import { courseSchema, zodFieldErrors } from '@/schema/form.schema';
 
 type CourseFormField =
   | 'title'
   | 'description'
   | 'thumbnail'
+  | 'thumbnailFile'
   | 'level'
   | 'status'
   | 'courseType';
@@ -45,6 +47,7 @@ export function CourseFormDialog({
     title: '',
     description: '',
     thumbnail: '',
+    thumbnailFile: undefined,
     level: 'beginner',
     status: 'pending',
     courseType: '',
@@ -61,6 +64,7 @@ export function CourseFormDialog({
         title: course.title,
         description: course.description ?? '',
         thumbnail: course.thumbnail ?? '',
+        thumbnailFile: undefined,
         level: course.level,
         status: course.status,
         courseType: course.courseType ?? '',
@@ -75,6 +79,7 @@ export function CourseFormDialog({
         title: '',
         description: '',
         thumbnail: '',
+        thumbnailFile: undefined,
         level: 'beginner',
         status: 'pending',
         courseType: '',
@@ -230,9 +235,52 @@ export function CourseFormDialog({
               <Input
                 value={form.thumbnail ?? ''}
                 onChange={(e) => set('thumbnail', e.target.value)}
-                placeholder="https://..."
+                placeholder="https://... hoặc upload bên dưới"
               />
               {renderFieldError('thumbnail')}
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label htmlFor="course-thumb-file">Upload ảnh thumbnail</Label>
+              <label
+                htmlFor="course-thumb-file"
+                className="flex items-center gap-3 rounded-lg border border-dashed border-gray-300 px-3 py-2.5 transition-colors hover:border-[#2d6a4f] hover:bg-emerald-50/40"
+              >
+                {course?.thumbnail && !form.thumbnailFile ? (
+                  <span className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md border border-gray-200">
+                    <Image
+                      src={course.thumbnail}
+                      alt="thumbnail"
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  </span>
+                ) : (
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+                    <ImageIcon className="h-4 w-4 text-[#2d6a4f]" />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-gray-700">
+                    {form.thumbnailFile ? form.thumbnailFile.name : 'Chọn ảnh để tải lên'}
+                  </span>
+                  <span className="block truncate text-[11px] text-gray-400">
+                    {form.thumbnailFile
+                      ? `${(form.thumbnailFile.size / 1024 / 1024).toFixed(1)} MB`
+                      : course?.thumbnail
+                        ? 'Đã có ảnh — chọn để thay thế'
+                        : 'JPG, PNG, WEBP'}
+                  </span>
+                </span>
+                <input
+                  id="course-thumb-file"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => set('thumbnailFile', e.target.files?.[0])}
+                />
+              </label>
+              {renderFieldError('thumbnailFile')}
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Tags (cách nhau bởi dấu phẩy)</Label>

@@ -80,6 +80,7 @@ export const courseSchema = z.object({
     .max(200, 'Tên khoá học tối đa 200 ký tự'),
   description: optionalString,
   thumbnail: optionalUrl,
+  thumbnailFile: fileSchema.optional(),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   status: z.enum(['pending', 'published', 'archived']).optional(),
   courseType: optionalString,

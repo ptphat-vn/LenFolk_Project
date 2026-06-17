@@ -45,7 +45,7 @@ exports.updateOne = async (req, res, next) => {
     // Prevent userId/courseId/lessonId spoofing on update
     delete req.body.userId;
     const updated = await Progress.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
     res.status(200).json({ success: true, data: updated });

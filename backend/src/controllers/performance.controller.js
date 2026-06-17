@@ -164,7 +164,7 @@ exports.updateOne = async (req, res, next) => {
         : req.body;
 
     const updated = await Performance.findByIdAndUpdate(req.params.id, updatePayload, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).select('-__v');
 
@@ -207,7 +207,7 @@ exports.approveOne = async (req, res, next) => {
     }
 
     const updated = await Performance.findByIdAndUpdate(req.params.id, updateFields, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     }).select('-__v');
 
@@ -246,7 +246,7 @@ exports.rejectOne = async (req, res, next) => {
     const updated = await Performance.findByIdAndUpdate(
       req.params.id,
       { status: 'archived' },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     ).select('-__v');
 
     const { rejectReason } = req.body;

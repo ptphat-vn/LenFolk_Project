@@ -47,7 +47,7 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
-  const doc = await InstructorProfile.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  const doc = await InstructorProfile.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after', runValidators: true });
   if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy hồ sơ giảng viên' });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });
   } catch (err) { next(err); }
@@ -82,7 +82,7 @@ exports.approve = async (req, res, next) => {
     const user = await User.findByIdAndUpdate(
       profile.userId,
       { role: 'instructor' },
-      { new: true },
+      { returnDocument: 'after' },
     ).select('name email');
 
     if (user?.email) await sendInstructorApprovedEmail(user);

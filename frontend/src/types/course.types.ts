@@ -58,6 +58,7 @@ export interface CreateCourseInput {
   title: string;
   description?: string;
   thumbnail?: string;
+  thumbnailFile?: File;
   level: CourseLevel;
   status?: CourseStatus;
   tags?: string[];

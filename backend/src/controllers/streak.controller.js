@@ -46,7 +46,7 @@ exports.updateOne = async (req, res, next) => {
     // Prevent userId spoofing on update
     delete req.body.userId;
     const updated = await Streak.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
     await evaluateBadges(updated.userId, 'streak_days', updated.currentStreak);

@@ -9,6 +9,7 @@ const {
   verifyInstructorOrAdmin,
   verifyAdmin,
 } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 const validate = require('../middlewares/validate.middleware');
 const {
   createCourseSchema,
@@ -26,6 +27,7 @@ router
   .post(
     verifyToken,
     verifyAdmin,
+    upload.courseThumbnail.single('thumbnailFile'),
     validate(createCourseSchema),
     courseController.createOne,
   );
@@ -41,6 +43,7 @@ router
   .patch(
     verifyToken,
     verifyAdmin,
+    upload.courseThumbnail.single('thumbnailFile'),
     validate(updateCourseSchema),
     courseController.updateOne,
   )

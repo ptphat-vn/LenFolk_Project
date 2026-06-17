@@ -36,7 +36,7 @@ exports.updateMe = async (req, res, next) => {
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 
@@ -103,7 +103,7 @@ exports.updateOne = async (req, res, next) => {
   // Strip password fields: findByIdAndUpdate bypasses pre-save bcrypt hook
   delete req.body.passwordHash;
   delete req.body.password;
-  const doc = await User.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  const doc = await User.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after', runValidators: true });
   if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
   await writeAuditLog(req, { action: 'UPDATE', resource: 'User', resourceId: doc._id, after: doc.toJSON() });
   res.status(200).json({ success: true, message: 'Cập nhật người dùng thành công', data: doc });
