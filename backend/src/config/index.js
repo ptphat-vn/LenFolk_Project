@@ -30,6 +30,8 @@ const envSchema = z.object({
   MAIL_FROM: z.string().default('LenFolk <onboarding@resend.dev>'),
   // ── Resend (HTTP email API qua HTTPS 443 — không bị Render chặn như SMTP) ──
   RESEND_API_KEY: z.string().default(''),
+  // Brevo (Sendinblue) — gửi email qua HTTP API, xác thực 1 email người gửi (không cần domain)
+  BREVO_API_KEY: z.string().default(''),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
@@ -76,6 +78,7 @@ module.exports = {
     pass: env.MAIL_PASS,
     from: env.MAIL_FROM,
     resendApiKey: env.RESEND_API_KEY,
+    brevoApiKey: env.BREVO_API_KEY,
     replyTo: env.MAIL_REPLY_TO,
   },
   appName: env.APP_NAME,
