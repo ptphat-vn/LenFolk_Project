@@ -42,7 +42,7 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
-  const doc = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+  const doc = await Coupon.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after', runValidators: true });
   if (!doc) return res.status(404).json({ success: false, message: 'Không tìm thấy dữ liệu' });
   await writeAuditLog(req, { action: 'UPDATE', resource: 'Coupon', resourceId: doc._id, after: doc.toObject() });
   res.status(200).json({ success: true, message: 'Cập nhật thành công', data: doc });

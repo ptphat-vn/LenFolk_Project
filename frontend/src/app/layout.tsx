@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from '@/components/ui/sonner';
+import { ScrollToTop } from '@/components/ScrollToTop';
 
 export default function RootLayout({
   children,
@@ -37,6 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${roboto.variable} ${lora.variable} ${beVietnamPro.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-(--font-roboto)">
+        <ScrollToTop />
         {children}
         <Toaster position="top-right" richColors theme="light" />
       </body>

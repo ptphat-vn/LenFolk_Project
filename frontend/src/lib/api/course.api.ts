@@ -8,6 +8,11 @@ import {
   UpsertCoursePlanInput,
 } from '@/types/course.types';
 import { CoursePurchaseInput, CoursePurchaseResponse } from '@/types/coupon.types';
+import { hasFileValue, toFormData } from './form-data';
+
+function coursePayload(body: Partial<CreateCourseInput>) {
+  return hasFileValue(body) ? toFormData(body) : body;
+}
 
 export const courseApi = {
   /** GET /courses — Lấy danh sách khóa học (Public) */
@@ -18,7 +23,7 @@ export const courseApi = {
 
   /** POST /courses — Tạo khóa học mới (Admin only) */
   create: async (body: CreateCourseInput) => {
-    const res = await axiosInstance.post<APIResponse<Course>>('/courses', body);
+    const res = await axiosInstance.post<APIResponse<Course>>('/courses', coursePayload(body));
     return res.data;
   },
 
@@ -30,7 +35,10 @@ export const courseApi = {
 
   /** PATCH /courses/:id — Cập nhật khóa học (Admin only) */
   update: async (id: string, body: Partial<CreateCourseInput>) => {
-    const res = await axiosInstance.patch<APIResponse<Course>>(`/courses/${id}`, body);
+    const res = await axiosInstance.patch<APIResponse<Course>>(
+      `/courses/${id}`,
+      coursePayload(body),
+    );
     return res.data;
   },
 
