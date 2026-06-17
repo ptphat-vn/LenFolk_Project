@@ -53,7 +53,8 @@ export default function PrivacyScreen() {
           <Ionicons name="arrow-back" size={22} color="#10120C" />
         </TouchableOpacity>
         <Text
-          className="flex-1 pr-10 text-center text-lg font-bold text-charcoal"
+          numberOfLines={2}
+          className="min-w-0 flex-1 pr-10 text-center text-lg font-bold text-charcoal"
           style={{ fontFamily: "BeVietnamPro-Medium" }}
         >
           Chính sách bảo mật
@@ -70,15 +71,11 @@ export default function PrivacyScreen() {
           delay={80}
           className="rounded-[32px] bg-white p-6"
         >
-          <Text className="mb-6 text-sm leading-6 text-charcoal/65">
-            Chính sách này giải thích cách LenFolk xử lý dữ liệu khi bạn sử
-            dụng ứng dụng.
-          </Text>
-
           <View className="gap-6">
             {sections.map((section) => (
               <View key={section.title}>
                 <Text
+                  numberOfLines={2}
                   className="mb-2 text-sm font-bold text-charcoal"
                   style={{ fontFamily: "BeVietnamPro-Medium" }}
                 >

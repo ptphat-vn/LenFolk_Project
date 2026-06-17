@@ -9,38 +9,49 @@ export type Lesson = {
   theory: string[];
   targetNote: string;
   practiceTip: string;
+  /**
+   * Đặt false cho các bài chỉ mang tính giới thiệu/lý thuyết, không có phần
+   * ghi âm luyện tập với AI. Mặc định coi như có luyện tập.
+   */
+  hasPractice?: boolean;
 };
 
 export const lessons: Lesson[] = [
   {
     id: 1,
     category: "Cơ bản",
-    title: "Bài 1: Làm quen với sáo trúc",
+    title: "Bài 1: Giới thiệu sáo trúc Việt Nam",
     duration: "5:00",
     status: "completed",
-    objective: "Nhận biết tư thế cầm sáo và vị trí đặt môi đúng.",
+    objective:
+      "Làm quen với cây sáo trúc Việt Nam loại 6 lỗ bấm: nguồn gốc, cấu tạo và cách cầm sáo cơ bản. Đây là bài giới thiệu nên chưa có phần luyện tập ghi âm.",
     theory: [
-      "Giữ vai thả lỏng, lưng thẳng và sáo song song với mặt đất.",
-      "Đặt mép lỗ thổi sát môi dưới, không ép sáo quá chặt.",
-      "Thổi luồng hơi mảnh, đều và hướng nhẹ xuống cạnh lỗ thổi.",
+      "Sáo trúc là nhạc cụ hơi truyền thống của Việt Nam, làm từ ống trúc hoặc nứa, cho âm thanh trong trẻo, mộc mạc và gần gũi.",
+      "Loại phổ biến nhất với người mới là sáo 6 lỗ bấm: gồm 1 lỗ thổi và 6 lỗ bấm để tạo ra các nốt nhạc.",
+      "Gần đuôi sáo còn có các lỗ định âm (lỗ thoát hơi) giúp chỉnh cao độ và treo dây trang trí.",
+      "Sáo trúc Việt Nam thường được định âm theo các tông như Đô, Rê, Sol... tuỳ chiều dài và đường kính ống.",
+      "Tư thế cầm: giữ sáo nằm ngang, thân sáo hơi chếch xuống, vai và hai tay thả lỏng tự nhiên.",
+      "Tay trái bấm 3 lỗ phía trên, tay phải bấm 3 lỗ phía dưới; dùng phần thịt đầu ngón bịt thật kín lỗ bấm.",
+      "Hãy quan sát và làm quen với cây sáo trước; các kỹ thuật đặt môi, lấy hơi và thổi nốt sẽ học ở những bài sau.",
     ],
     targetNote: "B4",
-    practiceTip: "Giữ nốt B4 ổn định trong 3 đến 5 giây.",
+    practiceTip: "Bài giới thiệu — chỉ cần quan sát và làm quen với cây sáo.",
+    hasPractice: false,
   },
   {
     id: 2,
     category: "Cơ bản",
-    title: "Bài 2: Kỹ thuật thổi cơ bản",
+    title: "Bài 2: Cách đặt môi và thổi sáo",
     duration: "15:00",
     status: "completed",
-    objective: "Tạo âm rõ, ít tiếng gió và giữ cao độ ổn định.",
+    objective: "Biết cách đặt môi, cầm sáo và hướng hơi để tạo được âm sáo rõ.",
     theory: [
-      "Hít vào bằng bụng, tránh nâng vai khi lấy hơi.",
-      "Khẩu hình nhỏ giúp luồng hơi tập trung hơn.",
-      "Duy trì áp lực hơi đều từ đầu đến cuối nốt.",
+      "Đặt cạnh lỗ thổi tựa nhẹ gần môi dưới, không ép sáo quá chặt.",
+      "Giữ sáo ngang, cằm và vai thả lỏng để luồng hơi đi ổn định.",
+      "Thu khẩu hình nhỏ và hướng hơi mảnh qua cạnh lỗ thổi để tạo âm rõ.",
     ],
     targetNote: "A4",
-    practiceTip: "Thổi A4 ba lần, mỗi lần 4 giây và nghỉ 2 giây.",
+    practiceTip: "Xem hình mẫu đặt môi rồi ghi âm một hơi thổi sao cho ra âm sáo rõ.",
   },
   {
     id: 3,
@@ -182,3 +193,21 @@ export const lessons: Lesson[] = [
 
 export const getLessonById = (id: string | number) =>
   lessons.find((lesson) => lesson.id === Number(id));
+
+/** Lấy số thứ tự bài học từ tiêu đề dạng "Bài 1: ...". */
+export const getLessonNumberFromTitle = (
+  title?: string | null,
+): number | undefined => {
+  const match = title?.match(/Bài\s+(\d+)/i);
+  return match ? Number(match[1]) : undefined;
+};
+
+/**
+ * Cho biết một bài học có phần luyện tập ghi âm với AI hay không.
+ * Bài giới thiệu (ví dụ Bài 1) được đánh dấu hasPractice = false ở trên.
+ */
+export const lessonHasPractice = (lessonNumber?: number) => {
+  if (lessonNumber == null) return true;
+  const mockLesson = lessons.find((lesson) => lesson.id === lessonNumber);
+  return mockLesson?.hasPractice !== false;
+};

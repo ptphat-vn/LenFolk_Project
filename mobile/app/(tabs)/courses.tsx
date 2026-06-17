@@ -242,7 +242,7 @@ export default function CoursesScreen() {
                   className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
                 >
                   {/* Left Column: Icon Status badge + Title & Category */}
-                  <View className="flex-row items-center flex-1 pr-4 px-2">
+                  <View className="min-w-0 flex-row items-center flex-1 pr-4 px-2">
                     {/* Status Badge */}
                     <View className="mr-4">
                       {lesson.status === "completed" && (
@@ -263,8 +263,8 @@ export default function CoursesScreen() {
                     </View>
 
                     {/* Titles */}
-                    <View className="flex-1">
-                      <Text className="text-xs text-charcoal/70 font-semibold mb-0.5">
+                    <View className="min-w-0 flex-1">
+                      <Text numberOfLines={1} className="text-xs text-charcoal/70 font-semibold mb-0.5">
                         {lesson.category}
                       </Text>
                       <Text

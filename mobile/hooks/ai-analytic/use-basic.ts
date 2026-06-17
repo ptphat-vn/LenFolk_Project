@@ -14,6 +14,7 @@ export const useBasic = <AnalysisResult>() =>
       message,
       maxDurationSec,
       useLlm = false,
+      onUploadProgress,
     }: BaseAnalysisPayload) => {
       const response = await aiAxios.post<AnalysisResult>(
         "/analyze/basic",
@@ -22,6 +23,13 @@ export const useBasic = <AnalysisResult>() =>
           params: {
             max_duration_sec: maxDurationSec,
             use_llm: useLlm,
+          },
+          onUploadProgress: (event) => {
+            if (!onUploadProgress) return;
+            const total = event.total ?? 0;
+            if (total > 0) {
+              onUploadProgress(Math.round((event.loaded / total) * 100));
+            }
           },
         },
       );

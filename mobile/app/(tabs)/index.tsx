@@ -17,6 +17,10 @@ import NotificationButton from "@/components/NotificationButton";
 import SafeScreen from "../../components/SafeScreen";
 import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 import { getRandomPracticeNote } from "@/constants/practice-notes";
+import {
+  getLessonNumberFromTitle,
+  lessonHasPractice,
+} from "@/constants/lessons";
 
 const greetingPrompt = "Hôm nay bạn muốn học gì?";
 const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nhạc.";
@@ -67,7 +71,18 @@ export default function HomeScreen() {
     orderedLessons[0];
   const currentStreak = streaks?.[0]?.currentStreak ?? 0;
   const todayLessons = visibleLessons.slice(0, 2);
-  const reviewLessons = orderedLessons.slice(0, 4);
+  // Chỉ những bài có luyện tập mới được dùng cho ôn tập / luyện tự do.
+  const practiceableLessons = React.useMemo(
+    () =>
+      orderedLessons.filter((lesson) =>
+        lessonHasPractice(getLessonNumberFromTitle(lesson.title) ?? lesson.order),
+      ),
+    [orderedLessons],
+  );
+  const reviewLessons = practiceableLessons.slice(0, 4);
+  const freePracticeLesson =
+    practiceableLessons.find((lesson) => lesson._id === continueLesson?._id) ??
+    practiceableLessons[0];
 
   React.useEffect(() => {
     if (!isFocused || !user?._id || !streaksLoaded) return;
@@ -271,8 +286,9 @@ export default function HomeScreen() {
                 style={{ width: 40, height: 40 }}
               />
             </View>
-            <View>
+            <View className="min-w-0 flex-1">
               <Text
+                numberOfLines={1}
                 className="text-charcoal text-xs font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
@@ -284,8 +300,9 @@ export default function HomeScreen() {
 
           {/* Goals status */}
           <View className="flex-1 bg-[#8E9E6E]/10 rounded-3xl p-4 flex-row items-center justify-between">
-            <View>
+            <View className="min-w-0 flex-1 pr-2">
               <Text
+                numberOfLines={1}
                 className="text-primary text-sm font-extrabold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
@@ -293,11 +310,11 @@ export default function HomeScreen() {
               </Text>
               <View className="flex-row items-center mt-1">
                 <Ionicons name="book-outline" size={12} color="#8E9E6E" />
-                <Text className="text-[12px] text-gray-500 font-bold ml-1">{user?.role || "learner"}</Text>
+                <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-gray-500 font-bold ml-1">{user?.role || "learner"}</Text>
               </View>
               <View className="flex-row items-center mt-0.5">
                 <MaterialCommunityIcons name="weight-lifter" size={12} color="#8E9E6E" />
-                <Text className="text-[12px] text-gray-500 font-bold ml-1">
+                <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-gray-500 font-bold ml-1">
                   {subscriptionLoading ? "Đang tải..." : subscriptionLabel}
                 </Text>
               </View>
@@ -342,24 +359,25 @@ export default function HomeScreen() {
         <AnimatedBlock variant="button" delay={210}>
           <TouchableOpacity
             activeOpacity={0.95}
-            disabled={!continueLesson}
+            disabled={!freePracticeLesson}
             onPress={() =>
-              openPractice(continueLesson?._id)
+              openPractice(freePracticeLesson?._id)
             }
             className="w-full bg-[#FFF9E6] py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#F4E0AC] mb-8"
           >
-            <View className="flex-row items-center py-2">
+            <View className="min-w-0 flex-1 flex-row items-center py-2 pr-3">
               <View className="w-12 h-12 rounded-2xl bg-[#F4E0AC]/40 justify-center items-center shadow-sm">
                 <Ionicons name="sparkles" size={22} color="#7C672D" />
               </View>
-              <View className="ml-4">
+              <View className="min-w-0 flex-1 ml-4">
                 <Text
+                  numberOfLines={1}
                   className="text-[#4B421F] text-base font-bold"
                   style={{ fontFamily: "BeVietnamPro-Medium" }}
                 >
                   Luyện tập tự do với AI
                 </Text>
-                <Text className="text-[12px] text-[#7C672D] mt-0.5">
+                <Text numberOfLines={2} className="text-[12px] text-[#7C672D] mt-0.5">
                   Thổi sáo và nhận đánh giá từ AI ngay lập tức
                 </Text>
               </View>
@@ -395,7 +413,7 @@ export default function HomeScreen() {
                     <Ionicons name="musical-notes-outline" size={22} color="#8E9E6E" />
                   )}
                 </TouchableOpacity>
-                <Text numberOfLines={2} className="text-[12px] text-charcoal font-bold text-center">
+                <Text numberOfLines={2} ellipsizeMode="tail" className="text-[12px] text-charcoal font-bold text-center">
                   {lesson.title}
                 </Text>
               </View>
@@ -440,7 +458,7 @@ export default function HomeScreen() {
                   </Text>
                   <View className="flex-row items-center">
                     <Ionicons name="time-outline" size={12} color="gray" />
-                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">
+                    <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-gray-400 ml-1 font-bold">
                       {Math.max(1, Math.ceil(lesson.duration / 60))} phút
                     </Text>
                   </View>
