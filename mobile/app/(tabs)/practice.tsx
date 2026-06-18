@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -22,6 +23,10 @@ import {
   lessonHasPractice,
 } from "@/constants/lessons";
 import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
+import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 
 const NOTE_COLORS = [
@@ -38,9 +43,33 @@ export default function PracticeTabScreen() {
   const router = useRouter();
   const scrollRef = useScrollToTopOnFocus();
   const { data: lessons, isLoading } = useGetLessons();
+  const { data: courses } = useGetCourses();
+  const { data: progressList } = useGetProgressList();
+  const { hasPremiumAccess } = useCurrentSubscription();
   const orderedLessons = React.useMemo(
     () => [...(lessons ?? [])].sort((a, b) => a.order - b.order),
     [lessons],
+  );
+  const canOpenLesson = React.useCallback(
+    (lesson?: (typeof orderedLessons)[number]) => {
+      if (!lesson) return false;
+      const lessonIndex = orderedLessons.findIndex(
+        (item) => item._id === lesson._id,
+      );
+      const previousLesson =
+        lessonIndex > 0 ? orderedLessons[lessonIndex - 1] : undefined;
+      const previousProgress = progressList?.find(
+        (item) => item.lessonId === previousLesson?._id,
+      );
+
+      if (previousLesson && previousProgress?.status !== "completed") {
+        return false;
+      }
+
+      const course = courses?.find((item) => item._id === lesson.courseId);
+      return canAccessLesson(lesson, course, hasPremiumAccess);
+    },
+    [courses, hasPremiumAccess, orderedLessons, progressList],
   );
   // Bài giới thiệu (ví dụ Bài 1) không có phần luyện tập nên không hiển thị ở
   // danh sách "Luyện theo bài học".
@@ -51,9 +80,13 @@ export default function PracticeTabScreen() {
       ),
     [orderedLessons],
   );
-  const firstLesson = practiceableLessons[0] || orderedLessons[0];
+  const accessiblePracticeLessons = React.useMemo(
+    () => practiceableLessons.filter((lesson) => canOpenLesson(lesson)),
+    [canOpenLesson, practiceableLessons],
+  );
+  const firstLesson = accessiblePracticeLessons[0] || practiceableLessons[0] || orderedLessons[0];
   const notePracticeLesson =
-    practiceableLessons.find(
+    accessiblePracticeLessons.find(
       (lesson) =>
         (getLessonNumberFromTitle(lesson.title) ?? lesson.order) !== 2,
     ) || firstLesson;
@@ -65,6 +98,35 @@ export default function PracticeTabScreen() {
     practiceMode: "note" | "lesson" = "lesson",
   ) => {
     if (!lessonId) return;
+    const lesson = orderedLessons.find((item) => item._id === lessonId);
+    if (lesson && !canOpenLesson(lesson)) {
+      const lessonIndex = orderedLessons.findIndex((item) => item._id === lessonId);
+      const previousLesson =
+        lessonIndex > 0 ? orderedLessons[lessonIndex - 1] : undefined;
+      const previousProgress = progressList?.find(
+        (item) => item.lessonId === previousLesson?._id,
+      );
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
+        () => undefined,
+      );
+      if (previousLesson && previousProgress?.status !== "completed") {
+        Alert.alert(
+          "Chưa thể luyện bài này",
+          `Bạn cần đánh dấu hoàn thành "${previousLesson.title}" trước khi tiếp tục.`,
+        );
+        return;
+      }
+
+      Alert.alert("Cần mở gói Technique", getUpgradeMessage(lesson.title), [
+        { text: "Để sau", style: "cancel" },
+        {
+          text: "Mở gói",
+          onPress: () => router.push("/profile/subscription"),
+        },
+      ]);
+      return;
+    }
 
     Haptics.selectionAsync().catch(() => undefined);
     router.push({
@@ -222,7 +284,10 @@ export default function PracticeTabScreen() {
             <ActivityIndicator color="#8E9E6E" size="large" className="py-16" />
           ) : practiceableLessons.length > 0 ? (
             <View className="overflow-hidden rounded-[28px] bg-white px-5">
-              {practiceableLessons.map((lesson, index) => (
+              {practiceableLessons.map((lesson, index) => {
+                const isLocked = !canOpenLesson(lesson);
+
+                return (
                 <TouchableOpacity
                   key={lesson._id}
                   activeOpacity={0.82}
@@ -258,10 +323,15 @@ export default function PracticeTabScreen() {
                     </View>
                   </View>
                   <View className="ml-3 h-9 w-9 items-center justify-center rounded-full bg-[#FDF8EA]">
-                    <Ionicons name="arrow-forward" size={17} color="#8E9E6E" />
+                    <Ionicons
+                      name={isLocked ? "lock-closed" : "arrow-forward"}
+                      size={17}
+                      color="#8E9E6E"
+                    />
                   </View>
                 </TouchableOpacity>
-              ))}
+              );
+              })}
             </View>
           ) : (
             <View className="items-center rounded-[28px] bg-white px-6 py-14">

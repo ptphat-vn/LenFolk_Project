@@ -123,7 +123,7 @@ export default function RegisterInstructorScreen() {
       >
         <AnimatedBlock
           variant="header"
-          className="flex-row items-center px-6 pt-14 pb-6"
+          className="flex-row items-center px-6 pt-14 pb-6 "
         >
           <TouchableOpacity
             className="w-10 h-10 rounded-full bg-white items-center justify-center mr-4"
@@ -131,7 +131,7 @@ export default function RegisterInstructorScreen() {
           >
             <Ionicons name="arrow-back" size={22} color="#10120C" />
           </TouchableOpacity>
-          <View className="flex-1">
+          <View className="flex-1 pt-3">
             <Text className="text-2xl font-bold text-charcoal">
               Đăng ký giảng viên
             </Text>

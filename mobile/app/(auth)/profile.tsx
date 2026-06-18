@@ -1,211 +1,326 @@
 import React, { useState } from "react";
-import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Image } from "react-native";
-import { useRouter } from "expo-router";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Colors } from "../../constants/Colors";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { AnimatedBlock } from "@/components/AnimatedPage";
+
+import SafeScreen from "@/components/SafeScreen";
+import { useAuthStore } from "@/store/authStore";
+import { useUpdateMe } from "@/hooks/user/use-update-me";
+
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateOfBirth = (value: string) => {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+};
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [language, setLanguage] = useState("Tiếng Việt");
-  const [showCongrats, setShowCongrats] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const updateMe = useUpdateMe();
 
-  const handleComplete = () => {
-    setShowCongrats(false);
-    setIsLoading(false);
-    Alert.alert(
-      "Cần đăng nhập",
-      "Màn hình này không tạo session giả. Hãy đăng ký hoặc đăng nhập bằng API trước.",
-      [{ text: "Đến đăng nhập", onPress: () => router.replace("/login") }],
-    );
+  const [name, setName] = useState(user?.name || "");
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || "");
+  const [dateOfBirth, setDateOfBirth] = useState(
+    user?.dateOfBirth ? toDateInputValue(new Date(user.dateOfBirth)) : "",
+  );
+  const [dob, setDob] = useState<Date>(
+    user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date(2005, 0, 1),
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [gender, setGender] = useState<"male" | "female" | "other">(
+    user?.gender || "other",
+  );
+
+  const onChangeDob = (_event: unknown, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+
+    if (selectedDate) {
+      setDob(selectedDate);
+      setDateOfBirth(toDateInputValue(selectedDate));
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!user) {
+      Alert.alert("Cần đăng nhập", "Vui lòng đăng nhập để hoàn thiện hồ sơ.", [
+        { text: "Đến đăng nhập", onPress: () => router.replace("/login") },
+      ]);
+      return;
+    }
+
+    if (!name.trim() || !phoneNumber.trim() || !dateOfBirth) {
+      Alert.alert(
+        "Thiếu thông tin",
+        "Vui lòng nhập họ tên, số điện thoại và ngày sinh.",
+      );
+      return;
+    }
+
+    const parsedDate = new Date(dateOfBirth);
+    if (Number.isNaN(parsedDate.getTime())) {
+      Alert.alert("Ngày sinh không hợp lệ", "Vui lòng chọn lại ngày sinh.");
+      return;
+    }
+
+    try {
+      await updateMe.mutateAsync({
+        name: name.trim(),
+        email: user.email,
+        phoneNumber: phoneNumber.trim(),
+        dateOfBirth: parsedDate.toISOString(),
+        gender,
+      });
+
+      router.replace("/profile/verify");
+    } catch (error: any) {
+      Alert.alert(
+        "Không thể lưu hồ sơ",
+        error?.response?.data?.message || "Vui lòng thử lại sau.",
+      );
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1 bg-white"
-    >
-      <ScrollView
+    <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+      <StatusBar style="dark" />
+      <Stack.Screen options={{ title: "Hoàn thiện hồ sơ", headerShown: false }} />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: "space-between" }}
-        showsVerticalScrollIndicator={false}
       >
-        <StatusBar style="dark" />
-
-        {/* Top Header Section */}
-        <AnimatedBlock variant="panel">
-          {/* Header */}
-          <AnimatedBlock variant="header" className="flex-row items-center mb-8 mt-4">
-            <TouchableOpacity
-              className="p-2 rounded-full bg-gray-50 mr-4"
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color="#10120C" className="animate-arrow-left" />
-            </TouchableOpacity>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ padding: 24, paddingBottom: 44, gap: 22 }}
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="h-11 w-11 items-center justify-center rounded-full bg-white">
+              <Ionicons name="person-add-outline" size={22} color="#8E9E6E" />
+            </View>
             <Text
-              className="text-2xl font-bold text-charcoal"
+              numberOfLines={1}
+              className="min-w-0 flex-1 px-4 text-center text-lg font-bold text-[#10120C]"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
-              Hoàn thiện hồ sơ của bạn
+              Hoàn thiện hồ sơ
             </Text>
-          </AnimatedBlock>
+            <View className="h-11 w-11" />
+          </View>
 
-          {/* Avatar Area with Edit Badge */}
-          <AnimatedBlock variant="hero" delay={80} className="items-center mb-10 mt-2">
-            <View className="relative">
-              <Image
-                source={require("../../assets/images/Profile.png")}
-                style={{ width: 128, height: 128, borderRadius: 64, borderWidth: 4, borderColor: "white" }}
-                className="shadow-md"
-              />
-              {/* Edit Icon Badge */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => Alert.alert("Ảnh đại diện", "Bạn có thể cập nhật ảnh sau khi đăng nhập.")}
-                className="absolute bottom-0 right-0 w-9 h-9 rounded-full justify-center items-center border-2 border-white shadow"
-                style={{ backgroundColor: Colors.light.primary }}
-              >
-                <Feather name="edit-2" size={15} color="white" />
-              </TouchableOpacity>
-            </View>
-          </AnimatedBlock>
-
-          {/* Input Cards Stack with Shadows */}
-          <AnimatedBlock variant="card" delay={150} className="gap-5 px-1">
-            {/* Full Name */}
-            <View className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100">
-              <TextInput
-                className="flex-1 text-charcoal text-base font-semibold py-4"
-                placeholder="Tên"
-                placeholderTextColor="#9CA3AF"
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
-
-            {/* Birth Date */}
-            <View className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100">
-              <Feather name="calendar" size={20} color="#8E9E6E" className="mr-3.5" />
-              <TextInput
-                className="flex-1 text-charcoal text-base ml-2.5 font-semibold py-4"
-                placeholder="Ngày sinh"
-                placeholderTextColor="#9CA3AF"
-                value={birthDate}
-                onChangeText={setBirthDate}
-              />
-            </View>
-
-            {/* Email */}
-            <View className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100">
-              <Feather name="mail" size={20} color="#8E9E6E" className="mr-3.5" />
-              <TextInput
-                className="flex-1 text-charcoal text-base ml-2.5 font-semibold py-4"
-                placeholder="Email"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-
-            {/* Phone Number with Vietnam flag code */}
-            <View className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100">
-              <View className="flex-row items-center mr-3 border-r border-gray-100 pr-3.5">
-                <Text className="text-xl mr-2">🇻🇳</Text>
-                <Ionicons name="chevron-down" size={14} color="#6B7280" />
-              </View>
-              <Text className="text-base text-charcoal font-semibold mr-2">( +84 )</Text>
-              <TextInput
-                className="flex-1 text-charcoal text-base font-semibold py-4"
-                placeholder="999-999-9999"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
-            </View>
-
-            {/* Language dropdown select */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setLanguage((value) => value === "Tiếng Việt" ? "English" : "Tiếng Việt")}
-              className="w-full flex-row items-center bg-white border border-gray-100 rounded-2xl px-5 py-4.5 shadow shadow-gray-100 justify-between"
-            >
-              <View className="flex-row items-center py-4">
-                <Ionicons name="language" size={20} color="#8E9E6E" className="mr-3.5" />
-                <Text className="text-base text-charcoal font-semibold ml-2.5">{language}</Text>
-              </View>
-              <Ionicons name="chevron-down" size={18} color="#6B7280" />
-            </TouchableOpacity>
-          </AnimatedBlock>
-        </AnimatedBlock>
-
-        {/* Submit button "Đăng nhập" with white round right arrow */}
-        <AnimatedBlock variant="button" delay={240} className="w-full mb-4">
-          <TouchableOpacity
-            activeOpacity={0.9}
-            className="w-full bg-primary pl-6 pr-2 py-2 rounded-full flex-row justify-between items-center shadow-lg shadow-primary/20"
-            onPress={handleComplete}
-          >
-            <Text
-              className="text-white text-base font-bold ml-4"
-              style={{ fontFamily: "BeVietnamPro-Medium" }}
-            >
-              Đăng nhập
-            </Text>
-            <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-              <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
-            </View>
-          </TouchableOpacity>
-        </AnimatedBlock>
-      </ScrollView>
-
-      {/* --- SUCCESS CONGRATS MODAL OVERLAY --- */}
-      <Modal
-        visible={showCongrats}
-        transparent={true}
-        animationType="fade"
-      >
-        <View className="flex-1 bg-black/55 justify-center items-center px-8">
-          <AnimatedBlock variant="hero" className="bg-white rounded-[40px] px-8 py-10 w-full items-center shadow-2xl">
-            {/* Mascot successfully done logo */}
+          <View className="items-center rounded-[30px] bg-white px-6 py-7">
             <Image
               source={require("../../assets/images/Profile.png")}
-              style={{ width: 144, height: 144, borderRadius: 72 }}
-              className="mb-8 shadow-sm"
+              style={{ width: 96, height: 96, borderRadius: 48 }}
             />
-
-            {/* Title */}
             <Text
-              className="text-3xl font-bold text-charcoal text-center mb-5"
+              className="mt-5 text-center text-xl font-bold text-[#10120C]"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
-              Chúc mừng!
+              Chào mừng bạn đến LenFolk
             </Text>
-
-            {/* Subtext description */}
-            <Text className="text-sm text-gray-500 text-center leading-6 mb-8 px-2 font-medium">
-              Tài khoản của bạn đã sẵn sàng để sử dụng. Bạn sẽ được chuyển hướng đến trang chủ trong vài giây nữa.
+            <Text className="mt-2 text-center text-sm leading-6 text-[#777B70]">
+              Bổ sung vài thông tin cơ bản rồi xác thực email để bắt đầu học.
             </Text>
+          </View>
 
-            {/* Spinner Loading Animation */}
-            {isLoading && (
-              <ActivityIndicator
-                size="large"
-                color="#8E9E6E"
-                className="mt-2"
-              />
+          <View className="gap-5 rounded-[30px] bg-white p-5">
+            <View>
+              <Text className="mb-2 text-xs font-bold text-[#8E9E6E]">
+                HỌ VÀ TÊN
+              </Text>
+              <View className="flex-row items-center rounded-2xl border border-[#E5E7E1] bg-[#F7F8F3] px-4 py-3">
+                <Ionicons name="person-outline" size={19} color="#8E9E6E" />
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Nhập họ tên của bạn"
+                  placeholderTextColor="#9CA3AF"
+                  className="ml-3 min-w-0 flex-1 text-sm text-[#10120C]"
+                />
+              </View>
+            </View>
+
+            <View>
+              <Text className="mb-2 text-xs font-bold text-[#8E9E6E]">
+                EMAIL ĐĂNG KÝ
+              </Text>
+              <View className="flex-row items-center rounded-2xl border border-[#E5E7E1] bg-[#F7F8F3] px-4 py-3">
+                <Ionicons name="mail-outline" size={19} color="#8E9E6E" />
+                <TextInput
+                  value={user?.email || ""}
+                  editable={false}
+                  placeholder="Email"
+                  placeholderTextColor="#9CA3AF"
+                  className="ml-3 min-w-0 flex-1 text-sm text-[#777B70]"
+                />
+                <Ionicons name="lock-closed-outline" size={16} color="#A5AA9E" />
+              </View>
+            </View>
+
+            <View>
+              <Text className="mb-2 text-xs font-bold text-[#8E9E6E]">
+                SỐ ĐIỆN THOẠI
+              </Text>
+              <View className="flex-row items-center rounded-2xl border border-[#E5E7E1] bg-[#F7F8F3] px-4 py-3">
+                <Ionicons name="call-outline" size={19} color="#8E9E6E" />
+                <TextInput
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  placeholder="Nhập số điện thoại"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="phone-pad"
+                  className="ml-3 min-w-0 flex-1 text-sm text-[#10120C]"
+                />
+              </View>
+            </View>
+
+            <View>
+              <Text className="mb-2 text-xs font-bold text-[#8E9E6E]">
+                NGÀY SINH
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowDatePicker(true)}
+                className="flex-row items-center justify-between rounded-2xl border border-[#E5E7E1] bg-[#F7F8F3] px-4 py-4"
+              >
+                <View className="min-w-0 flex-1 flex-row items-center">
+                  <Ionicons name="calendar-outline" size={19} color="#8E9E6E" />
+                  <Text
+                    numberOfLines={1}
+                    className={`ml-3 min-w-0 flex-1 text-sm ${
+                      dateOfBirth ? "text-[#10120C]" : "text-[#9CA3AF]"
+                    }`}
+                  >
+                    {formatDateOfBirth(dateOfBirth) || "Chọn ngày sinh"}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-down" size={18} color="#8E9E6E" />
+              </TouchableOpacity>
+            </View>
+
+            <View>
+              <Text className="mb-2 text-xs font-bold text-[#8E9E6E]">
+                GIỚI TÍNH
+              </Text>
+              <View className="flex-row gap-3">
+                {(["male", "female", "other"] as const).map((value) => {
+                  const label =
+                    value === "male" ? "Nam" : value === "female" ? "Nữ" : "Khác";
+                  const isSelected = gender === value;
+
+                  return (
+                    <TouchableOpacity
+                      key={value}
+                      activeOpacity={0.85}
+                      onPress={() => setGender(value)}
+                      className={`h-12 flex-1 items-center justify-center rounded-2xl border ${
+                        isSelected
+                          ? "border-[#8E9E6E] bg-[#8E9E6E]"
+                          : "border-[#E5E7E1] bg-[#F7F8F3]"
+                      }`}
+                    >
+                      <Text
+                        className={`text-xs font-bold ${
+                          isSelected ? "text-white" : "text-[#687451]"
+                        }`}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.9}
+            disabled={updateMe.isPending}
+            onPress={handleComplete}
+            className={`flex-row items-center justify-center gap-2 rounded-[24px] bg-[#10120C] px-6 py-5 ${
+              updateMe.isPending ? "opacity-70" : ""
+            }`}
+          >
+            {updateMe.isPending ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Ionicons name="arrow-forward-circle" size={21} color="white" />
             )}
-          </AnimatedBlock>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+            <Text className="font-bold text-white">
+              {updateMe.isPending ? "Đang lưu..." : "Tiếp tục xác thực email"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {showDatePicker && Platform.OS === "ios" && (
+        <Modal
+          transparent
+          animationType="slide"
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View className="flex-1 justify-end bg-black/40">
+            <View className="rounded-t-[30px] bg-white p-6 pb-10">
+              <View className="mb-4 flex-row items-center justify-between">
+                <Text className="text-lg font-bold text-[#10120C]">
+                  Chọn ngày sinh
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(false)}
+                  className="rounded-full bg-[#8E9E6E] px-4 py-2"
+                >
+                  <Text className="text-sm font-bold text-white">Xong</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={dob}
+                mode="date"
+                display="spinner"
+                locale="vi-VN"
+                maximumDate={new Date()}
+                onChange={onChangeDob}
+                style={{ width: "100%", height: 180 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {showDatePicker && Platform.OS === "android" && (
+        <DateTimePicker
+          value={dob}
+          mode="date"
+          display="default"
+          locale="vi-VN"
+          maximumDate={new Date()}
+          onChange={onChangeDob}
+        />
+      )}
+    </SafeScreen>
   );
 }

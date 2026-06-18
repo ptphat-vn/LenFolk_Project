@@ -21,9 +21,11 @@ import { useVerifyEmail } from "@/hooks/auth/use-verify-email";
 export default function AccountVerificationScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   const resendMutation = useResendVerification();
   const verifyMutation = useVerifyEmail();
+  const autoSentRef = React.useRef(false);
 
   // Backend xác thực email bằng OTP gửi qua email → dùng email của tài khoản.
   const contactInfo = user?.email || "";
@@ -65,6 +67,17 @@ export default function AccountVerificationScreen() {
     });
   };
 
+  useEffect(() => {
+    if (autoSentRef.current || user?.isVerified || !contactInfo.trim()) {
+      return;
+    }
+
+    autoSentRef.current = true;
+    handleSendOtp();
+    // Chỉ tự gửi một lần khi màn hình được mở trong onboarding.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactInfo, user?.isVerified]);
+
   const handleVerifyOtp = () => {
     const email = contactInfo.trim();
     if (otpCode.trim().length !== 6) {
@@ -76,7 +89,11 @@ export default function AccountVerificationScreen() {
       { email, code: otpCode.trim() },
       {
         onSuccess: () => {
-          Alert.alert("Thành công", "Xác thực email thành công!");
+          updateUser({ isVerified: true }).catch(() => undefined);
+          Alert.alert("Thành công", "Xác thực email thành công!", [
+            { text: "Vào trang chính", onPress: () => router.replace("/(tabs)") },
+          ]);
+          navigator.vibrate(100);
         },
         onError: (error: any) => {
           Alert.alert(
@@ -237,7 +254,7 @@ export default function AccountVerificationScreen() {
                     <TextInput
                       value={otpCode}
                       onChangeText={setOtpCode}
-                      placeholder="Nhập mã xác thực (123456)"
+                      placeholder="Nhập mã xác thực"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="number-pad"
                       maxLength={6}

@@ -95,6 +95,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           iconName = isFocused ? "home" : "home-outline";
         } else if (route.name === "courses") {
           iconName = isFocused ? "book" : "book-outline";
+        } else if (route.name === "performances") {
+          iconName = isFocused ? "albums" : "albums-outline";
         } else if (route.name === "practice") {
           iconName = isFocused ? "musical-notes" : "musical-notes-outline";
         } else if (route.name === "leaderboard") {
@@ -151,6 +153,7 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ title: "Trang chủ" }} />
         <Tabs.Screen name="courses" options={{ title: "Bài học" }} />
+        <Tabs.Screen name="performances" options={{ title: "Tác phẩm" }} />
         <Tabs.Screen name="practice" options={{ title: "Luyện tập" }} />
         <Tabs.Screen name="leaderboard" options={{ title: "Bảng xếp hạng" }} />
         <Tabs.Screen name="profile" options={{ title: "Cá nhân" }} />

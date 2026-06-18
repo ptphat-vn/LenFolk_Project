@@ -56,18 +56,21 @@ export const lessons: Lesson[] = [
   {
     id: 3,
     category: "Cơ bản",
-    title: "Bài 3: Luyện tập hơi thở",
-    duration: "8:00",
+    title: "Bài 3: Thế bấm ngón và các nốt nhạc cơ bản",
+    duration: "12:00",
     status: "in_progress",
     progress: 0.6,
-    objective: "Kiểm soát luồng hơi dài và đều khi giữ nốt.",
+    objective:
+      "Làm quen với thế bấm ngón của 7 nốt cơ bản và luyện thổi từng nốt rõ, đúng cao độ.",
     theory: [
-      "Hít sâu bằng mũi và miệng trong khoảng 2 giây.",
-      "Giữ cơ bụng chủ động để luồng hơi không bị hụt.",
-      "Ưu tiên âm đều trước khi cố kéo dài thời gian.",
+      "Quan sát bảng thế bấm để biết lỗ nào cần bịt kín trước khi thổi từng nốt.",
+      "Dùng phần thịt đầu ngón tay che kín lỗ bấm, tránh để hở làm nốt bị lệch hoặc xì hơi.",
+      "Luyện từng nốt Đô, Rê, Mi, Pha, Sol, La, Si chậm rãi; chỉ chuyển nốt khi âm đã rõ và ổn định.",
+      "Giữ luồng hơi đều trong 3 đến 6 giây cho mỗi nốt để AI có đủ dữ liệu phân tích.",
     ],
-    targetNote: "G4",
-    practiceTip: "Giữ G4 trong 6 giây với âm lượng ổn định.",
+    targetNote: "C5",
+    practiceTip:
+      "Chọn từng nốt, xem bảng thế bấm ngón rồi ghi âm để AI kiểm tra cao độ và độ ổn định.",
   },
   {
     id: 4,

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Alert, View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
@@ -185,6 +185,39 @@ export default function ProfileTabScreen() {
             </Text>
           </TouchableOpacity>
         </AnimatedBlock>
+
+        {(user?.role === "instructor" || user?.role === "admin") && (
+          <AnimatedBlock variant="listItem" delay={120} className="mx-6 mb-6">
+            <Text
+              className="text-base font-bold text-charcoal mb-3 px-1"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Giảng viên
+            </Text>
+
+            <View className="bg-[#E2E8D3] rounded-3xl overflow-hidden border border-[#D6DDC6]/30">
+              <TouchableOpacity
+                onPress={() => router.push("/instructor/performances" as Href)}
+                className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
+              >
+                <View className="min-w-0 flex-row items-center flex-1 pr-4">
+                  <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
+                    <Ionicons name="albums" size={16} color="#8E9E6E" />
+                  </View>
+                  <View className="min-w-0 flex-1">
+                    <Text numberOfLines={1} className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                      Tác phẩm của tôi
+                    </Text>
+                    <Text numberOfLines={1} className="text-xs text-gray-500 font-bold mt-0.5">
+                      Tạo, xem trạng thái và doanh thu
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          </AnimatedBlock>
+        )}
 
         {/* --- SECTION: HỌC TẬP (LEARNING SETTINGS) --- */}
         <AnimatedBlock variant="listItem" delay={140} className="mx-6 mb-6">

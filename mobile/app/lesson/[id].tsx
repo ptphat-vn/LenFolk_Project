@@ -3,7 +3,10 @@ import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Alert } fr
 import { Ionicons } from "@expo/vector-icons";
 import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import YoutubePlayer from "react-native-youtube-iframe";
+import YoutubePlayer, {
+  PLAYER_STATES,
+  type YoutubeIframeRef,
+} from "react-native-youtube-iframe";
 
 import SafeScreen from "@/components/SafeScreen";
 import { lessons as allLessons, lessonHasPractice } from "@/constants/lessons";
@@ -14,6 +17,8 @@ import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useCreateProgress } from "@/hooks/progress/use-create-progress";
 import { useUpdateProgress } from "@/hooks/progress/use-update-progress";
 import { getNoteLabel } from "@/constants/practice-notes";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
+import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
 
 function getYoutubeVideoId(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -27,46 +32,42 @@ export default function LessonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { data: dbLesson, isLoading: lessonLoading } = useGetDetailLesson(id || "");
-  const { data: courses } = useGetCourses();
+  const { data: courses, isLoading: coursesLoading } = useGetCourses();
   const { data: allLessonsData } = useGetLessons();
   const { data: progressList, isLoading: progressLoading } = useGetProgressList();
+  const {
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const createProgress = useCreateProgress();
   const updateProgress = useUpdateProgress();
-  const trackedLessonRef = React.useRef<string | undefined>(undefined);
-
-  React.useEffect(() => {
-    if (!dbLesson || progressLoading || trackedLessonRef.current === dbLesson._id) {
-      return;
-    }
-
-    trackedLessonRef.current = dbLesson._id;
-    const existing = progressList?.find((item) => item.lessonId === dbLesson._id);
-    const lastAccessedAt = new Date().toISOString();
-
-    if (existing) {
-      if (existing.status !== "completed") {
-        updateProgress.mutate({
-          id: existing._id,
-          status: "in_progress",
-          completionPercent: Math.max(existing.completionPercent, 5),
-          lastAccessedAt,
-        });
-      }
-      return;
-    }
-
-    createProgress.mutate({
-      courseId: dbLesson.courseId,
-      lessonId: dbLesson._id,
-      status: "in_progress",
-      completionPercent: 5,
-      lastAccessedAt,
-    });
-  }, [createProgress, dbLesson, progressList, progressLoading, updateProgress]);
+  const youtubePlayerRef = React.useRef<YoutubeIframeRef | null>(null);
+  const videoProgressIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSavedVideoProgressRef = React.useRef(0);
+  const isSavingVideoProgressRef = React.useRef(false);
+  const lessonCourse = React.useMemo(
+    () => courses?.find((c) => c._id === dbLesson?.courseId),
+    [courses, dbLesson?.courseId],
+  );
+  const isLessonLocked =
+    Boolean(dbLesson && courses) &&
+    !canAccessLesson(dbLesson, lessonCourse, hasPremiumAccess);
+  const previousLesson = React.useMemo(() => {
+    if (!dbLesson) return undefined;
+    const ordered = [...(allLessonsData ?? [])].sort((a, b) => a.order - b.order);
+    const currentIndex = ordered.findIndex((item) => item._id === dbLesson._id);
+    return currentIndex > 0 ? ordered[currentIndex - 1] : undefined;
+  }, [allLessonsData, dbLesson]);
+  const previousProgress = React.useMemo(
+    () => progressList?.find((item) => item.lessonId === previousLesson?._id),
+    [previousLesson?._id, progressList],
+  );
+  const isPrerequisiteLocked =
+    Boolean(previousLesson) && previousProgress?.status !== "completed";
 
   const lesson = React.useMemo(() => {
     if (!dbLesson) return null;
-    const course = courses?.find((c) => c._id === dbLesson.courseId);
+    const course = lessonCourse;
     const category = course
       ? course.level === "beginner"
         ? "Cơ bản"
@@ -113,7 +114,7 @@ export default function LessonDetailScreen() {
       practiceTip: mockLesson?.practiceTip || "Giữ nốt ổn định trong 3 đến 5 giây.",
       videoUrl: dbLesson.videoUrl || null,
     };
-  }, [dbLesson, courses, id]);
+  }, [dbLesson, id, lessonCourse]);
 
   const orderedDbLessons = React.useMemo(
     () => [...(allLessonsData ?? [])].sort((a, b) => a.order - b.order),
@@ -183,10 +184,129 @@ export default function LessonDetailScreen() {
   };
 
   const isMarkingComplete = updateProgress.isPending || createProgress.isPending;
+  const goToSubscription = () => {
+    router.push("/profile/subscription");
+  };
 
   const youtubeVideoId = React.useMemo(() => {
     return getYoutubeVideoId(lesson?.videoUrl);
   }, [lesson?.videoUrl]);
+
+  React.useEffect(() => {
+    lastSavedVideoProgressRef.current = currentProgress?.completionPercent ?? 0;
+  }, [currentProgress?.completionPercent, dbLesson?._id]);
+
+  const stopVideoProgressTracking = React.useCallback(() => {
+    if (videoProgressIntervalRef.current) {
+      clearInterval(videoProgressIntervalRef.current);
+      videoProgressIntervalRef.current = null;
+    }
+  }, []);
+
+  const saveYoutubeProgress = React.useCallback(
+    async (force = false) => {
+      if (
+        !dbLesson ||
+        !youtubeVideoId ||
+        !youtubePlayerRef.current ||
+        isCompleted ||
+        isLessonLocked ||
+        isPrerequisiteLocked ||
+        progressLoading ||
+        isSavingVideoProgressRef.current
+      ) {
+        return;
+      }
+
+      isSavingVideoProgressRef.current = true;
+
+      try {
+        const [duration, currentTime] = await Promise.all([
+          youtubePlayerRef.current.getDuration(),
+          youtubePlayerRef.current.getCurrentTime(),
+        ]);
+
+        if (!duration || duration <= 0 || currentTime < 0) return;
+
+        const watchedSeconds = Math.floor(currentTime);
+        const completionPercent = Math.min(
+          99,
+          Math.max(1, Math.floor((currentTime / duration) * 100)),
+        );
+        const previousPercent = Math.max(
+          lastSavedVideoProgressRef.current,
+          currentProgress?.completionPercent ?? 0,
+        );
+
+        if (!force && completionPercent < previousPercent + 5) return;
+        if (completionPercent <= previousPercent && !force) return;
+
+        const payload = {
+          status: "in_progress" as const,
+          watchedSeconds,
+          completionPercent: Math.max(completionPercent, previousPercent),
+          lastAccessedAt: new Date().toISOString(),
+        };
+
+        if (currentProgress) {
+          await updateProgress.mutateAsync({
+            id: currentProgress._id,
+            ...payload,
+          });
+        } else {
+          await createProgress.mutateAsync({
+            courseId: dbLesson.courseId,
+            lessonId: dbLesson._id,
+            ...payload,
+          });
+        }
+
+        lastSavedVideoProgressRef.current = payload.completionPercent;
+      } finally {
+        isSavingVideoProgressRef.current = false;
+      }
+    },
+    [
+      createProgress,
+      currentProgress,
+      dbLesson,
+      isCompleted,
+      isLessonLocked,
+      isPrerequisiteLocked,
+      progressLoading,
+      updateProgress,
+      youtubeVideoId,
+    ],
+  );
+
+  const startVideoProgressTracking = React.useCallback(() => {
+    if (videoProgressIntervalRef.current) return;
+    saveYoutubeProgress(true).catch(() => undefined);
+    videoProgressIntervalRef.current = setInterval(() => {
+      saveYoutubeProgress().catch(() => undefined);
+    }, 5000);
+  }, [saveYoutubeProgress]);
+
+  const handleYoutubeStateChange = React.useCallback(
+    (state: PLAYER_STATES) => {
+      if (state === PLAYER_STATES.PLAYING) {
+        startVideoProgressTracking();
+        return;
+      }
+
+      if (
+        state === PLAYER_STATES.PAUSED ||
+        state === PLAYER_STATES.ENDED ||
+        state === PLAYER_STATES.BUFFERING
+      ) {
+        stopVideoProgressTracking();
+        saveYoutubeProgress(true).catch(() => undefined);
+      }
+    },
+    [saveYoutubeProgress, startVideoProgressTracking, stopVideoProgressTracking],
+  );
+
+  React.useEffect(() => stopVideoProgressTracking, [stopVideoProgressTracking]);
 
   const player = useVideoPlayer(null, (player) => {
     player.loop = false;
@@ -198,7 +318,7 @@ export default function LessonDetailScreen() {
     }
   }, [lesson?.videoUrl, youtubeVideoId, player]);
 
-  if (lessonLoading) {
+  if (lessonLoading || coursesLoading || subscriptionLoading) {
     return (
       <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
         <Stack.Screen options={{ title: "Bài học" }} />
@@ -224,6 +344,94 @@ export default function LessonDetailScreen() {
           >
             <Text className="font-bold text-white">Quay lại</Text>
           </TouchableOpacity>
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isLessonLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Mở gói Technique", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={goToLessons}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Bài học thuộc gói Technique
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {getUpgradeMessage(lesson.title)}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={goToSubscription}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="card-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Mở gói Technique</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isPrerequisiteLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Chưa mở bài", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={goToLessons}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Chưa thể học bài này
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {`Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                if (!previousLesson) return;
+                router.replace({
+                  pathname: "/lesson/[id]",
+                  params: { id: previousLesson._id },
+                } as unknown as Href);
+              }}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="book-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Quay lại bài trước</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeScreen>
     );
@@ -258,9 +466,11 @@ export default function LessonDetailScreen() {
         {youtubeVideoId ? (
           <View className="overflow-hidden rounded-[28px] bg-black w-full shadow-sm">
             <YoutubePlayer
+              ref={youtubePlayerRef}
               height={200}
               play={false}
               videoId={youtubeVideoId}
+              onChangeState={handleYoutubeStateChange}
             />
           </View>
         ) : (

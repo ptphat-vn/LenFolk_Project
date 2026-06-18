@@ -8,7 +8,7 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -27,13 +27,18 @@ import { Image } from "expo-image";
 
 import SafeScreen from "@/components/SafeScreen";
 import { lessons as allLessons } from "@/constants/lessons";
+import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
 import {
   getNoteLabel,
   getRandomPracticeNote,
   PRACTICE_NOTES,
 } from "@/constants/practice-notes";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 import { useGetDetailLesson } from "@/hooks/lesson/use-get-detail-lesson";
 import { useCreatePracticeSession } from "@/hooks/practice-session/use-create-practice-session";
+import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useBasicAnalysis } from "@/hooks/ai-analytic/use-basic";
 import { useAdvancedAnalysis } from "@/hooks/ai-analytic/use-advanced";
 import { useGetMe } from "@/hooks/user/use-get-me";
@@ -55,6 +60,8 @@ const mouthPlacementPracticeImages = [
   require("../../assets/images/dat_moi_3.png"),
 ];
 
+const basicNotesPracticeImage = require("../../assets/images/bai_3.png");
+
 export default function NotePracticeScreen() {
   const router = useRouter();
   const { lessonId, lessonNumber, note, practiceMode } = useLocalSearchParams<{
@@ -65,6 +72,13 @@ export default function NotePracticeScreen() {
   }>();
 
   const { data: dbLesson } = useGetDetailLesson(lessonId || "");
+  const { data: allLessonsData } = useGetLessons();
+  const { data: progressList } = useGetProgressList();
+  const { data: courses, isLoading: coursesLoading } = useGetCourses();
+  const {
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const { data: freshUser } = useGetMe();
@@ -75,6 +89,25 @@ export default function NotePracticeScreen() {
       dbLesson?.title?.includes(`Bài ${l.id}:`),
   );
   const lessonTitle = dbLesson?.title || mockLesson?.title || "";
+  const lessonCourse = useMemo(
+    () => courses?.find((course) => course._id === dbLesson?.courseId),
+    [courses, dbLesson?.courseId],
+  );
+  const isLessonLocked =
+    Boolean(dbLesson && courses) &&
+    !canAccessLesson(dbLesson, lessonCourse, hasPremiumAccess);
+  const previousLesson = useMemo(() => {
+    if (!dbLesson) return undefined;
+    const ordered = [...(allLessonsData ?? [])].sort((a, b) => a.order - b.order);
+    const currentIndex = ordered.findIndex((item) => item._id === dbLesson._id);
+    return currentIndex > 0 ? ordered[currentIndex - 1] : undefined;
+  }, [allLessonsData, dbLesson]);
+  const previousProgress = useMemo(
+    () => progressList?.find((item) => item.lessonId === previousLesson?._id),
+    [previousLesson?._id, progressList],
+  );
+  const isPrerequisiteLocked =
+    Boolean(previousLesson) && previousProgress?.status !== "completed";
   const isNotePracticeMode = practiceMode === "note";
   const isMouthPlacementLesson =
     !isNotePracticeMode &&
@@ -82,6 +115,13 @@ export default function NotePracticeScreen() {
       Number(lessonNumber) === 2 ||
       lessonTitle.toLowerCase().includes("đặt môi") ||
       lessonTitle.toLowerCase().includes("dat moi"));
+  const isBasicNotesLesson =
+    mockLesson?.id === 3 ||
+    Number(lessonNumber) === 3 ||
+    lessonTitle.toLowerCase().includes("thế bấm") ||
+    lessonTitle.toLowerCase().includes("the bam") ||
+    lessonTitle.toLowerCase().includes("nốt nhạc cơ bản") ||
+    lessonTitle.toLowerCase().includes("not nhac co ban");
 
   const lesson = useMemo(() => {
     if (!dbLesson) return null;
@@ -115,12 +155,22 @@ export default function NotePracticeScreen() {
   const [isResultModalVisible, setIsResultModalVisible] = useState(false);
   const [selectedPracticeImageIndex, setSelectedPracticeImageIndex] =
     useState<number | null>(null);
+  const [isBasicNotesImageVisible, setIsBasicNotesImageVisible] =
+    useState(false);
   const imageViewerTranslateY = useRef(new Animated.Value(0)).current;
   const recorderOperationRef = useRef(false);
   const playbackStartedAtRef = useRef(0);
 
-  const practiceTitle = isMouthPlacementLesson ? "Luyện thổi sáo" : "Luyện cao độ";
-  const recordingTargetTitle = isMouthPlacementLesson ? "Mục tiêu" : "Nốt mục tiêu";
+  const practiceTitle = isMouthPlacementLesson
+    ? "Luyện thổi sáo"
+    : isBasicNotesLesson
+      ? "Luyện nốt cơ bản"
+      : "Luyện cao độ";
+  const recordingTargetTitle = isMouthPlacementLesson
+    ? "Mục tiêu"
+    : isBasicNotesLesson
+      ? "Nốt đang luyện"
+      : "Nốt mục tiêu";
   const recordingTargetLabel = isMouthPlacementLesson ? "Âm sáo rõ" : targetNoteLabel;
   const recordingTargetDetail = isMouthPlacementLesson
     ? "Không chỉ toàn tiếng gió"
@@ -215,6 +265,7 @@ export default function NotePracticeScreen() {
   const closePracticeImageViewer = useCallback(() => {
     imageViewerTranslateY.setValue(0);
     setSelectedPracticeImageIndex(null);
+    setIsBasicNotesImageVisible(false);
   }, [imageViewerTranslateY]);
 
   const imageViewerPanResponder = useMemo(
@@ -272,6 +323,8 @@ export default function NotePracticeScreen() {
   );
 
   useEffect(() => {
+    if (isLessonLocked || isPrerequisiteLocked) return;
+
     const prepareAudio = async () => {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       setPermissionGranted(permission.granted);
@@ -285,7 +338,7 @@ export default function NotePracticeScreen() {
     };
 
     prepareAudio().catch(() => setPermissionGranted(false));
-  }, []);
+  }, [isLessonLocked, isPrerequisiteLocked]);
 
   const configureRecordingSession = async () => {
     await setAudioModeAsync({
@@ -325,6 +378,25 @@ export default function NotePracticeScreen() {
   };
 
   const startRecording = async () => {
+    if (isPrerequisiteLocked) {
+      Alert.alert(
+        "Chưa thể luyện bài này",
+        `Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`,
+      );
+      return;
+    }
+
+    if (isLessonLocked) {
+      Alert.alert("Cần mở gói Technique", getUpgradeMessage(lessonTitle), [
+        { text: "Để sau", style: "cancel" },
+        {
+          text: "Mở gói",
+          onPress: () => router.push("/profile/subscription"),
+        },
+      ]);
+      return;
+    }
+
     if (recorderOperationRef.current || recorderState.isRecording) return;
     if (AppState.currentState !== "active") {
       Alert.alert(
@@ -504,6 +576,105 @@ export default function NotePracticeScreen() {
 
   const durationSeconds = Math.floor((recorderState.durationMillis ?? 0) / 1000);
 
+  if (coursesLoading || subscriptionLoading) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Luyện nốt", headerShown: false }} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#8E9E6E" />
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isLessonLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Mở gói Technique", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Luyện tập thuộc gói Technique
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {getUpgradeMessage(lessonTitle)}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push("/profile/subscription")}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="card-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Mở gói Technique</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isPrerequisiteLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Chưa mở bài", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Chưa thể luyện bài này
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {`Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                if (!previousLesson) return;
+                router.replace({
+                  pathname: "/lesson/[id]",
+                  params: { id: previousLesson._id },
+                } as unknown as Href);
+              }}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="book-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Quay lại bài trước</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
+
   return (
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <Stack.Screen options={{ title: "Luyện nốt", headerShown: false }} />
@@ -569,6 +740,37 @@ export default function NotePracticeScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
+          </View>
+        )}
+
+        {isBasicNotesLesson && (
+          <View className="gap-4 rounded-[26px] bg-white p-5">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Bảng thế bấm ngón
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-[#777B70]">
+                Chọn nốt bên dưới rồi đối chiếu bảng để đặt ngón đúng trước khi thổi.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsBasicNotesImageVisible(true)}
+              className="overflow-hidden rounded-[22px] bg-[#F7F8F3]"
+            >
+              <Image
+                source={basicNotesPracticeImage}
+                contentFit="contain"
+                style={{ height: 230, width: "100%" }}
+              />
+              <View className="flex-row items-center justify-between px-4 py-3">
+                <Text className="text-xs font-semibold text-[#687451]">
+                  Đang luyện: {targetNoteLabel} ({targetNote})
+                </Text>
+                <Ionicons name="expand-outline" size={18} color="#687451" />
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -930,6 +1132,44 @@ export default function NotePracticeScreen() {
               />
             </Animated.View>
           )}
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isBasicNotesImageVisible}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closePracticeImageViewer}
+      >
+        <View className="flex-1 bg-black">
+          <View className="absolute right-5 top-12 z-10">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={closePracticeImageViewer}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View
+            className="flex-1"
+            style={{ transform: [{ translateY: imageViewerTranslateY }] }}
+            {...imageViewerPanResponder.panHandlers}
+          >
+            <Image
+              source={basicNotesPracticeImage}
+              contentFit="contain"
+              style={{ flex: 1, width: "100%" }}
+            />
+          </Animated.View>
         </View>
       </Modal>
     </SafeScreen>
