@@ -4,13 +4,13 @@ export type PracticeNote = {
 };
 
 export const PRACTICE_NOTES: PracticeNote[] = [
-  { pitch: "C4", label: "Đô" },
-  { pitch: "D4", label: "Rê" },
-  { pitch: "E4", label: "Mi" },
-  { pitch: "F4", label: "Pha" },
-  { pitch: "G4", label: "Sol" },
-  { pitch: "A4", label: "La" },
-  { pitch: "B4", label: "Si" },
+  { pitch: "C5", label: "Đô" },
+  { pitch: "D5", label: "Rê" },
+  { pitch: "E5", label: "Mi" },
+  { pitch: "F5", label: "Pha" },
+  { pitch: "G5", label: "Sol" },
+  { pitch: "A5", label: "La" },
+  { pitch: "B5", label: "Si" },
 ];
 
 const SOLFEGE_LABELS: Record<string, string> = {

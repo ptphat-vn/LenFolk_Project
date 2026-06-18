@@ -8,29 +8,37 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   AppState,
   Modal,
+  PanResponder,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 
 import SafeScreen from "@/components/SafeScreen";
 import { lessons as allLessons } from "@/constants/lessons";
+import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
 import {
   getNoteLabel,
   getRandomPracticeNote,
   PRACTICE_NOTES,
 } from "@/constants/practice-notes";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 import { useGetDetailLesson } from "@/hooks/lesson/use-get-detail-lesson";
 import { useCreatePracticeSession } from "@/hooks/practice-session/use-create-practice-session";
+import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useBasicAnalysis } from "@/hooks/ai-analytic/use-basic";
 import { useAdvancedAnalysis } from "@/hooks/ai-analytic/use-advanced";
 import { useGetMe } from "@/hooks/user/use-get-me";
@@ -46,18 +54,74 @@ type RecordedAudioFile = {
   createdAt: number;
 };
 
+const mouthPlacementPracticeImages = [
+  require("../../assets/images/dat_moi_1.png"),
+  require("../../assets/images/dat_moi_2.png"),
+  require("../../assets/images/dat_moi_3.png"),
+];
+
+const basicNotesPracticeImage = require("../../assets/images/bai_3.png");
+
 export default function NotePracticeScreen() {
   const router = useRouter();
-  const { lessonId, note } = useLocalSearchParams<{
+  const { lessonId, lessonNumber, note, practiceMode } = useLocalSearchParams<{
     lessonId: string;
+    lessonNumber?: string;
     note?: string;
+    practiceMode?: "note" | "lesson";
   }>();
 
   const { data: dbLesson } = useGetDetailLesson(lessonId || "");
+  const { data: allLessonsData } = useGetLessons();
+  const { data: progressList } = useGetProgressList();
+  const { data: courses, isLoading: coursesLoading } = useGetCourses();
+  const {
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const { data: freshUser } = useGetMe();
-  const mockLesson = allLessons.find((l) => String(l.id) === lessonId || l.title === dbLesson?.title);
+  const mockLesson = allLessons.find(
+    (l) =>
+      String(l.id) === lessonId ||
+      l.title === dbLesson?.title ||
+      dbLesson?.title?.includes(`Bài ${l.id}:`),
+  );
+  const lessonTitle = dbLesson?.title || mockLesson?.title || "";
+  const lessonCourse = useMemo(
+    () => courses?.find((course) => course._id === dbLesson?.courseId),
+    [courses, dbLesson?.courseId],
+  );
+  const isLessonLocked =
+    Boolean(dbLesson && courses) &&
+    !canAccessLesson(dbLesson, lessonCourse, hasPremiumAccess);
+  const previousLesson = useMemo(() => {
+    if (!dbLesson) return undefined;
+    const ordered = [...(allLessonsData ?? [])].sort((a, b) => a.order - b.order);
+    const currentIndex = ordered.findIndex((item) => item._id === dbLesson._id);
+    return currentIndex > 0 ? ordered[currentIndex - 1] : undefined;
+  }, [allLessonsData, dbLesson]);
+  const previousProgress = useMemo(
+    () => progressList?.find((item) => item.lessonId === previousLesson?._id),
+    [previousLesson?._id, progressList],
+  );
+  const isPrerequisiteLocked =
+    Boolean(previousLesson) && previousProgress?.status !== "completed";
+  const isNotePracticeMode = practiceMode === "note";
+  const isMouthPlacementLesson =
+    !isNotePracticeMode &&
+    (mockLesson?.id === 2 ||
+      Number(lessonNumber) === 2 ||
+      lessonTitle.toLowerCase().includes("đặt môi") ||
+      lessonTitle.toLowerCase().includes("dat moi"));
+  const isBasicNotesLesson =
+    mockLesson?.id === 3 ||
+    Number(lessonNumber) === 3 ||
+    lessonTitle.toLowerCase().includes("thế bấm") ||
+    lessonTitle.toLowerCase().includes("the bam") ||
+    lessonTitle.toLowerCase().includes("nốt nhạc cơ bản") ||
+    lessonTitle.toLowerCase().includes("not nhac co ban");
 
   const lesson = useMemo(() => {
     if (!dbLesson) return null;
@@ -89,8 +153,28 @@ export default function NotePracticeScreen() {
   const [permissionGranted, setPermissionGranted] = useState<boolean>();
   const [isPreparingRecorder, setIsPreparingRecorder] = useState(false);
   const [isResultModalVisible, setIsResultModalVisible] = useState(false);
+  const [selectedPracticeImageIndex, setSelectedPracticeImageIndex] =
+    useState<number | null>(null);
+  const [isBasicNotesImageVisible, setIsBasicNotesImageVisible] =
+    useState(false);
+  const imageViewerTranslateY = useRef(new Animated.Value(0)).current;
   const recorderOperationRef = useRef(false);
   const playbackStartedAtRef = useRef(0);
+
+  const practiceTitle = isMouthPlacementLesson
+    ? "Luyện thổi sáo"
+    : isBasicNotesLesson
+      ? "Luyện nốt cơ bản"
+      : "Luyện cao độ";
+  const recordingTargetTitle = isMouthPlacementLesson
+    ? "Mục tiêu"
+    : isBasicNotesLesson
+      ? "Nốt đang luyện"
+      : "Nốt mục tiêu";
+  const recordingTargetLabel = isMouthPlacementLesson ? "Âm sáo rõ" : targetNoteLabel;
+  const recordingTargetDetail = isMouthPlacementLesson
+    ? "Không chỉ toàn tiếng gió"
+    : targetNote;
 
   useEffect(() => {
     if (freshUser) {
@@ -178,6 +262,36 @@ export default function NotePracticeScreen() {
     }
   }, [analysis.isSuccess]);
 
+  const closePracticeImageViewer = useCallback(() => {
+    imageViewerTranslateY.setValue(0);
+    setSelectedPracticeImageIndex(null);
+    setIsBasicNotesImageVisible(false);
+  }, [imageViewerTranslateY]);
+
+  const imageViewerPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dy) > 12 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderMove: (_, gestureState) => {
+          imageViewerTranslateY.setValue(Math.max(gestureState.dy, 0));
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy > 90 || gestureState.vy > 1.1) {
+            closePracticeImageViewer();
+            return;
+          }
+
+          Animated.spring(imageViewerTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        },
+      }),
+    [closePracticeImageViewer, imageViewerTranslateY],
+  );
+
   useEffect(() => {
     if (
       playingUri &&
@@ -209,6 +323,8 @@ export default function NotePracticeScreen() {
   );
 
   useEffect(() => {
+    if (isLessonLocked || isPrerequisiteLocked) return;
+
     const prepareAudio = async () => {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       setPermissionGranted(permission.granted);
@@ -222,7 +338,7 @@ export default function NotePracticeScreen() {
     };
 
     prepareAudio().catch(() => setPermissionGranted(false));
-  }, []);
+  }, [isLessonLocked, isPrerequisiteLocked]);
 
   const configureRecordingSession = async () => {
     await setAudioModeAsync({
@@ -262,6 +378,25 @@ export default function NotePracticeScreen() {
   };
 
   const startRecording = async () => {
+    if (isPrerequisiteLocked) {
+      Alert.alert(
+        "Chưa thể luyện bài này",
+        `Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`,
+      );
+      return;
+    }
+
+    if (isLessonLocked) {
+      Alert.alert("Cần mở gói Technique", getUpgradeMessage(lessonTitle), [
+        { text: "Để sau", style: "cancel" },
+        {
+          text: "Mở gói",
+          onPress: () => router.push("/profile/subscription"),
+        },
+      ]);
+      return;
+    }
+
     if (recorderOperationRef.current || recorderState.isRecording) return;
     if (AppState.currentState !== "active") {
       Alert.alert(
@@ -320,9 +455,11 @@ export default function NotePracticeScreen() {
         const createdAt = Date.now();
         const recordedFile: RecordedAudioFile = {
           uri: recorder.uri,
-          name: `note-${targetNote}-${createdAt}.m4a`,
+          name: isMouthPlacementLesson
+            ? `flute-sound-${createdAt}.m4a`
+            : `note-${targetNote}-${createdAt}.m4a`,
           note: targetNote,
-          noteLabel: targetNoteLabel,
+          noteLabel: isMouthPlacementLesson ? "Âm sáo" : targetNoteLabel,
           durationSeconds: Math.max(durationSeconds, 1),
           createdAt,
         };
@@ -352,7 +489,21 @@ export default function NotePracticeScreen() {
     setTargetNote(pitch);
   };
 
+  const resetCurrentRecording = async () => {
+    await stopPlayback();
+    analysis.reset();
+    setIsResultModalVisible(false);
+    setRecordingUri(undefined);
+    setRecordedFiles([]);
+    await configureRecordingSession().catch(() => undefined);
+  };
+
   const practiceAnotherNote = async () => {
+    if (isMouthPlacementLesson) {
+      await resetCurrentRecording();
+      return;
+    }
+
     const alternatives = PRACTICE_NOTES.filter(
       (practiceNote) => practiceNote.pitch !== targetNote,
     );
@@ -389,7 +540,14 @@ export default function NotePracticeScreen() {
   const analyzeRecording = () => {
     if (!recordingUri) return;
 
-    const fileName = selectedRecordedFile?.name || `note-${targetNote}-${Date.now()}.m4a`;
+    const fileName =
+      selectedRecordedFile?.name ||
+      (isMouthPlacementLesson
+        ? `flute-sound-${Date.now()}.m4a`
+        : `note-${targetNote}-${Date.now()}.m4a`);
+    const analysisMessage = isMouthPlacementLesson
+      ? "Phân tích bản ghi người học thổi sáo. Chỉ cần đánh giá người học đã tạo được âm thanh sáo rõ hay chưa, âm có bị toàn tiếng gió hoặc quá yếu không. Nhận xét ngắn gọn bằng tiếng Việt và đưa 1-2 gợi ý về khẩu hình, hướng hơi nếu cần."
+      : `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là "${targetNoteLabel}". Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện. Khi nhắc tên nốt trong phần nhận xét, BẮT BUỘC dùng tên tiếng Việt (Đô, Rê, Mi, Pha, Sol, La, Si), tuyệt đối không dùng ký hiệu nhạc lý như C5, D5, E5.`;
 
     analysis.mutate(
       {
@@ -398,7 +556,7 @@ export default function NotePracticeScreen() {
           name: fileName,
           type: "audio/mp4",
         },
-        message: `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là ${targetNote} (${targetNoteLabel}). Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện.`,
+        message: analysisMessage,
         useLlm: true,
         ...(hasAdvancedAccess ? { fast: false } : {}),
       },
@@ -417,6 +575,105 @@ export default function NotePracticeScreen() {
   };
 
   const durationSeconds = Math.floor((recorderState.durationMillis ?? 0) / 1000);
+
+  if (coursesLoading || subscriptionLoading) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Luyện nốt", headerShown: false }} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#8E9E6E" />
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isLessonLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Mở gói Technique", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Luyện tập thuộc gói Technique
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {getUpgradeMessage(lessonTitle)}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push("/profile/subscription")}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="card-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Mở gói Technique</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isPrerequisiteLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Chưa mở bài", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Chưa thể luyện bài này
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {`Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                if (!previousLesson) return;
+                router.replace({
+                  pathname: "/lesson/[id]",
+                  params: { id: previousLesson._id },
+                } as unknown as Href);
+              }}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="book-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Quay lại bài trước</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
 
   return (
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
@@ -440,7 +697,7 @@ export default function NotePracticeScreen() {
               className="text-lg font-bold text-[#10120C]"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
-              Luyện cao độ
+              {practiceTitle}
             </Text>
             <Text className="mt-0.5 text-[11px] text-[#8A8D84]">
               {lesson?.title || "Luyện tập cùng AI"}
@@ -448,6 +705,74 @@ export default function NotePracticeScreen() {
           </View>
           <View className="h-11 w-11" />
         </View>
+
+        {isMouthPlacementLesson && (
+          <View className="gap-4 rounded-[26px] bg-white p-5">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Hình mẫu thực hành
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-[#777B70]">
+                Xem cách đặt môi, cầm sáo và hướng hơi trước khi ghi âm.
+              </Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12 }}
+            >
+              {mouthPlacementPracticeImages.map((imageSource, index) => (
+                <TouchableOpacity
+                  key={`mouth-placement-${index}`}
+                  activeOpacity={0.88}
+                  onPress={() => setSelectedPracticeImageIndex(index)}
+                  className="w-64 overflow-hidden rounded-[22px] bg-[#F7F8F3]"
+                >
+                  <Image
+                    source={imageSource}
+                    contentFit="contain"
+                    style={{ height: 240, width: "100%" }}
+                  />
+                  <Text className="px-4 py-3 text-xs font-semibold text-[#687451]">
+                    Mẫu {index + 1}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {isBasicNotesLesson && (
+          <View className="gap-4 rounded-[26px] bg-white p-5">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Bảng thế bấm ngón
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-[#777B70]">
+                Chọn nốt bên dưới rồi đối chiếu bảng để đặt ngón đúng trước khi thổi.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsBasicNotesImageVisible(true)}
+              className="overflow-hidden rounded-[22px] bg-[#F7F8F3]"
+            >
+              <Image
+                source={basicNotesPracticeImage}
+                contentFit="contain"
+                style={{ height: 230, width: "100%" }}
+              />
+              <View className="flex-row items-center justify-between px-4 py-3">
+                <Text className="text-xs font-semibold text-[#687451]">
+                  Đang luyện: {targetNoteLabel} ({targetNote})
+                </Text>
+                <Ionicons name="expand-outline" size={18} color="#687451" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View className="overflow-hidden rounded-[34px] bg-[#8E9E6E] px-6 pb-7 pt-5">
           <View className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
@@ -467,56 +792,60 @@ export default function NotePracticeScreen() {
 
           <View className="items-center">
             <Text selectable className="text-xs font-bold uppercase tracking-[2px] text-white/60">
-              Nốt mục tiêu
+              {recordingTargetTitle}
             </Text>
             <Text
               selectable
-              className="mt-2 text-6xl font-bold text-white"
+              className={`mt-2 font-bold text-white ${
+                isMouthPlacementLesson ? "text-4xl" : "text-6xl"
+              }`}
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
-              {targetNoteLabel}
+              {recordingTargetLabel}
             </Text>
             <Text className="mt-1 text-xs font-bold text-white/55">
-              {targetNote}
+              {recordingTargetDetail}
             </Text>
           </View>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-        >
-          {PRACTICE_NOTES.map((practiceNote) => {
-            const isSelected = practiceNote.pitch === targetNote;
+        {!isMouthPlacementLesson && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {PRACTICE_NOTES.map((practiceNote) => {
+              const isSelected = practiceNote.pitch === targetNote;
 
-            return (
-              <TouchableOpacity
-                key={practiceNote.pitch}
-                activeOpacity={0.8}
-            disabled={
-              recorderState.isRecording ||
-              analysis.isPending ||
-              isPreparingRecorder
-            }
-                onPress={() => selectNote(practiceNote.pitch)}
-                className={`min-w-[58px] items-center rounded-2xl border px-3 py-3 ${
-                  isSelected
-                    ? "border-[#8E9E6E] bg-[#8E9E6E]"
-                    : "border-[#E5E7E1] bg-white"
-                }`}
-              >
-                <Text
-                  className={`text-sm font-bold ${
-                    isSelected ? "text-white" : "text-[#687451]"
+              return (
+                <TouchableOpacity
+                  key={practiceNote.pitch}
+                  activeOpacity={0.8}
+                  disabled={
+                    recorderState.isRecording ||
+                    analysis.isPending ||
+                    isPreparingRecorder
+                  }
+                  onPress={() => selectNote(practiceNote.pitch)}
+                  className={`min-w-[58px] items-center rounded-2xl border px-3 py-3 ${
+                    isSelected
+                      ? "border-[#8E9E6E] bg-[#8E9E6E]"
+                      : "border-[#E5E7E1] bg-white"
                   }`}
                 >
-                  {practiceNote.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    className={`text-sm font-bold ${
+                      isSelected ? "text-white" : "text-[#687451]"
+                    }`}
+                  >
+                    {practiceNote.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         <View className="items-center rounded-[30px] bg-white px-7 pb-7 pt-6">
           <View className="mb-5 w-full flex-row items-center justify-between">
@@ -579,9 +908,11 @@ export default function NotePracticeScreen() {
               ? "Đang chuẩn bị micro..."
               : recorderState.isRecording
               ? "Chạm để dừng ghi âm"
-              : recordingUri
-                ? "Bản ghi đã sẵn sàng để phân tích"
-                : "Chạm micro và bắt đầu thổi"}
+                : recordingUri
+                  ? "Bản ghi đã sẵn sàng để phân tích"
+                  : isMouthPlacementLesson
+                    ? "Chạm micro và thổi ra âm sáo rõ"
+                    : "Chạm micro và bắt đầu thổi"}
           </Text>
         </View>
 
@@ -662,6 +993,8 @@ export default function NotePracticeScreen() {
             <Text className="font-bold text-white">
               {analysis.isPending
                 ? "AI đang phân tích..."
+                : isMouthPlacementLesson
+                  ? "Kiểm tra âm sáo với AI"
                 : hasAdvancedAccess
                   ? "Phân tích nâng cao với AI"
                   : "Phân tích cơ bản với AI"}
@@ -754,9 +1087,89 @@ export default function NotePracticeScreen() {
               className="mt-1 flex-row items-center justify-center gap-2 rounded-full bg-[#10120C] py-4"
             >
               <Ionicons name="refresh" size={18} color="white" />
-              <Text className="font-bold text-white">Thử nốt khác</Text>
+              <Text className="font-bold text-white">
+                {isMouthPlacementLesson ? "Thử lại" : "Thử nốt khác"}
+              </Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={selectedPracticeImageIndex !== null}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closePracticeImageViewer}
+      >
+        <View className="flex-1 bg-black">
+          <View className="absolute right-5 top-12 z-10">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={closePracticeImageViewer}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {selectedPracticeImageIndex !== null && (
+            <Animated.View
+              className="flex-1"
+              style={{ transform: [{ translateY: imageViewerTranslateY }] }}
+              {...imageViewerPanResponder.panHandlers}
+            >
+              <Image
+                source={mouthPlacementPracticeImages[selectedPracticeImageIndex]}
+                contentFit="contain"
+                style={{ flex: 1, width: "100%" }}
+              />
+            </Animated.View>
+          )}
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isBasicNotesImageVisible}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closePracticeImageViewer}
+      >
+        <View className="flex-1 bg-black">
+          <View className="absolute right-5 top-12 z-10">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={closePracticeImageViewer}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View
+            className="flex-1"
+            style={{ transform: [{ translateY: imageViewerTranslateY }] }}
+            {...imageViewerPanResponder.panHandlers}
+          >
+            <Image
+              source={basicNotesPracticeImage}
+              contentFit="contain"
+              style={{ flex: 1, width: "100%" }}
+            />
+          </Animated.View>
         </View>
       </Modal>
     </SafeScreen>

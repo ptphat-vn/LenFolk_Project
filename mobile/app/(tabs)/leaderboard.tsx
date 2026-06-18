@@ -168,14 +168,15 @@ export default function ProgressScreen() {
                 </View>
               )}
             </View>
-            <View>
+            <View className="min-w-0 flex-1">
               <Text
+                numberOfLines={1}
                 className="text-charcoal text-[16px] font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
                 {displayName}
               </Text>
-              <Text className="text-[13px] text-gray-400 font-bold mt-0.5">
+              <Text numberOfLines={1} ellipsizeMode="middle" className="text-[13px] text-gray-400 font-bold mt-0.5">
                 {user?.email || "Chưa có email"}
               </Text>
             </View>
@@ -226,8 +227,9 @@ export default function ProgressScreen() {
               </View>
 
               {/* Title & Value */}
-              <Text className="text-[12px] text-white/70 font-semibold mb-1">{stat.title}</Text>
+              <Text numberOfLines={1} className="text-[12px] text-white/70 font-semibold mb-1">{stat.title}</Text>
               <Text
+                numberOfLines={2}
                 className="text-white text-base font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
@@ -271,9 +273,9 @@ export default function ProgressScreen() {
             ))}
           </View>
 
-          <View className="flex-row justify-between items-center px-1 pt-2 border-t border-gray-150/40">
-            <Text className="text-[12px] text-charcoal/60 font-semibold">Nguồn: <Text className="font-bold text-charcoal">Tài khoản</Text></Text>
-            <Text className="text-[12px] text-primary font-bold">{profileProgress}% hồ sơ</Text>
+          <View className="flex-row justify-between items-center gap-3 px-1 pt-2 border-t border-gray-150/40">
+            <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-charcoal/60 font-semibold">Nguồn: <Text className="font-bold text-charcoal">Tài khoản</Text></Text>
+            <Text numberOfLines={1} className="shrink-0 text-[12px] text-primary font-bold">{profileProgress}% hồ sơ</Text>
           </View>
         </AnimatedBlock>
 
@@ -343,18 +345,19 @@ export default function ProgressScreen() {
                     <View className="w-9 h-9 rounded-full bg-white items-center justify-center mr-3 border border-[#8E9E6E]/20 shadow-sm">
                       <Ionicons name="checkmark" size={18} color="#8E9E6E" />
                     </View>
-                    <View>
+                    <View className="min-w-0 flex-1">
                       <Text
+                        numberOfLines={1}
                         className="text-charcoal text-sm font-bold"
                         style={{ fontFamily: "BeVietnamPro-Medium" }}
                       >
                         {item.title}
                       </Text>
-                      <Text className="text-[12px] text-gray-400 font-bold mt-0.5">{item.time}</Text>
+                      <Text numberOfLines={1} className="text-[12px] text-gray-400 font-bold mt-0.5">{item.time}</Text>
                     </View>
                   </View>
 
-                  <Text className="text-sm font-extrabold text-charcoal/80">{item.score}</Text>
+                  <Text numberOfLines={1} className="ml-3 max-w-[38%] text-sm font-extrabold text-charcoal/80">{item.score}</Text>
                 </View>
               ))
             )}

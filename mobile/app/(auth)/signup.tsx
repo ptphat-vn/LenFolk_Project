@@ -6,6 +6,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRegister } from "@/hooks/auth/use-register";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import SlideToConfirm from "@/components/SlideToConfirm";
+import { getOnboardingRoute } from "@/constants/onboarding";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -30,6 +31,9 @@ export default function SignupScreen() {
     registerMutation.mutate(
       { name, email, password },
       {
+        onSuccess: (data) => {
+          router.replace(getOnboardingRoute(data.user) || "/(tabs)");
+        },
         onError: (error) => {
           Alert.alert(
             "Đăng ký thất bại",

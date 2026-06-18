@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Alert, View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
@@ -128,20 +128,21 @@ export default function ProfileTabScreen() {
                 </View>
               )}
             </View>
-            <View className="flex-1">
+            <View className="min-w-0 flex-1">
               <Text
+                numberOfLines={1}
                 className="text-charcoal text-lg font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
                 {displayName}
               </Text>
-              <Text className="text-xs text-gray-400 font-bold mt-0.5">
+              <Text numberOfLines={1} ellipsizeMode="middle" className="text-xs text-gray-400 font-bold mt-0.5">
                 {user?.email || "Chưa có email"}
               </Text>
 
               <View className="flex-row flex-wrap items-center gap-2 mt-2">
                 <View className="bg-[#E2E8D3] px-2.5 py-1 rounded-full">
-                  <Text className="text-[10px] font-bold text-[#687451]">
+                  <Text numberOfLines={1} className="text-[10px] font-bold text-[#687451]">
                     Gói: {subscriptionLoading ? "Đang tải..." : subscriptionLabel}
                   </Text>
                 </View>
@@ -164,7 +165,7 @@ export default function ProfileTabScreen() {
               <View className="flex-row items-center mt-2 gap-4">
                 <View className="flex-row items-center">
                   <Ionicons name="person-circle-outline" size={14} color="#8E9E6E" />
-                  <Text className="text-xs font-bold text-charcoal/80 ml-1">{profileScore}/5 hồ sơ</Text>
+                  <Text numberOfLines={1} className="text-xs font-bold text-charcoal/80 ml-1">{profileScore}/5 hồ sơ</Text>
                 </View>
               </View>
             </View>
@@ -185,6 +186,39 @@ export default function ProfileTabScreen() {
           </TouchableOpacity>
         </AnimatedBlock>
 
+        {(user?.role === "instructor" || user?.role === "admin") && (
+          <AnimatedBlock variant="listItem" delay={120} className="mx-6 mb-6">
+            <Text
+              className="text-base font-bold text-charcoal mb-3 px-1"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Giảng viên
+            </Text>
+
+            <View className="bg-[#E2E8D3] rounded-3xl overflow-hidden border border-[#D6DDC6]/30">
+              <TouchableOpacity
+                onPress={() => router.push("/instructor/performances" as Href)}
+                className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
+              >
+                <View className="min-w-0 flex-row items-center flex-1 pr-4">
+                  <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
+                    <Ionicons name="albums" size={16} color="#8E9E6E" />
+                  </View>
+                  <View className="min-w-0 flex-1">
+                    <Text numberOfLines={1} className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                      Tác phẩm của tôi
+                    </Text>
+                    <Text numberOfLines={1} className="text-xs text-gray-500 font-bold mt-0.5">
+                      Tạo, xem trạng thái và doanh thu
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+          </AnimatedBlock>
+        )}
+
         {/* --- SECTION: HỌC TẬP (LEARNING SETTINGS) --- */}
         <AnimatedBlock variant="listItem" delay={140} className="mx-6 mb-6">
           <Text
@@ -200,7 +234,7 @@ export default function ProfileTabScreen() {
               onPress={() => Alert.alert("Tốc độ mặc định", "Tính năng tùy chỉnh tốc độ (BPM) sẽ sớm ra mắt.")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="flash" size={16} color="#E0B034" />
                 </View>
@@ -221,11 +255,11 @@ export default function ProfileTabScreen() {
 
             {/* Item 2: Notifications Switch */}
             <View className="flex-row justify-between items-center p-4.5 border-b border-white/40 p-4">
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="notifications" size={16} color="#8E9E6E" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Nhắc nhở hàng ngày
                 </Text>
               </View>
@@ -242,16 +276,16 @@ export default function ProfileTabScreen() {
               onPress={() => router.push("/(tabs)/courses")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="mic" size={16} color="#8E9E6E" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Độ nhạy micro
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="text-xs text-gray-500 font-bold mr-2">Bật</Text>
+              <View className="flex-row items-center shrink-0">
+                <Text numberOfLines={1} className="text-xs text-gray-500 font-bold mr-2">Bật</Text>
                 <Ionicons
                   name="chevron-forward"
                   size={16}
@@ -266,16 +300,16 @@ export default function ProfileTabScreen() {
               onPress={() => router.push("/(tabs)/leaderboard")}
               className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <MaterialCommunityIcons name="target" size={16} color="#8E9E6E" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Mục tiêu hằng ngày
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="text-xs text-gray-500 font-bold mr-2">20 phút</Text>
+              <View className="flex-row items-center shrink-0">
+                <Text numberOfLines={1} className="text-xs text-gray-500 font-bold mr-2">20 phút</Text>
                 <Ionicons
                   name="chevron-forward"
                   size={16}
@@ -302,11 +336,11 @@ export default function ProfileTabScreen() {
               onPress={() => router.push("/profile/edit")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="person" size={16} color="#8E9E6E" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Thông tin cá nhân
                 </Text>
               </View>
@@ -323,16 +357,16 @@ export default function ProfileTabScreen() {
               onPress={() => router.push("/profile/subscription")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="ribbon" size={16} color="#E0B034" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Gói học hiện tại
                 </Text>
               </View>
-              <View className="flex-row items-center">
-                <Text className="text-xs text-gray-500 font-bold mr-2">
+              <View className="min-w-0 max-w-[45%] flex-row items-center">
+                <Text numberOfLines={1} className="min-w-0 flex-1 text-xs text-gray-500 font-bold mr-2">
                   {subscriptionLoading ? "..." : subscriptionLabel}
                 </Text>
                 <Ionicons
@@ -349,7 +383,7 @@ export default function ProfileTabScreen() {
               onPress={() => router.push("/profile/verify")}
               className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons
                     name={user?.isVerified ? "shield-checkmark" : "shield-outline"}
@@ -357,12 +391,13 @@ export default function ProfileTabScreen() {
                     color={user?.isVerified ? "#2F855A" : "#C05621"}
                   />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Xác thực tài khoản
                 </Text>
               </View>
-              <View className="flex-row items-center">
+              <View className="min-w-0 max-w-[45%] flex-row items-center">
                 <Text
+                  numberOfLines={1}
                   className={`text-xs font-bold mr-2 ${
                     user?.isVerified ? "text-[#2F855A]" : "text-[#C05621]"
                   }`}
@@ -378,11 +413,11 @@ export default function ProfileTabScreen() {
               onPress={() => Alert.alert("Chế độ tối", "Giao diện tối chưa được thiết kế trong phiên bản hiện tại.")}
               className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="moon" size={16} color="#8E9E6E" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Chế độ tối
                 </Text>
               </View>
@@ -411,11 +446,11 @@ export default function ProfileTabScreen() {
               onPress={() => router.push("/privacy")}
               className="flex-row justify-between items-center p-4.5 active:bg-white/10 p-4"
             >
-              <View className="flex-row items-center flex-1 pr-4">
+              <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="shield-checkmark" size={16} color="#8E9E6E" />
                 </View>
-                <Text className="text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                   Chính sách bảo mật
                 </Text>
               </View>
