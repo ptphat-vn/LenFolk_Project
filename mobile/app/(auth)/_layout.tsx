@@ -1,5 +1,6 @@
 import { Redirect, Stack } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
+import { getOnboardingRoute, isProfileComplete } from "@/constants/onboarding";
 
 export default function AuthLayout() {
   const { user, token, isCheckingAuth } = useAuthStore();
@@ -8,9 +9,18 @@ export default function AuthLayout() {
     return null;
   }
 
-  if (user && token) {
-    return <Redirect href="/(tabs)" />;
+  if (user && token && isProfileComplete(user)) {
+    return <Redirect href={getOnboardingRoute(user) || "/(tabs)"} />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true,
+        animation: "slide_from_right",
+      }}
+    />
+  );
 }

@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Contact } from '@/components/user/home/Contact';
+import { Contact } from '@/components/user/contact/Contact';
 
 export default function ContactPage() {
   return (

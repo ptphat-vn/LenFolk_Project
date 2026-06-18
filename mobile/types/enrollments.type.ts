@@ -26,6 +26,8 @@ export type MyEnrollmentItem = {
     title: string;
     thumbnail: string | null;
     status: string;
+    courseType?: string;
+    level?: "beginner" | "intermediate" | "advanced";
     price?: number;
   } | null;
   plan: {

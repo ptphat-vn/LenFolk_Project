@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from "react-native";
 import { Href, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "../../constants/Colors";
 import { Ionicons, Feather } from "@expo/vector-icons";
@@ -15,7 +16,18 @@ import SafeScreen from "../../components/SafeScreen";
 import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
 import { useGetCourses } from "@/hooks/course/use-get-courses";
 import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
+import {
+  canAccessLesson,
+  getUpgradeMessage,
+} from "@/constants/course-access";
 import NotificationButton from "@/components/NotificationButton";
+
+function hasYoutubeVideo(url?: string | null) {
+  return /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/.test(
+    url || "",
+  );
+}
 
 export default function CoursesScreen() {
   const router = useRouter();
@@ -26,13 +38,22 @@ export default function CoursesScreen() {
   const filterIndicatorX = useSharedValue(0);
 
   const { data: dbLessons, isLoading: lessonsLoading } = useGetLessons();
-  const { data: courses } = useGetCourses();
+  const { data: courses, isLoading: coursesLoading } = useGetCourses();
   const { data: progressList } = useGetProgressList();
+  const { hasPremiumAccess } = useCurrentSubscription();
 
   const allLessonsMapped = React.useMemo(() => {
     if (!dbLessons) return [];
-    return dbLessons.map((lesson) => {
+    const ordered = [...dbLessons].sort((a, b) => a.order - b.order);
+
+    return ordered.map((lesson, index) => {
       const course = courses?.find((c) => c._id === lesson.courseId);
+      const previousLesson = ordered[index - 1];
+      const previousProgress = progressList?.find(
+        (p) => p.lessonId === previousLesson?._id,
+      );
+      const isPrerequisiteLocked =
+        Boolean(previousLesson) && previousProgress?.status !== "completed";
       const category = course
         ? course.level === "beginner"
           ? "Cơ bản"
@@ -55,9 +76,13 @@ export default function CoursesScreen() {
         duration,
         status,
         progress,
+        isLocked: !canAccessLesson(lesson, course, hasPremiumAccess),
+        isPrerequisiteLocked,
+        previousTitle: previousLesson?.title,
+        hasYoutubeVideo: hasYoutubeVideo(lesson.videoUrl),
       };
     });
-  }, [dbLessons, courses, progressList]);
+  }, [dbLessons, courses, hasPremiumAccess, progressList]);
 
   const categories = ["Tất cả", "Cơ bản", "Trung cấp", "Nâng cao"];
   const activeFilterIndex = categories.indexOf(activeFilter);
@@ -82,6 +107,38 @@ export default function CoursesScreen() {
       lesson.category.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const openLesson = (lesson: (typeof allLessonsMapped)[number]) => {
+    if (lesson.isPrerequisiteLocked) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
+        () => undefined,
+      );
+      Alert.alert(
+        "Chưa thể mở bài",
+        `Bạn cần đánh dấu hoàn thành "${lesson.previousTitle}" trước khi học bài này.`,
+      );
+      return;
+    }
+
+    if (lesson.isLocked) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
+        () => undefined,
+      );
+      Alert.alert("Cần mở gói Technique", getUpgradeMessage(lesson.title), [
+        { text: "Để sau", style: "cancel" },
+        {
+          text: "Mở gói",
+          onPress: () => router.push("/profile/subscription"),
+        },
+      ]);
+      return;
+    }
+
+    router.push({
+      pathname: "/lesson/[id]",
+      params: { id: String(lesson.id) },
+    } as unknown as Href);
+  };
 
   return (
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
@@ -204,23 +261,35 @@ export default function CoursesScreen() {
             delay={420}
             className="bg-[#8E9E6E] pt-8 pb-4 px-5"
           >
-            {lessonsLoading ? (
+            {lessonsLoading || coursesLoading ? (
               <ActivityIndicator color="white" size="large" className="py-12" />
             ) : filteredLessons.length > 0 ? (
               filteredLessons.map((lesson) => (
                 <TouchableOpacity
                   key={lesson.id}
                   activeOpacity={0.9}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/lesson/[id]",
-                      params: { id: String(lesson.id) },
-                    } as unknown as Href)
-                  }
+                  delayLongPress={350}
+                  onPress={() => openLesson(lesson)}
+                  onLongPress={() => {
+                    Haptics.impactAsync(
+                      Haptics.ImpactFeedbackStyle.Medium,
+                    ).catch(() => undefined);
+                    Alert.alert(
+                      lesson.title,
+                      `${lesson.category} • ${lesson.duration}`,
+                      [
+                        { text: "Đóng", style: "cancel" },
+                        {
+                          text: lesson.isLocked ? "Mở gói" : "Mở bài học",
+                          onPress: () => openLesson(lesson),
+                        },
+                      ],
+                    );
+                  }}
                   className="w-full bg-[#E2E8D3] rounded-3xl p-5 mb-4 flex-row items-center justify-between shadow-sm border border-[#D6DDC6]/40"
                 >
                   {/* Left Column: Icon Status badge + Title & Category */}
-                  <View className="flex-row items-center flex-1 pr-4 px-2">
+                  <View className="min-w-0 flex-row items-center flex-1 pr-4 px-2">
                     {/* Status Badge */}
                     <View className="mr-4">
                       {lesson.status === "completed" && (
@@ -235,15 +304,33 @@ export default function CoursesScreen() {
                       )}
                       {lesson.status === "not_started" && (
                         <View className="w-10 h-10 rounded-full bg-white justify-center items-center shadow-sm border-2 border-white">
-                          <Ionicons name="play" size={18} color="#8E9E6E" style={{ marginLeft: 3 }} />
+                          <Ionicons
+                            name={
+                              lesson.isLocked || lesson.isPrerequisiteLocked
+                                ? "lock-closed"
+                                : "play"
+                            }
+                            size={18}
+                            color="#8E9E6E"
+                            style={
+                              lesson.isLocked || lesson.isPrerequisiteLocked
+                                ? undefined
+                                : { marginLeft: 3 }
+                            }
+                          />
                         </View>
                       )}
                     </View>
 
                     {/* Titles */}
-                    <View className="flex-1">
-                      <Text className="text-xs text-charcoal/70 font-semibold mb-0.5">
+                    <View className="min-w-0 flex-1">
+                      <Text numberOfLines={1} className="text-xs text-charcoal/70 font-semibold mb-0.5">
                         {lesson.category}
+                        {lesson.isLocked
+                          ? " • Gói Technique"
+                          : lesson.isPrerequisiteLocked
+                            ? " • Chưa mở"
+                            : ""}
                       </Text>
                       <Text
                         numberOfLines={2}
@@ -255,11 +342,14 @@ export default function CoursesScreen() {
                       </Text>
 
                       {/* Progress bar under title for in_progress status */}
-                      {lesson.status === "in_progress" && (
+                      {lesson.status === "in_progress" && lesson.hasYoutubeVideo && (
                         <View className="w-full max-w-[180px] h-1.5 bg-white rounded-full mt-2.5 overflow-hidden">
                           <View
                             className="h-full bg-primary"
-                            style={{ width: `${(lesson.progress || 0.6) * 100}%`, backgroundColor: Colors.light.primary }}
+                            style={{
+                              width: `${Math.max(0, Math.min(1, lesson.progress)) * 100}%`,
+                              backgroundColor: Colors.light.primary,
+                            }}
                           />
                         </View>
                       )}
@@ -271,7 +361,9 @@ export default function CoursesScreen() {
                     numberOfLines={1}
                     className="shrink-0 text-sm font-bold text-charcoal/90"
                   >
-                    {lesson.duration}
+                    {lesson.isLocked || lesson.isPrerequisiteLocked
+                      ? "Khóa"
+                      : lesson.duration}
                   </Text>
                 </TouchableOpacity>
               ))

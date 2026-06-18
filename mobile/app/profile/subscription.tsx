@@ -20,7 +20,7 @@ import { useGetTransactionStatus } from "@/hooks/transaction-record/use-get-tran
 import { useCancelTransaction } from "@/hooks/transaction-record/use-cancel-transaction";
 import { useGetMyEnrollments } from "@/hooks/enrollment/use-get-my-enrollments";
 
-type PackageTab = "foundation" | "technique" | "repertoire";
+type PackageTab = "foundation" | "technique";
 
 // Map message lỗi (thường là tiếng Anh / nội bộ) từ backend sang tiếng Việt thân thiện.
 // Không hiển thị nguyên văn message backend cho người dùng.
@@ -81,16 +81,13 @@ export default function SubscriptionScreen() {
   const mappedCourses = useMemo(() => {
     if (!courses) return {};
     const technique = courses.find((c) => c.level === "intermediate" || c.title.toLowerCase().includes("technique"));
-    const repertoire = courses.find((c) => c.level === "advanced" || c.title.toLowerCase().includes("repertoire"));
     return {
       technique: technique?._id || null,
-      repertoire: repertoire?._id || null,
     };
   }, [courses]);
 
   const activeCourseId = useMemo(() => {
     if (activeTab === "technique") return mappedCourses.technique;
-    if (activeTab === "repertoire") return mappedCourses.repertoire;
     return null;
   }, [activeTab, mappedCourses]);
 
@@ -109,7 +106,6 @@ export default function SubscriptionScreen() {
 
     const foundationCourse = findCourse("beginner", ["foundations", "foundation", "cơ bản"]);
     const techniqueCourse = findCourse("intermediate", ["technique", "kỹ năng", "trung cấp"]);
-    const repertoireCourse = findCourse("advanced", ["repertoire", "biểu diễn", "chuyên nghiệp"]);
 
     return {
       foundation: {
@@ -155,39 +151,6 @@ export default function SubscriptionScreen() {
             "Kiểm soát hơi thở, âm thanh ổn định",
             "Luyện, đánh lưỡi, rung hơi, lấy hơi thành thạo",
             "Làm chủ kỹ thuật cốt lõi của sáo trúc",
-          ],
-      },
-      repertoire: {
-        name: repertoireCourse?.title || "Repertoire",
-        price: repertoireCourse?.plan
-          ? `${new Intl.NumberFormat("vi-VN").format(repertoireCourse.plan.price)}đ`
-          : "499.000đ",
-        billing: repertoireCourse?.plan?.billingCycle === "monthly"
-          ? "1 tháng"
-          : repertoireCourse?.plan?.billingCycle === "quarterly"
-            ? "3 tháng"
-            : repertoireCourse?.plan?.billingCycle === "yearly"
-              ? "1 năm"
-              : "Tác phẩm",
-        badge: "Chuyên nghiệp",
-        description: repertoireCourse?.plan?.description || repertoireCourse?.description || "Hoàn thiện khả năng biểu diễn sáo trúc chuyên sâu: xử lý cảm xúc, màu sắc âm thanh và phong cách biểu diễn. Kết hợp luyện tập AI thông minh và coaching 1:1 trực tiếp cùng giảng viên.",
-        highlights: repertoireCourse?.plan?.features && repertoireCourse.plan.features.length > 0
-          ? repertoireCourse.plan.features.slice(0, 3)
-          : [
-            "Hoàn thiện kỹ thuật & cảm xúc biểu diễn thực thụ",
-            "Luyện tập thông minh & đánh giá cao độ/nhịp bằng AI",
-            "Coaching 1:1 hoặc 1:2 trực tiếp cùng Giảng viên chuyên môn",
-          ],
-        checklist: repertoireCourse?.plan?.features && repertoireCourse.plan.features.length > 3
-          ? repertoireCourse.plan.features.slice(3)
-          : [
-            "1. Thẩm âm: Tìm hiểu và nghe làm quen giai điệu (Audio/Video)",
-            "2. Xướng âm (Solfège): Đọc nốt theo nhịp, hiểu tiết tấu & cao độ",
-            "3. Phân tích bài: Hiểu rõ cấu trúc, tone và các phân đoạn khó",
-            "4. Luyện ngón + kỹ thuật + hơi thở chuyên sâu cho tác phẩm",
-            "5. Vỡ bài: Tập luyện với tempo chậm kết hợp công nghệ AI",
-            "6. Tập với nhạc nền/beat: Duy trì tempo và hòa hợp âm nhạc",
-            "7. Hoàn thiện: Coaching trực tiếp với Giảng viên để tạo màu sắc riêng",
           ],
       },
     };
@@ -297,7 +260,7 @@ export default function SubscriptionScreen() {
           >
             <Ionicons name="arrow-back" size={22} color="#10120C" />
           </TouchableOpacity>
-          <Text className="text-sm font-bold text-[#687451] bg-[#E2E8D3] px-3.5 py-1.5 rounded-full">
+          <Text numberOfLines={1} className="max-w-[60%] text-sm font-bold text-[#687451] bg-[#E2E8D3] px-3.5 py-1.5 rounded-full">
             Premium
           </Text>
         </View>
@@ -334,7 +297,7 @@ export default function SubscriptionScreen() {
 
         {/* --- PACKAGE SELECTION TABS --- */}
         <View className="mx-6 bg-white rounded-2xl p-1.5 flex-row justify-between shadow-sm border border-gray-100 mb-6">
-          {(["foundation", "technique", "repertoire"] as const).map((tab) => {
+          {(["foundation", "technique"] as const).map((tab) => {
             const isSelected = activeTab === tab;
             const details = packageDetails[tab];
             const tabName = details.name;
@@ -352,13 +315,14 @@ export default function SubscriptionScreen() {
                   }`}
               >
                 <Text
+                  numberOfLines={1}
                   className={`text-xs font-bold ${isSelected ? "text-white" : "text-charcoal"
                     }`}
                   style={{ fontFamily: "BeVietnamPro-Medium" }}
                 >
                   {tabName}
                 </Text>
-                <Text className={`text-[9px] font-bold mt-0.5 ${isSelected ? "text-white/80" : "text-gray-400"}`}>
+                <Text numberOfLines={1} className={`text-[9px] font-bold mt-0.5 ${isSelected ? "text-white/80" : "text-gray-400"}`}>
                   {tabSub}
                 </Text>
               </TouchableOpacity>
@@ -369,16 +333,17 @@ export default function SubscriptionScreen() {
         {/* --- DETAIL CARD DISPLAY --- */}
         <View className="mx-6 rounded-[28px] border-2 border-[#8E9E6E]/30 bg-white p-6 shadow-sm relative overflow-hidden">
           {/* Badge indicator */}
-          <View className="absolute top-4 right-4 bg-[#FFB800]/10 px-3 py-1 rounded-full border border-[#FFB800]/20">
-            <Text className="text-[10px] font-black text-[#B87A00] uppercase tracking-wider">
+          <View className="absolute top-4 right-4 max-w-[52%] bg-[#FFB800]/10 px-3 py-1 rounded-full border border-[#FFB800]/20">
+            <Text numberOfLines={1} className="text-[10px] font-black text-[#B87A00] uppercase tracking-wider">
               {currentDetails.badge}
             </Text>
           </View>
 
-          <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-widest mb-1 mt-6">
+          <Text numberOfLines={2} className="text-xs font-bold text-[#8E9E6E] uppercase tracking-widest mb-1 mt-6 pr-24">
             Vietnamese Bamboo Flute
           </Text>
           <Text
+            numberOfLines={2}
             className="text-3xl font-extrabold text-[#10120C] mb-3"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
           >
@@ -390,12 +355,12 @@ export default function SubscriptionScreen() {
           </Text>
 
           {/* Price Tag Box */}
-          <View className="w-full bg-[#8E9E6E]/10 border border-[#8E9E6E]/20 rounded-2xl p-4 flex-row items-baseline mb-6">
-            <Text className="text-3xl font-black text-[#8E9E6E]">{currentDetails.price}</Text>
-            <Text className="text-sm font-bold text-[#687451] ml-1">/ {currentDetails.billing}</Text>
+          <View className="w-full bg-[#8E9E6E]/10 border border-[#8E9E6E]/20 rounded-2xl p-4 flex-row flex-wrap items-baseline mb-6">
+            <Text numberOfLines={1} className="max-w-full text-3xl font-black text-[#8E9E6E]">{currentDetails.price}</Text>
+            <Text numberOfLines={1} className="text-sm font-bold text-[#687451] ml-1">/ {currentDetails.billing}</Text>
           </View>
 
-          {/* Highlights box (Only for Technique/Repertoire) */}
+          {/* Highlights box for the paid package */}
           {activeTab !== "foundation" && (
             <View className="w-full bg-[#E2E8D3]/30 border border-[#C5D0B4]/40 rounded-2xl p-4 gap-2 mb-6">
               {currentDetails.highlights.map((h, idx) => (
@@ -439,6 +404,7 @@ export default function SubscriptionScreen() {
               color="white"
             />
             <Text
+              numberOfLines={2}
               className="text-white text-base font-bold py-4"
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
@@ -463,7 +429,7 @@ export default function SubscriptionScreen() {
           <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 50 }}>
             {/* Modal Header */}
             <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-xl font-bold text-[#10120C]" style={{ fontFamily: "BeVietnamPro-Medium" }}>
+              <Text numberOfLines={2} className="min-w-0 flex-1 pr-3 text-xl font-bold text-[#10120C]" style={{ fontFamily: "BeVietnamPro-Medium" }}>
                 {isPaid ? "Thanh Toán Thành Công" : "Thanh Toán Đăng Ký"}
               </Text>
               <TouchableOpacity
@@ -480,7 +446,7 @@ export default function SubscriptionScreen() {
                 <View className="w-20 h-20 rounded-full bg-[#8E9E6E]/15 items-center justify-center">
                   <Ionicons name="checkmark-circle" size={56} color="#8E9E6E" />
                 </View>
-                <Text className="text-lg font-bold text-charcoal text-center">
+                <Text numberOfLines={3} className="text-lg font-bold text-charcoal text-center">
                   Đã kích hoạt gói {currentDetails.name}
                 </Text>
                 <Text className="text-xs text-gray-500 text-center leading-5 px-6">
@@ -502,9 +468,9 @@ export default function SubscriptionScreen() {
                 {/* Invoice Info Card */}
                 <View className="bg-white rounded-[24px] p-5 shadow-sm mb-6 border border-gray-50">
                   <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider mb-2">Đơn hàng của bạn</Text>
-                  <View className="flex-row justify-between items-center mb-3">
-                    <Text className="text-base font-bold text-charcoal">Gói khóa học: {currentDetails.name}</Text>
-                    <Text className="text-base font-black text-[#8E9E6E]">
+                  <View className="flex-row justify-between items-start gap-3 mb-3">
+                    <Text numberOfLines={2} className="min-w-0 flex-1 text-base font-bold text-charcoal">Gói khóa học: {currentDetails.name}</Text>
+                    <Text numberOfLines={1} className="shrink-0 max-w-[40%] text-base font-black text-[#8E9E6E]">
                       {purchase
                         ? `${new Intl.NumberFormat("vi-VN").format(purchase.amountToPay)}đ`
                         : currentDetails.price}
@@ -534,27 +500,27 @@ export default function SubscriptionScreen() {
                   </View>
 
                   <View className="w-full gap-2 mt-2">
-                    <View className="flex-row justify-between">
-                      <Text className="text-xs text-gray-400">Ngân hàng:</Text>
-                      <Text className="text-xs font-bold text-charcoal">
+                    <View className="flex-row justify-between gap-3">
+                      <Text className="shrink-0 text-xs text-gray-400">Ngân hàng:</Text>
+                      <Text numberOfLines={1} className="min-w-0 flex-1 text-right text-xs font-bold text-charcoal">
                         {purchase?.bankCode || "—"}
                       </Text>
                     </View>
-                    <View className="flex-row justify-between">
-                      <Text className="text-xs text-gray-400">Số tài khoản:</Text>
-                      <Text className="text-xs font-bold text-charcoal select-text">
+                    <View className="flex-row justify-between gap-3">
+                      <Text className="shrink-0 text-xs text-gray-400">Số tài khoản:</Text>
+                      <Text numberOfLines={1} className="min-w-0 flex-1 text-right text-xs font-bold text-charcoal select-text">
                         {purchase?.accountNumber || "—"}
                       </Text>
                     </View>
-                    <View className="flex-row justify-between">
-                      <Text className="text-xs text-gray-400">Tên người nhận:</Text>
-                      <Text className="text-xs font-bold text-charcoal">
+                    <View className="flex-row justify-between gap-3">
+                      <Text className="shrink-0 text-xs text-gray-400">Tên người nhận:</Text>
+                      <Text numberOfLines={2} className="min-w-0 flex-1 text-right text-xs font-bold text-charcoal">
                         {purchase?.accountName || "—"}
                       </Text>
                     </View>
-                    <View className="flex-row justify-between">
-                      <Text className="text-xs text-gray-400">Nội dung CK:</Text>
-                      <Text className="text-xs font-bold text-[#8E9E6E] select-text">
+                    <View className="flex-row justify-between gap-3">
+                      <Text className="shrink-0 text-xs text-gray-400">Nội dung CK:</Text>
+                      <Text numberOfLines={1} className="min-w-0 flex-1 text-right text-xs font-bold text-[#8E9E6E] select-text">
                         {purchase?.payCode || "—"}
                       </Text>
                     </View>
@@ -577,15 +543,15 @@ export default function SubscriptionScreen() {
                   ) : (
                     <ActivityIndicator color="#8E9E6E" />
                   )}
-                  <View className="flex-1">
-                    <Text className="text-sm font-bold text-charcoal">
+                  <View className="min-w-0 flex-1">
+                    <Text numberOfLines={2} className="text-sm font-bold text-charcoal">
                       {isFailed
                         ? "Giao dịch thất bại"
                         : pollExpired
                           ? "Vẫn đang chờ thanh toán"
                           : "Đang chờ bạn chuyển khoản..."}
                     </Text>
-                    <Text className="text-[11px] text-gray-400 leading-4 mt-0.5">
+                    <Text numberOfLines={3} className="text-[11px] text-gray-400 leading-4 mt-0.5">
                       {isFailed
                         ? "Vui lòng đóng và thử tạo lại giao dịch."
                         : pollExpired

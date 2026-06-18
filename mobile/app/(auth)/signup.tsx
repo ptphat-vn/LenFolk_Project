@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
+import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRegister } from "@/hooks/auth/use-register";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import SlideToConfirm from "@/components/SlideToConfirm";
+import { getOnboardingRoute } from "@/constants/onboarding";
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -30,6 +31,9 @@ export default function SignupScreen() {
     registerMutation.mutate(
       { name, email, password },
       {
+        onSuccess: (data) => {
+          router.replace(getOnboardingRoute(data.user) || "/(tabs)");
+        },
         onError: (error) => {
           Alert.alert(
             "Đăng ký thất bại",
@@ -189,6 +193,15 @@ export default function SignupScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            className="items-center mt-5"
+            onPress={() => router.push("/register-instructor" as Href)}
+          >
+            <Text className="text-sm font-bold text-primary">
+              Đăng ký trở thành giảng viên
+            </Text>
+          </TouchableOpacity>
         </AnimatedBlock>
       </ScrollView>
     </KeyboardAvoidingView>

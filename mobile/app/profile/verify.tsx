@@ -21,12 +21,14 @@ import { useVerifyEmail } from "@/hooks/auth/use-verify-email";
 export default function AccountVerificationScreen() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   const resendMutation = useResendVerification();
   const verifyMutation = useVerifyEmail();
+  const autoSentRef = React.useRef(false);
 
   // Backend xác thực email bằng OTP gửi qua email → dùng email của tài khoản.
-  const [contactInfo, setContactInfo] = useState(user?.email || "");
+  const contactInfo = user?.email || "";
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [timer, setTimer] = useState(60);
@@ -65,6 +67,17 @@ export default function AccountVerificationScreen() {
     });
   };
 
+  useEffect(() => {
+    if (autoSentRef.current || user?.isVerified || !contactInfo.trim()) {
+      return;
+    }
+
+    autoSentRef.current = true;
+    handleSendOtp();
+    // Chỉ tự gửi một lần khi màn hình được mở trong onboarding.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactInfo, user?.isVerified]);
+
   const handleVerifyOtp = () => {
     const email = contactInfo.trim();
     if (otpCode.trim().length !== 6) {
@@ -76,7 +89,11 @@ export default function AccountVerificationScreen() {
       { email, code: otpCode.trim() },
       {
         onSuccess: () => {
-          Alert.alert("Thành công", "Xác thực email thành công!");
+          updateUser({ isVerified: true }).catch(() => undefined);
+          Alert.alert("Thành công", "Xác thực email thành công!", [
+            { text: "Vào trang chính", onPress: () => router.replace("/(tabs)") },
+          ]);
+          navigator.vibrate(100);
         },
         onError: (error: any) => {
           Alert.alert(
@@ -121,6 +138,7 @@ export default function AccountVerificationScreen() {
             <Ionicons name="arrow-back" size={22} color="#10120C" />
           </TouchableOpacity>
           <Text
+            numberOfLines={1}
             className="text-lg font-bold text-charcoal"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
           >
@@ -153,13 +171,13 @@ export default function AccountVerificationScreen() {
               </Text>
 
               <View className="w-full bg-[#F3F4F6] rounded-2xl p-5 gap-3 mt-4 border border-gray-150">
-                <View className="flex-row justify-between">
-                  <Text className="text-xs text-gray-400">Trạng thái:</Text>
-                  <Text className="text-xs font-bold text-[#8E9E6E]">Đã xác thực</Text>
+                <View className="flex-row justify-between gap-3">
+                  <Text className="shrink-0 text-xs text-gray-400">Trạng thái:</Text>
+                  <Text numberOfLines={1} className="min-w-0 flex-1 text-right text-xs font-bold text-[#8E9E6E]">Đã xác thực</Text>
                 </View>
-                <View className="flex-row justify-between">
-                  <Text className="text-xs text-gray-400">Liên hệ xác thực:</Text>
-                  <Text className="text-xs font-bold text-charcoal">{contactInfo || "SMS/Email"}</Text>
+                <View className="flex-row justify-between gap-3">
+                  <Text className="shrink-0 text-xs text-gray-400">Liên hệ xác thực:</Text>
+                  <Text numberOfLines={1} ellipsizeMode="middle" className="min-w-0 flex-1 text-right text-xs font-bold text-charcoal">{contactInfo || "SMS/Email"}</Text>
                 </View>
               </View>
 
@@ -199,13 +217,18 @@ export default function AccountVerificationScreen() {
                     <Text className="text-xs font-bold text-[#8E9E6E] mb-2">EMAIL</Text>
                     <TextInput
                       value={contactInfo}
-                      onChangeText={setContactInfo}
                       placeholder="Nhập email của bạn"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      editable={!user?.email}
                       className="w-full bg-[#F3F4F6]/50 border border-gray-200 rounded-2xl px-4 py-3.5 text-charcoal text-sm"
                     />
+                    {user?.email && (
+                    <Text numberOfLines={2} className="text-[10px] text-gray-400 mt-2">
+                        Mã xác thực chỉ được gửi tới email của tài khoản hiện tại.
+                      </Text>
+                    )}
                   </View>
 
                   <TouchableOpacity
@@ -231,20 +254,20 @@ export default function AccountVerificationScreen() {
                     <TextInput
                       value={otpCode}
                       onChangeText={setOtpCode}
-                      placeholder="Nhập mã xác thực (123456)"
+                      placeholder="Nhập mã xác thực"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="number-pad"
                       maxLength={6}
                       className="w-full bg-[#F3F4F6]/50 border border-gray-200 rounded-2xl px-4 py-3.5 text-charcoal text-center text-lg font-black tracking-widest"
                     />
-                    <Text className="text-[10px] text-gray-400 mt-2 text-center">
+                      <Text numberOfLines={2} ellipsizeMode="middle" className="text-[10px] text-gray-400 mt-2 text-center">
                       Đã gửi OTP về {contactInfo}
                     </Text>
                   </View>
 
                   <View className="items-center">
                     {timer > 0 ? (
-                      <Text className="text-xs text-gray-500 font-medium">
+                      <Text numberOfLines={1} className="text-xs text-gray-500 font-medium">
                         Gửi lại mã sau <Text className="font-bold text-[#8E9E6E]">{timer}s</Text>
                       </Text>
                     ) : (
@@ -276,7 +299,7 @@ export default function AccountVerificationScreen() {
                       onPress={() => setOtpSent(false)}
                       className="w-full bg-white border border-gray-200 py-3.5 rounded-full items-center justify-center"
                     >
-                      <Text className="text-gray-500 font-bold text-sm">Quay lại nhập thông tin</Text>
+                      <Text numberOfLines={1} className="text-gray-500 font-bold text-sm">Quay lại nhập thông tin</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

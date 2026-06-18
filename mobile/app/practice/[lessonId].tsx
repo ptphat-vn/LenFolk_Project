@@ -3,69 +3,188 @@ import {
   AudioModule,
   RecordingPresets,
   setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  AppState,
+  Modal,
+  PanResponder,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 
 import SafeScreen from "@/components/SafeScreen";
 import { lessons as allLessons } from "@/constants/lessons";
+import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
+import {
+  getNoteLabel,
+  getRandomPracticeNote,
+  PRACTICE_NOTES,
+} from "@/constants/practice-notes";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
 import { useGetDetailLesson } from "@/hooks/lesson/use-get-detail-lesson";
 import { useCreatePracticeSession } from "@/hooks/practice-session/use-create-practice-session";
+import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
+import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useBasicAnalysis } from "@/hooks/ai-analytic/use-basic";
 import { useAdvancedAnalysis } from "@/hooks/ai-analytic/use-advanced";
 import { useGetMe } from "@/hooks/user/use-get-me";
 import { useAuthStore } from "@/store/authStore";
 import type { AnalysisResult } from "@/types/ai-analysis.type";
 
+type RecordedAudioFile = {
+  uri: string;
+  name: string;
+  note: string;
+  noteLabel: string;
+  durationSeconds: number;
+  createdAt: number;
+};
+
+const mouthPlacementPracticeImages = [
+  require("../../assets/images/dat_moi_1.png"),
+  require("../../assets/images/dat_moi_2.png"),
+  require("../../assets/images/dat_moi_3.png"),
+];
+
+const basicNotesPracticeImage = require("../../assets/images/bai_3.png");
+
 export default function NotePracticeScreen() {
   const router = useRouter();
-  const { lessonId, note } = useLocalSearchParams<{
+  const { lessonId, lessonNumber, note, practiceMode } = useLocalSearchParams<{
     lessonId: string;
+    lessonNumber?: string;
     note?: string;
+    practiceMode?: "note" | "lesson";
   }>();
 
   const { data: dbLesson } = useGetDetailLesson(lessonId || "");
+  const { data: allLessonsData } = useGetLessons();
+  const { data: progressList } = useGetProgressList();
+  const { data: courses, isLoading: coursesLoading } = useGetCourses();
+  const {
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const { data: freshUser } = useGetMe();
-  const mockLesson = allLessons.find((l) => String(l.id) === lessonId || l.title === dbLesson?.title);
+  const mockLesson = allLessons.find(
+    (l) =>
+      String(l.id) === lessonId ||
+      l.title === dbLesson?.title ||
+      dbLesson?.title?.includes(`Bài ${l.id}:`),
+  );
+  const lessonTitle = dbLesson?.title || mockLesson?.title || "";
+  const lessonCourse = useMemo(
+    () => courses?.find((course) => course._id === dbLesson?.courseId),
+    [courses, dbLesson?.courseId],
+  );
+  const isLessonLocked =
+    Boolean(dbLesson && courses) &&
+    !canAccessLesson(dbLesson, lessonCourse, hasPremiumAccess);
+  const previousLesson = useMemo(() => {
+    if (!dbLesson) return undefined;
+    const ordered = [...(allLessonsData ?? [])].sort((a, b) => a.order - b.order);
+    const currentIndex = ordered.findIndex((item) => item._id === dbLesson._id);
+    return currentIndex > 0 ? ordered[currentIndex - 1] : undefined;
+  }, [allLessonsData, dbLesson]);
+  const previousProgress = useMemo(
+    () => progressList?.find((item) => item.lessonId === previousLesson?._id),
+    [previousLesson?._id, progressList],
+  );
+  const isPrerequisiteLocked =
+    Boolean(previousLesson) && previousProgress?.status !== "completed";
+  const isNotePracticeMode = practiceMode === "note";
+  const isMouthPlacementLesson =
+    !isNotePracticeMode &&
+    (mockLesson?.id === 2 ||
+      Number(lessonNumber) === 2 ||
+      lessonTitle.toLowerCase().includes("đặt môi") ||
+      lessonTitle.toLowerCase().includes("dat moi"));
+  const isBasicNotesLesson =
+    mockLesson?.id === 3 ||
+    Number(lessonNumber) === 3 ||
+    lessonTitle.toLowerCase().includes("thế bấm") ||
+    lessonTitle.toLowerCase().includes("the bam") ||
+    lessonTitle.toLowerCase().includes("nốt nhạc cơ bản") ||
+    lessonTitle.toLowerCase().includes("not nhac co ban");
 
   const lesson = useMemo(() => {
     if (!dbLesson) return null;
     return {
       id: dbLesson._id,
       title: dbLesson.title,
-      targetNote: mockLesson?.targetNote || dbLesson.techniques?.[0] || "A4",
+      targetNote: mockLesson?.targetNote || dbLesson.techniques?.[0] || "C4",
     };
   }, [dbLesson, mockLesson]);
 
   const createSession = useCreatePracticeSession();
 
-  const targetNote = note || lesson?.targetNote || mockLesson?.targetNote || "A4";
+  const [targetNote, setTargetNote] = useState(
+    note || lesson?.targetNote || mockLesson?.targetNote || "C4",
+  );
+  const targetNoteLabel = getNoteLabel(targetNote);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
+  const playbackPlayer = useAudioPlayer(undefined, { updateInterval: 250 });
+  const playbackStatus = useAudioPlayerStatus(playbackPlayer);
   const basicAnalysis = useBasicAnalysis<AnalysisResult>();
   const advancedAnalysis = useAdvancedAnalysis<AnalysisResult>();
   const hasAdvancedAccess = freshUser?.isSubscribed ?? user?.isSubscribed ?? false;
   const analysis = hasAdvancedAccess ? advancedAnalysis : basicAnalysis;
   const [recordingUri, setRecordingUri] = useState<string>();
+  const [recordedFiles, setRecordedFiles] = useState<RecordedAudioFile[]>([]);
+  const [playingUri, setPlayingUri] = useState<string>();
+  const [pendingPlaybackUri, setPendingPlaybackUri] = useState<string>();
   const [permissionGranted, setPermissionGranted] = useState<boolean>();
+  const [isPreparingRecorder, setIsPreparingRecorder] = useState(false);
+  const [isResultModalVisible, setIsResultModalVisible] = useState(false);
+  const [selectedPracticeImageIndex, setSelectedPracticeImageIndex] =
+    useState<number | null>(null);
+  const [isBasicNotesImageVisible, setIsBasicNotesImageVisible] =
+    useState(false);
+  const imageViewerTranslateY = useRef(new Animated.Value(0)).current;
+  const recorderOperationRef = useRef(false);
+  const playbackStartedAtRef = useRef(0);
+
+  const practiceTitle = isMouthPlacementLesson
+    ? "Luyện thổi sáo"
+    : isBasicNotesLesson
+      ? "Luyện nốt cơ bản"
+      : "Luyện cao độ";
+  const recordingTargetTitle = isMouthPlacementLesson
+    ? "Mục tiêu"
+    : isBasicNotesLesson
+      ? "Nốt đang luyện"
+      : "Nốt mục tiêu";
+  const recordingTargetLabel = isMouthPlacementLesson ? "Âm sáo rõ" : targetNoteLabel;
+  const recordingTargetDetail = isMouthPlacementLesson
+    ? "Không chỉ toàn tiếng gió"
+    : targetNote;
 
   useEffect(() => {
     if (freshUser) {
       updateUser(freshUser);
     }
   }, [freshUser, updateUser]);
+
+  useEffect(() => {
+    setTargetNote(note || lesson?.targetNote || mockLesson?.targetNote || "C4");
+  }, [lesson?.targetNote, mockLesson?.targetNote, note]);
 
   const parsedData = useMemo(() => {
     if (!analysis.data) return null;
@@ -99,7 +218,113 @@ export default function NotePracticeScreen() {
     return { fileInfo, summary };
   }, [analysis.data]);
 
+  const compactResult = useMemo(() => {
+    const summary = parsedData?.summary as Record<string, any> | undefined;
+    const rawData = analysis.data;
+
+    if (!summary) {
+      return rawData
+        ? {
+            score: null,
+            label: "Đã phân tích",
+            description: "AI đã trả kết quả, nhưng chưa đúng định dạng tóm tắt.",
+            issues: [],
+            recommendations: [],
+          }
+        : null;
+    }
+
+    const toStringList = (value: unknown) =>
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : [];
+
+    const shorten = (value: unknown, maxLength = 120) => {
+      if (typeof value !== "string") return "";
+      const text = value.trim();
+      return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+    };
+
+    return {
+      score: typeof summary.score === "number" ? Math.round(summary.score) : null,
+      label: typeof summary.label === "string" ? summary.label : "Đã phân tích",
+      description: shorten(summary.summary || summary.description || summary.feedback, 130),
+      issues: toStringList(summary.issues).slice(0, 2).map((item) => shorten(item, 80)),
+      recommendations: toStringList(summary.recommendations || summary.suggestions)
+        .slice(0, 2)
+        .map((item) => shorten(item, 90)),
+    };
+  }, [analysis.data, parsedData]);
+
   useEffect(() => {
+    if (analysis.isSuccess) {
+      setIsResultModalVisible(true);
+    }
+  }, [analysis.isSuccess]);
+
+  const closePracticeImageViewer = useCallback(() => {
+    imageViewerTranslateY.setValue(0);
+    setSelectedPracticeImageIndex(null);
+    setIsBasicNotesImageVisible(false);
+  }, [imageViewerTranslateY]);
+
+  const imageViewerPanResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dy) > 12 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx),
+        onPanResponderMove: (_, gestureState) => {
+          imageViewerTranslateY.setValue(Math.max(gestureState.dy, 0));
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dy > 90 || gestureState.vy > 1.1) {
+            closePracticeImageViewer();
+            return;
+          }
+
+          Animated.spring(imageViewerTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        },
+      }),
+    [closePracticeImageViewer, imageViewerTranslateY],
+  );
+
+  useEffect(() => {
+    if (
+      playingUri &&
+      playbackStatus.didJustFinish &&
+      Date.now() - playbackStartedAtRef.current > 600
+    ) {
+      setPlayingUri(undefined);
+    }
+  }, [playbackStatus.didJustFinish, playingUri]);
+
+  useEffect(() => {
+    if (!pendingPlaybackUri || pendingPlaybackUri !== playingUri) return;
+    if (!playbackStatus.isLoaded || playbackStatus.isBuffering) return;
+
+    playbackPlayer.seekTo(0).catch(() => undefined);
+    playbackPlayer.play();
+    setPendingPlaybackUri(undefined);
+  }, [
+    pendingPlaybackUri,
+    playbackPlayer,
+    playbackStatus.isBuffering,
+    playbackStatus.isLoaded,
+    playingUri,
+  ]);
+
+  const selectedRecordedFile = useMemo(
+    () => recordedFiles.find((file) => file.uri === recordingUri),
+    [recordedFiles, recordingUri],
+  );
+
+  useEffect(() => {
+    if (isLessonLocked || isPrerequisiteLocked) return;
+
     const prepareAudio = async () => {
       const permission = await AudioModule.requestRecordingPermissionsAsync();
       setPermissionGranted(permission.granted);
@@ -113,53 +338,225 @@ export default function NotePracticeScreen() {
     };
 
     prepareAudio().catch(() => setPermissionGranted(false));
-  }, []);
+  }, [isLessonLocked, isPrerequisiteLocked]);
+
+  const configureRecordingSession = async () => {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      allowsRecording: true,
+    });
+  };
+
+  const configurePlaybackSession = async () => {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      allowsRecording: false,
+      shouldRouteThroughEarpiece: false,
+    });
+  };
+
+  const prepareRecorderWithRetry = async () => {
+    try {
+      await configureRecordingSession();
+      await recorder.prepareToRecordAsync();
+    } catch {
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+      }).catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await configureRecordingSession();
+      await recorder.prepareToRecordAsync();
+    }
+  };
+
+  const stopPlayback = async () => {
+    playbackPlayer.pause();
+    await playbackPlayer.seekTo(0).catch(() => undefined);
+    setPendingPlaybackUri(undefined);
+    setPlayingUri(undefined);
+  };
 
   const startRecording = async () => {
-    if (!permissionGranted) {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
-      setPermissionGranted(permission.granted);
-      if (!permission.granted) {
+    if (isPrerequisiteLocked) {
+      Alert.alert(
+        "Chưa thể luyện bài này",
+        `Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`,
+      );
+      return;
+    }
+
+    if (isLessonLocked) {
+      Alert.alert("Cần mở gói Technique", getUpgradeMessage(lessonTitle), [
+        { text: "Để sau", style: "cancel" },
+        {
+          text: "Mở gói",
+          onPress: () => router.push("/profile/subscription"),
+        },
+      ]);
+      return;
+    }
+
+    if (recorderOperationRef.current || recorderState.isRecording) return;
+    if (AppState.currentState !== "active") {
+      Alert.alert(
+        "Chưa thể bật micro",
+        "Hãy mở lại ứng dụng rồi thử ghi âm lần nữa.",
+      );
+      return;
+    }
+
+    recorderOperationRef.current = true;
+    setIsPreparingRecorder(true);
+
+    try {
+      let hasPermission = permissionGranted === true;
+      if (!hasPermission) {
+        const permission =
+          await AudioModule.requestRecordingPermissionsAsync();
+        hasPermission = permission.granted;
+        setPermissionGranted(permission.granted);
+      }
+
+      if (!hasPermission) {
         Alert.alert(
           "Cần quyền micro",
           "Hãy cấp quyền micro để ghi âm nốt thổi.",
         );
         return;
       }
-    }
 
-    analysis.reset();
-    setRecordingUri(undefined);
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      allowsRecording: true,
-    });
-    await recorder.prepareToRecordAsync();
-    recorder.record();
+      await stopPlayback();
+      analysis.reset();
+      setIsResultModalVisible(false);
+      setRecordingUri(undefined);
+      await prepareRecorderWithRetry();
+      recorder.record();
+    } catch (error) {
+      console.warn("Failed to start audio recording", error);
+      await configurePlaybackSession().catch(() => undefined);
+      Alert.alert(
+        "Không thể bật micro",
+        "Audio đang được ứng dụng khác sử dụng hoặc phiên ghi âm chưa sẵn sàng. Hãy dừng nhạc/cuộc gọi và thử lại.",
+      );
+    } finally {
+      recorderOperationRef.current = false;
+      setIsPreparingRecorder(false);
+    }
   };
 
   const stopRecording = async () => {
-    await recorder.stop();
-    if (recorder.uri) {
-      setRecordingUri(recorder.uri);
+    if (recorderOperationRef.current || !recorderState.isRecording) return;
+    recorderOperationRef.current = true;
+
+    try {
+      await recorder.stop();
+      if (recorder.uri) {
+        const createdAt = Date.now();
+        const recordedFile: RecordedAudioFile = {
+          uri: recorder.uri,
+          name: isMouthPlacementLesson
+            ? `flute-sound-${createdAt}.m4a`
+            : `note-${targetNote}-${createdAt}.m4a`,
+          note: targetNote,
+          noteLabel: isMouthPlacementLesson ? "Âm sáo" : targetNoteLabel,
+          durationSeconds: Math.max(durationSeconds, 1),
+          createdAt,
+        };
+
+        setRecordedFiles([recordedFile]);
+        setRecordingUri(recorder.uri);
+      }
+    } catch (error) {
+      console.warn("Failed to stop audio recording", error);
+      Alert.alert(
+        "Không thể dừng ghi âm",
+        "Phiên ghi âm gặp sự cố. Vui lòng thử lại.",
+      );
+    } finally {
+      await configurePlaybackSession().catch(() => undefined);
+      recorderOperationRef.current = false;
     }
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      allowsRecording: false,
-    });
+  };
+
+  const selectNote = (pitch: string) => {
+    if (recorderState.isRecording || analysis.isPending) return;
+
+    Haptics.selectionAsync().catch(() => undefined);
+    analysis.reset();
+    setIsResultModalVisible(false);
+    setRecordingUri(undefined);
+    setTargetNote(pitch);
+  };
+
+  const resetCurrentRecording = async () => {
+    await stopPlayback();
+    analysis.reset();
+    setIsResultModalVisible(false);
+    setRecordingUri(undefined);
+    setRecordedFiles([]);
+    await configureRecordingSession().catch(() => undefined);
+  };
+
+  const practiceAnotherNote = async () => {
+    if (isMouthPlacementLesson) {
+      await resetCurrentRecording();
+      return;
+    }
+
+    const alternatives = PRACTICE_NOTES.filter(
+      (practiceNote) => practiceNote.pitch !== targetNote,
+    );
+    const nextNote =
+      alternatives[Math.floor(Math.random() * alternatives.length)] ||
+      getRandomPracticeNote();
+
+    setTargetNote(nextNote.pitch);
+    await startRecording();
+  };
+
+  const playRecordedFile = async (file: RecordedAudioFile) => {
+    if (recorderState.isRecording || analysis.isPending) return;
+
+    Haptics.selectionAsync().catch(() => undefined);
+    analysis.reset();
+    setIsResultModalVisible(false);
+    setTargetNote(file.note);
+    setRecordingUri(file.uri);
+
+    if (playingUri === file.uri && playbackStatus.playing) {
+      await stopPlayback();
+      return;
+    }
+
+    await configurePlaybackSession().catch(() => undefined);
+    playbackPlayer.pause();
+    setPendingPlaybackUri(file.uri);
+    playbackPlayer.replace({ uri: file.uri });
+    playbackStartedAtRef.current = Date.now();
+    setPlayingUri(file.uri);
   };
 
   const analyzeRecording = () => {
     if (!recordingUri) return;
 
+    const fileName =
+      selectedRecordedFile?.name ||
+      (isMouthPlacementLesson
+        ? `flute-sound-${Date.now()}.m4a`
+        : `note-${targetNote}-${Date.now()}.m4a`);
+    const analysisMessage = isMouthPlacementLesson
+      ? "Phân tích bản ghi người học thổi sáo. Chỉ cần đánh giá người học đã tạo được âm thanh sáo rõ hay chưa, âm có bị toàn tiếng gió hoặc quá yếu không. Nhận xét ngắn gọn bằng tiếng Việt và đưa 1-2 gợi ý về khẩu hình, hướng hơi nếu cần."
+      : `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là "${targetNoteLabel}". Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện. Khi nhắc tên nốt trong phần nhận xét, BẮT BUỘC dùng tên tiếng Việt (Đô, Rê, Mi, Pha, Sol, La, Si), tuyệt đối không dùng ký hiệu nhạc lý như C5, D5, E5.`;
+
     analysis.mutate(
       {
         file: {
           uri: recordingUri,
-          name: `note-${targetNote}-${Date.now()}.m4a`,
+          name: fileName,
           type: "audio/mp4",
         },
-        message: `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là ${targetNote}. Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện.`,
+        message: analysisMessage,
         useLlm: true,
         ...(hasAdvancedAccess ? { fast: false } : {}),
       },
@@ -179,6 +576,105 @@ export default function NotePracticeScreen() {
 
   const durationSeconds = Math.floor((recorderState.durationMillis ?? 0) / 1000);
 
+  if (coursesLoading || subscriptionLoading) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Luyện nốt", headerShown: false }} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#8E9E6E" />
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isLessonLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Mở gói Technique", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Luyện tập thuộc gói Technique
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {getUpgradeMessage(lessonTitle)}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push("/profile/subscription")}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="card-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Mở gói Technique</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
+
+  if (isPrerequisiteLocked) {
+    return (
+      <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+        <Stack.Screen options={{ title: "Chưa mở bài", headerShown: false }} />
+        <View className="flex-1 justify-center gap-5 px-6">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+            className="absolute left-6 top-6 h-11 w-11 items-center justify-center rounded-full bg-white"
+          >
+            <Ionicons name="arrow-back" size={22} color="#10120C" />
+          </TouchableOpacity>
+
+          <View className="items-center gap-4 rounded-[30px] bg-white p-7">
+            <View className="h-16 w-16 items-center justify-center rounded-full bg-[#E2E8D3]">
+              <Ionicons name="lock-closed" size={30} color="#687451" />
+            </View>
+            <Text
+              selectable
+              className="text-center text-xl font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              Chưa thể luyện bài này
+            </Text>
+            <Text selectable className="text-center text-sm leading-6 text-[#55594F]">
+              {`Bạn cần đánh dấu hoàn thành "${previousLesson?.title}" trước khi tiếp tục.`}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                if (!previousLesson) return;
+                router.replace({
+                  pathname: "/lesson/[id]",
+                  params: { id: previousLesson._id },
+                } as unknown as Href);
+              }}
+              className="mt-2 w-full flex-row items-center justify-center gap-2 rounded-[22px] bg-[#10120C] px-5 py-4"
+            >
+              <Ionicons name="book-outline" size={20} color="white" />
+              <Text className="font-bold text-white">Quay lại bài trước</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeScreen>
+    );
+  }
+
   return (
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <Stack.Screen options={{ title: "Luyện nốt", headerShown: false }} />
@@ -195,39 +691,182 @@ export default function NotePracticeScreen() {
           >
             <Ionicons name="arrow-back" size={22} color="#10120C" />
           </TouchableOpacity>
-          <Text
-            selectable
-            className="text-lg font-bold text-[#10120C]"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
-          >
-            Phân tích nốt thổi
-          </Text>
+          <View className="items-center">
+            <Text
+              selectable
+              className="text-lg font-bold text-[#10120C]"
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              {practiceTitle}
+            </Text>
+            <Text className="mt-0.5 text-[11px] text-[#8A8D84]">
+              {lesson?.title || "Luyện tập cùng AI"}
+            </Text>
+          </View>
           <View className="h-11 w-11" />
         </View>
 
-        <View className="items-center gap-3 rounded-[32px] bg-[#8E9E6E] px-6 py-8">
-          <View className="rounded-full bg-white/20 px-3 py-1">
-            <Text className="text-[11px] font-bold text-white">
-              {hasAdvancedAccess ? "AI ADVANCED · GÓI NÂNG CAO" : "AI BASIC · GÓI CƠ BẢN"}
+        {isMouthPlacementLesson && (
+          <View className="gap-4 rounded-[26px] bg-white p-5">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Hình mẫu thực hành
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-[#777B70]">
+                Xem cách đặt môi, cầm sáo và hướng hơi trước khi ghi âm.
+              </Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12 }}
+            >
+              {mouthPlacementPracticeImages.map((imageSource, index) => (
+                <TouchableOpacity
+                  key={`mouth-placement-${index}`}
+                  activeOpacity={0.88}
+                  onPress={() => setSelectedPracticeImageIndex(index)}
+                  className="w-64 overflow-hidden rounded-[22px] bg-[#F7F8F3]"
+                >
+                  <Image
+                    source={imageSource}
+                    contentFit="contain"
+                    style={{ height: 240, width: "100%" }}
+                  />
+                  <Text className="px-4 py-3 text-xs font-semibold text-[#687451]">
+                    Mẫu {index + 1}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {isBasicNotesLesson && (
+          <View className="gap-4 rounded-[26px] bg-white p-5">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Bảng thế bấm ngón
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-[#777B70]">
+                Chọn nốt bên dưới rồi đối chiếu bảng để đặt ngón đúng trước khi thổi.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setIsBasicNotesImageVisible(true)}
+              className="overflow-hidden rounded-[22px] bg-[#F7F8F3]"
+            >
+              <Image
+                source={basicNotesPracticeImage}
+                contentFit="contain"
+                style={{ height: 230, width: "100%" }}
+              />
+              <View className="flex-row items-center justify-between px-4 py-3">
+                <Text className="text-xs font-semibold text-[#687451]">
+                  Đang luyện: {targetNoteLabel} ({targetNote})
+                </Text>
+                <Ionicons name="expand-outline" size={18} color="#687451" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View className="overflow-hidden rounded-[34px] bg-[#8E9E6E] px-6 pb-7 pt-5">
+          <View className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
+          <View className="mb-7 flex-row items-center justify-between">
+            <View className="rounded-full bg-white/15 px-3 py-1.5">
+              <Text className="text-[10px] font-bold uppercase tracking-wider text-white">
+                {hasAdvancedAccess ? "AI nâng cao" : "AI cơ bản"}
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <Ionicons name="mic-outline" size={15} color="white" />
+              <Text className="ml-1.5 text-xs font-semibold text-white/75">
+                Giữ 3–6 giây
+              </Text>
+            </View>
+          </View>
+
+          <View className="items-center">
+            <Text selectable className="text-xs font-bold uppercase tracking-[2px] text-white/60">
+              {recordingTargetTitle}
+            </Text>
+            <Text
+              selectable
+              className={`mt-2 font-bold text-white ${
+                isMouthPlacementLesson ? "text-4xl" : "text-6xl"
+              }`}
+              style={{ fontFamily: "BeVietnamPro-Medium" }}
+            >
+              {recordingTargetLabel}
+            </Text>
+            <Text className="mt-1 text-xs font-bold text-white/55">
+              {recordingTargetDetail}
             </Text>
           </View>
-          <Text selectable className="text-sm font-bold text-white/75">
-            NỐT MỤC TIÊU
-          </Text>
-          <Text
-            selectable
-            className="text-6xl font-bold text-white"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
-          >
-            {targetNote}
-          </Text>
-          <Text selectable className="text-center text-sm leading-6 text-white/85">
-            Giữ nốt đều từ 3 đến 6 giây, đặt điện thoại cách sáo khoảng 30 cm.
-          </Text>
         </View>
 
-        <View className="items-center gap-5 rounded-[30px] bg-white p-7">
-          <View className="h-6 flex-row items-end gap-1">
+        {!isMouthPlacementLesson && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {PRACTICE_NOTES.map((practiceNote) => {
+              const isSelected = practiceNote.pitch === targetNote;
+
+              return (
+                <TouchableOpacity
+                  key={practiceNote.pitch}
+                  activeOpacity={0.8}
+                  disabled={
+                    recorderState.isRecording ||
+                    analysis.isPending ||
+                    isPreparingRecorder
+                  }
+                  onPress={() => selectNote(practiceNote.pitch)}
+                  className={`min-w-[58px] items-center rounded-2xl border px-3 py-3 ${
+                    isSelected
+                      ? "border-[#8E9E6E] bg-[#8E9E6E]"
+                      : "border-[#E5E7E1] bg-white"
+                  }`}
+                >
+                  <Text
+                    className={`text-sm font-bold ${
+                      isSelected ? "text-white" : "text-[#687451]"
+                    }`}
+                  >
+                    {practiceNote.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View className="items-center rounded-[30px] bg-white px-7 pb-7 pt-6">
+          <View className="mb-5 w-full flex-row items-center justify-between">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Thu âm
+              </Text>
+              <Text className="mt-1 text-xs text-[#8A8D84]">
+                Đặt điện thoại cách sáo khoảng 30 cm
+              </Text>
+            </View>
+            <Text
+              selectable
+              className="text-2xl font-bold text-[#10120C]"
+              style={{ fontVariant: ["tabular-nums"] }}
+            >
+              00:{String(durationSeconds).padStart(2, "0")}
+            </Text>
+          </View>
+
+          <View className="mb-6 h-8 flex-row items-center gap-1">
             {[16, 24, 12, 20, 10, 22, 15, 26, 13, 20, 11, 24].map(
               (height, index) => (
                 <View
@@ -241,55 +880,121 @@ export default function NotePracticeScreen() {
             )}
           </View>
 
-          <Text
-            selectable
-            className="text-3xl font-bold text-[#10120C]"
-            style={{ fontVariant: ["tabular-nums"] }}
-          >
-            00:{String(durationSeconds).padStart(2, "0")}
-          </Text>
-
           <TouchableOpacity
             activeOpacity={0.85}
-            disabled={analysis.isPending}
+            disabled={analysis.isPending || isPreparingRecorder}
             onPress={recorderState.isRecording ? stopRecording : startRecording}
             className={`h-24 w-24 items-center justify-center rounded-full ${
               recorderState.isRecording ? "bg-[#D96C5F]" : "bg-[#10120C]"
             }`}
           >
-            <View className="h-20 w-20 items-center justify-center rounded-full border-2 border-white/30">
+            <View className="h-20 w-20 items-center justify-center rounded-full border-2 border-white/25">
               <Ionicons
-                name={recorderState.isRecording ? "stop" : "mic"}
+                name={
+                  isPreparingRecorder
+                    ? "hourglass-outline"
+                    : recorderState.isRecording
+                      ? "stop"
+                      : "mic"
+                }
                 size={34}
                 color="white"
               />
             </View>
           </TouchableOpacity>
 
-          <Text selectable className="text-sm text-[#777B70]">
-            {recorderState.isRecording
+          <Text selectable className="mt-5 text-sm text-[#777B70]">
+            {isPreparingRecorder
+              ? "Đang chuẩn bị micro..."
+              : recorderState.isRecording
               ? "Chạm để dừng ghi âm"
-              : recordingUri
-                ? "Đã ghi âm xong, có thể gửi phân tích"
-                : "Chạm để bắt đầu ghi âm"}
+                : recordingUri
+                  ? "Bản ghi đã sẵn sàng để phân tích"
+                  : isMouthPlacementLesson
+                    ? "Chạm micro và thổi ra âm sáo rõ"
+                    : "Chạm micro và bắt đầu thổi"}
           </Text>
         </View>
+
+        {recordedFiles.length > 0 && (
+          <View className="gap-3 rounded-[26px] bg-white p-5">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                File đã ghi âm
+              </Text>
+              <Text className="text-xs font-semibold text-[#8A8D84]">
+                {recordedFiles.length} file
+              </Text>
+            </View>
+
+            {recordedFiles.map((file) => {
+              const isSelected = file.uri === recordingUri;
+              const isPlaying = file.uri === playingUri && playbackStatus.playing;
+
+              return (
+                <TouchableOpacity
+                  key={file.uri}
+                  activeOpacity={0.85}
+                  disabled={recorderState.isRecording || analysis.isPending}
+                  onPress={() => playRecordedFile(file)}
+                  className={`flex-row items-center gap-3 rounded-[18px] border px-4 py-3 ${
+                    isSelected
+                      ? "border-[#8E9E6E] bg-[#F7F8F3]"
+                      : "border-[#E5E7E1] bg-white"
+                  }`}
+                >
+                  <View
+                    className={`h-10 w-10 items-center justify-center rounded-full ${
+                      isSelected ? "bg-[#8E9E6E]" : "bg-[#F1F2EC]"
+                    }`}
+                  >
+                    <Ionicons
+                      name={
+                        isPlaying
+                          ? "pause"
+                          : isSelected
+                            ? "play"
+                            : "musical-notes-outline"
+                      }
+                      size={18}
+                      color={isSelected ? "white" : "#687451"}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text selectable className="text-sm font-bold text-[#10120C]">
+                      {file.name}
+                    </Text>
+                    <Text className="mt-0.5 text-xs text-[#777B70]">
+                      {isPlaying ? "Đang phát" : file.noteLabel} · {file.durationSeconds}s ·{" "}
+                      {new Date(file.createdAt).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {recordingUri && !recorderState.isRecording && (
           <TouchableOpacity
             activeOpacity={0.9}
             disabled={analysis.isPending}
             onPress={analyzeRecording}
-            className="flex-row items-center justify-center gap-3 rounded-[22px] bg-[#F4E0AC] px-5 py-5"
+            className="flex-row items-center justify-center gap-3 rounded-[22px] bg-[#10120C] px-5 py-5"
           >
             {analysis.isPending ? (
-              <ActivityIndicator color="#4B421F" />
+              <ActivityIndicator color="white" />
             ) : (
-              <Ionicons name="sparkles" size={21} color="#4B421F" />
+              <Ionicons name="sparkles" size={21} color="white" />
             )}
-            <Text className="font-bold text-[#4B421F]">
+            <Text className="font-bold text-white">
               {analysis.isPending
                 ? "AI đang phân tích..."
+                : isMouthPlacementLesson
+                  ? "Kiểm tra âm sáo với AI"
                 : hasAdvancedAccess
                   ? "Phân tích nâng cao với AI"
                   : "Phân tích cơ bản với AI"}
@@ -312,135 +1017,161 @@ export default function NotePracticeScreen() {
             )}
           </View>
         )}
+      </ScrollView>
 
-        {analysis.isSuccess && (() => {
-          const { fileInfo, summary } = parsedData || {};
-          
-          if (!summary) {
-            return (
-              <View className="gap-4 rounded-[28px] bg-white p-6">
-                <Text className="text-sm font-bold text-[#10120C]">Kết quả gốc:</Text>
-                <Text className="text-xs font-mono text-[#777B70]">{JSON.stringify(analysis.data)}</Text>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={startRecording}
-                  className="flex-row items-center justify-center gap-2 rounded-full border border-[#D6DDC6] py-3 mt-4"
-                >
-                  <Ionicons name="refresh" size={18} color="#687451" />
-                  <Text className="font-bold text-[#687451]">Ghi lại nốt khác</Text>
-                </TouchableOpacity>
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isResultModalVisible && !!compactResult}
+        onRequestClose={() => setIsResultModalVisible(false)}
+      >
+        <View className="flex-1 justify-center bg-black/45 px-6">
+          <View className="gap-4 rounded-[28px] bg-white p-6">
+            <View className="flex-row items-start justify-between gap-4">
+              <View className="flex-1">
+                <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                  Kết quả phân tích
+                </Text>
+                <Text className="mt-1 text-lg font-bold text-[#10120C]">
+                  {compactResult?.label}
+                </Text>
               </View>
-            );
-          }
-          
-          const score = summary.score ?? 0;
-          const label = summary.label ?? "Đã phân tích";
-          const description = summary.summary ?? "";
-          const issues: string[] = summary.issues ?? [];
-          const recommendations: string[] = summary.recommendations ?? [];
-          
-          let scoreBg = "bg-[#E2E8D3]";
-          let scoreText = "text-[#687451]";
-          if (score < 50) {
-            scoreBg = "bg-[#FFF2F0]";
-            scoreText = "text-[#A84236]";
-          } else if (score < 80) {
-            scoreBg = "bg-[#FFF9E6]";
-            scoreText = "text-[#7C672D]";
-          }
-
-          return (
-            <View className="gap-5 rounded-[30px] bg-white p-6 shadow-sm">
-              <View className="flex-row items-center gap-3 border-b border-gray-100 pb-4">
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-[#E2E8D3]">
-                  <Ionicons name="sparkles" size={20} color="#687451" />
-                </View>
-                <View>
-                  <Text className="text-base font-bold text-[#10120C]">
-                    Kết quả phân tích
-                  </Text>
-                  <Text className="text-xs text-[#777B70]">
-                    {hasAdvancedAccess ? "Advanced AI Analysis" : "Basic AI Analysis"} · Đã tối ưu hiển thị
-                  </Text>
-                </View>
-              </View>
-
-              <View className="items-center py-4 bg-[#F7F8F3] rounded-[24px] gap-2">
-                <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider">ĐIỂM ĐÁNH GIÁ</Text>
-                <View className="flex-row items-baseline">
-                  <Text className="text-5xl font-black text-[#10120C]">{score}</Text>
-                  <Text className="text-lg font-bold text-[#777B70]">/100</Text>
-                </View>
-                <View className={`px-4 py-1.5 rounded-full ${scoreBg} mt-1`}>
-                  <Text className={`text-sm font-bold ${scoreText}`}>{label}</Text>
-                </View>
-              </View>
-
-              {description ? (
-                <View className="gap-1.5">
-                  <Text className="text-xs font-bold text-[#8E9E6E] uppercase tracking-wider">NHẬN XÉT CHUNG</Text>
-                  <Text className="text-sm leading-6 text-[#34372F] text-justify">
-                    {description}
-                  </Text>
-                </View>
-              ) : null}
-
-              {issues.length > 0 && (
-                <View className="gap-2.5 rounded-[22px] bg-[#FFF2F0] p-5 border border-[#F0C7C2]">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="alert-circle" size={20} color="#A84236" />
-                    <Text className="text-sm font-bold text-[#A84236]">Cần cải thiện</Text>
-                  </View>
-                  <View className="gap-2">
-                    {issues.map((issue, idx) => (
-                      <View key={idx} className="flex-row gap-2.5">
-                        <Text className="text-xs text-[#A84236]">•</Text>
-                        <Text className="flex-1 text-xs leading-5 text-[#7C4B46]">{issue}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {recommendations.length > 0 && (
-                <View className="gap-2.5 rounded-[22px] bg-[#E2E8D3]/30 p-5 border border-[#C5D0B4]">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="bulb" size={20} color="#687451" />
-                    <Text className="text-sm font-bold text-[#687451]">Gợi ý luyện tập</Text>
-                  </View>
-                  <View className="gap-2">
-                    {recommendations.map((rec, idx) => (
-                      <View key={idx} className="flex-row gap-2.5">
-                        <Text className="text-xs text-[#687451]">•</Text>
-                        <Text className="flex-1 text-xs leading-5 text-[#4A533B]">{rec}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {fileInfo && (
-                <View className="gap-1.5 border-t border-gray-100 pt-4">
-                  <Text className="text-[10px] font-bold text-[#8E9E6E] uppercase tracking-wider">Thông tin tệp âm thanh</Text>
-                  <Text className="text-[10px] text-[#777B70] leading-4">
-                    Thời lượng: {fileInfo.duration?.toFixed(2)} giây · Tốc độ lấy mẫu: {fileInfo.sample_rate} Hz {"\n"}
-                    Tên tệp: {fileInfo.original_filename || fileInfo.filename}
-                  </Text>
-                </View>
-              )}
-
               <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={startRecording}
-                className="flex-row items-center justify-center gap-2 rounded-full bg-[#10120C] py-4 mt-2"
+                activeOpacity={0.8}
+                onPress={() => setIsResultModalVisible(false)}
+                className="h-9 w-9 items-center justify-center rounded-full bg-[#F1F2EC]"
               >
-                <Ionicons name="refresh" size={18} color="white" />
-                <Text className="font-bold text-white text-sm">Thử lại nốt khác</Text>
+                <Ionicons name="close" size={20} color="#10120C" />
               </TouchableOpacity>
             </View>
-          );
-        })()}
-      </ScrollView>
+
+            {compactResult?.score != null && (
+              <View className="items-center rounded-[22px] bg-[#F7F8F3] py-4">
+                <Text className="text-5xl font-black text-[#10120C]">
+                  {compactResult?.score}
+                  <Text className="text-lg text-[#777B70]">/100</Text>
+                </Text>
+              </View>
+            )}
+
+            {!!compactResult?.description && (
+              <Text selectable className="text-sm leading-6 text-[#34372F]">
+                {compactResult.description}
+              </Text>
+            )}
+
+            {compactResult?.issues.map((issue, index) => (
+              <View key={`issue-${index}`} className="flex-row gap-2">
+                <Ionicons name="alert-circle" size={16} color="#A84236" />
+                <Text selectable className="flex-1 text-sm leading-5 text-[#7C4B46]">
+                  {issue}
+                </Text>
+              </View>
+            ))}
+
+            {compactResult?.recommendations.map((recommendation, index) => (
+              <View key={`recommendation-${index}`} className="flex-row gap-2">
+                <Ionicons name="bulb" size={16} color="#687451" />
+                <Text selectable className="flex-1 text-sm leading-5 text-[#4A533B]">
+                  {recommendation}
+                </Text>
+              </View>
+            ))}
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                setIsResultModalVisible(false);
+                practiceAnotherNote();
+              }}
+              className="mt-1 flex-row items-center justify-center gap-2 rounded-full bg-[#10120C] py-4"
+            >
+              <Ionicons name="refresh" size={18} color="white" />
+              <Text className="font-bold text-white">
+                {isMouthPlacementLesson ? "Thử lại" : "Thử nốt khác"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={selectedPracticeImageIndex !== null}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closePracticeImageViewer}
+      >
+        <View className="flex-1 bg-black">
+          <View className="absolute right-5 top-12 z-10">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={closePracticeImageViewer}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {selectedPracticeImageIndex !== null && (
+            <Animated.View
+              className="flex-1"
+              style={{ transform: [{ translateY: imageViewerTranslateY }] }}
+              {...imageViewerPanResponder.panHandlers}
+            >
+              <Image
+                source={mouthPlacementPracticeImages[selectedPracticeImageIndex]}
+                contentFit="contain"
+                style={{ flex: 1, width: "100%" }}
+              />
+            </Animated.View>
+          )}
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isBasicNotesImageVisible}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closePracticeImageViewer}
+      >
+        <View className="flex-1 bg-black">
+          <View className="absolute right-5 top-12 z-10">
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={closePracticeImageViewer}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View
+            className="flex-1"
+            style={{ transform: [{ translateY: imageViewerTranslateY }] }}
+            {...imageViewerPanResponder.panHandlers}
+          >
+            <Image
+              source={basicNotesPracticeImage}
+              contentFit="contain"
+              style={{ flex: 1, width: "100%" }}
+            />
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeScreen>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput } from "react-native";
+import { Alert, View, Text, ScrollView, TouchableOpacity, Image, TextInput } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import LottieView from "lottie-react-native";
@@ -8,6 +8,7 @@ import { useRouter } from "expo-router";
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useScrollToTopOnFocus } from "@/hooks/use-scroll-to-top-on-focus";
 import { useAuthStore } from "@/store/authStore";
+import { useGetCourses } from "@/hooks/course/use-get-courses";
 import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
 import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
 import { useGetStreaks } from "@/hooks/streak/use-get-streaks";
@@ -15,6 +16,13 @@ import { useCreateStreak } from "@/hooks/streak/use-create-streak";
 import { useUpdateStreak } from "@/hooks/streak/use-update-streak";
 import NotificationButton from "@/components/NotificationButton";
 import SafeScreen from "../../components/SafeScreen";
+import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
+import { getRandomPracticeNote } from "@/constants/practice-notes";
+import {
+  getLessonNumberFromTitle,
+  lessonHasPractice,
+} from "@/constants/lessons";
+import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
 
 const greetingPrompt = "Hôm nay bạn muốn học gì?";
 const lenFolkMessage = "LenFolk đồng hành cùng bạn trên từng nốt nhạc.";
@@ -30,7 +38,13 @@ export default function HomeScreen() {
   const [typedGreeting, setTypedGreeting] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
   const user = useAuthStore((state) => state.user);
+  const {
+    label: subscriptionLabel,
+    hasPremiumAccess,
+    isLoading: subscriptionLoading,
+  } = useCurrentSubscription();
   const { data: lessons } = useGetLessons();
+  const { data: courses } = useGetCourses();
   const { data: progressList } = useGetProgressList();
   const { data: streaks, isSuccess: streaksLoaded } = useGetStreaks();
   const createStreak = useCreateStreak();
@@ -52,15 +66,53 @@ export default function HomeScreen() {
       `${lesson.title} ${lesson.description ?? ""}`.toLowerCase().includes(query),
     );
   }, [orderedLessons, searchQuery]);
+  const canOpenLesson = React.useCallback(
+    (lesson?: (typeof orderedLessons)[number]) => {
+      if (!lesson) return false;
+      const lessonIndex = orderedLessons.findIndex(
+        (item) => item._id === lesson._id,
+      );
+      const previousLesson =
+        lessonIndex > 0 ? orderedLessons[lessonIndex - 1] : undefined;
+      const previousProgress = progressList?.find(
+        (item) => item.lessonId === previousLesson?._id,
+      );
+
+      if (previousLesson && previousProgress?.status !== "completed") {
+        return false;
+      }
+
+      const course = courses?.find((item) => item._id === lesson.courseId);
+      return canAccessLesson(lesson, course, hasPremiumAccess);
+    },
+    [courses, hasPremiumAccess, orderedLessons, progressList],
+  );
+  const accessibleLessons = React.useMemo(
+    () => orderedLessons.filter((lesson) => canOpenLesson(lesson)),
+    [canOpenLesson, orderedLessons],
+  );
   const continueProgress =
     progressList?.find((item) => item.status === "in_progress") ??
     progressList?.find((item) => item.status === "not_started");
   const continueLesson =
-    orderedLessons.find((lesson) => lesson._id === continueProgress?.lessonId) ??
+    accessibleLessons.find((lesson) => lesson._id === continueProgress?.lessonId) ??
+    accessibleLessons[0] ??
     orderedLessons[0];
   const currentStreak = streaks?.[0]?.currentStreak ?? 0;
   const todayLessons = visibleLessons.slice(0, 2);
-  const reviewLessons = orderedLessons.slice(0, 4);
+  // Chỉ những bài có luyện tập mới được dùng cho ôn tập / luyện tự do.
+  const practiceableLessons = React.useMemo(
+    () =>
+      orderedLessons.filter((lesson) =>
+        lessonHasPractice(getLessonNumberFromTitle(lesson.title) ?? lesson.order) &&
+        canOpenLesson(lesson),
+      ),
+    [canOpenLesson, orderedLessons],
+  );
+  const reviewLessons = practiceableLessons.slice(0, 4);
+  const freePracticeLesson =
+    practiceableLessons.find((lesson) => lesson._id === continueLesson?._id) ??
+    practiceableLessons[0];
 
   React.useEffect(() => {
     if (!isFocused || !user?._id || !streaksLoaded) return;
@@ -125,8 +177,38 @@ export default function HomeScreen() {
     user?._id,
   ]);
 
+  const openUpgrade = (title?: string) => {
+    Alert.alert("Cần mở gói Technique", getUpgradeMessage(title), [
+      { text: "Để sau", style: "cancel" },
+      {
+        text: "Mở gói",
+        onPress: () => router.push("/profile/subscription"),
+      },
+    ]);
+  };
+
   const openLesson = (lessonId?: string) => {
     if (!lessonId) return;
+    const lesson = orderedLessons.find((item) => item._id === lessonId);
+    if (lesson && !canOpenLesson(lesson)) {
+      const lessonIndex = orderedLessons.findIndex((item) => item._id === lessonId);
+      const previousLesson =
+        lessonIndex > 0 ? orderedLessons[lessonIndex - 1] : undefined;
+      const previousProgress = progressList?.find(
+        (item) => item.lessonId === previousLesson?._id,
+      );
+
+      if (previousLesson && previousProgress?.status !== "completed") {
+        Alert.alert(
+          "Chưa thể mở bài",
+          `Bạn cần đánh dấu hoàn thành "${previousLesson.title}" trước khi học bài này.`,
+        );
+      } else {
+        openUpgrade(lesson.title);
+      }
+      return;
+    }
+
     router.push({
       pathname: "/lesson/[id]",
       params: { id: lessonId },
@@ -135,9 +217,29 @@ export default function HomeScreen() {
 
   const openPractice = (lessonId?: string, note?: string) => {
     if (!lessonId) return;
+    const lesson = orderedLessons.find((item) => item._id === lessonId);
+    if (lesson && !canOpenLesson(lesson)) {
+      const lessonIndex = orderedLessons.findIndex((item) => item._id === lessonId);
+      const previousLesson =
+        lessonIndex > 0 ? orderedLessons[lessonIndex - 1] : undefined;
+      const previousProgress = progressList?.find(
+        (item) => item.lessonId === previousLesson?._id,
+      );
+
+      if (previousLesson && previousProgress?.status !== "completed") {
+        Alert.alert(
+          "Chưa thể luyện bài này",
+          `Bạn cần đánh dấu hoàn thành "${previousLesson.title}" trước khi tiếp tục.`,
+        );
+      } else {
+        openUpgrade(lesson.title);
+      }
+      return;
+    }
+
     router.push({
       pathname: "/practice/[lessonId]",
-      params: { lessonId, note: note || "A4" },
+      params: { lessonId, note: note || getRandomPracticeNote().pitch },
     } as any);
   };
 
@@ -204,7 +306,7 @@ export default function HomeScreen() {
                 style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "white" }}
                 className="shadow"
               />
-              {user?.currentSubscription === "Technique" && (
+              {hasPremiumAccess && (
                 <View className="absolute -top-3.5 -left-1.5 rotate-[-36deg] z-10">
                   <MaterialCommunityIcons name="crown" size={20} color="#FFB800" />
                 </View>
@@ -264,8 +366,9 @@ export default function HomeScreen() {
                 style={{ width: 40, height: 40 }}
               />
             </View>
-            <View>
+            <View className="min-w-0 flex-1">
               <Text
+                numberOfLines={1}
                 className="text-charcoal text-xs font-bold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
@@ -277,8 +380,9 @@ export default function HomeScreen() {
 
           {/* Goals status */}
           <View className="flex-1 bg-[#8E9E6E]/10 rounded-3xl p-4 flex-row items-center justify-between">
-            <View>
+            <View className="min-w-0 flex-1 pr-2">
               <Text
+                numberOfLines={1}
                 className="text-primary text-sm font-extrabold"
                 style={{ fontFamily: "BeVietnamPro-Medium" }}
               >
@@ -286,12 +390,12 @@ export default function HomeScreen() {
               </Text>
               <View className="flex-row items-center mt-1">
                 <Ionicons name="book-outline" size={12} color="#8E9E6E" />
-                <Text className="text-[12px] text-gray-500 font-bold ml-1">{user?.role || "learner"}</Text>
+                <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-gray-500 font-bold ml-1">{user?.role || "learner"}</Text>
               </View>
               <View className="flex-row items-center mt-0.5">
                 <MaterialCommunityIcons name="weight-lifter" size={12} color="#8E9E6E" />
-                <Text className="text-[12px] text-gray-500 font-bold ml-1">
-                  {user?.currentSubscription === "Technique" ? "Technique" : "Foundations"}
+                <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-gray-500 font-bold ml-1">
+                  {subscriptionLoading ? "Đang tải..." : subscriptionLabel}
                 </Text>
               </View>
             </View>
@@ -331,28 +435,56 @@ export default function HomeScreen() {
         </TouchableOpacity>
         </AnimatedBlock>
 
+        <AnimatedBlock variant="button" delay={220}>
+          <TouchableOpacity
+            activeOpacity={0.95}
+            onPress={() => router.push("/(tabs)/performances")}
+            className="w-full bg-[#EAF1DE] py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#8E9E6E]/25 mb-8"
+          >
+            <View className="min-w-0 flex-1 flex-row items-center py-2 pr-3">
+              <View className="w-12 h-12 rounded-2xl bg-white border border-gray-100 justify-center items-center shadow-sm">
+                <Ionicons name="albums" size={22} color="#8E9E6E" />
+              </View>
+              <View className="min-w-0 flex-1 ml-4">
+                <Text
+                  numberOfLines={1}
+                  className="text-charcoal text-base font-bold"
+                  style={{ fontFamily: "BeVietnamPro-Medium" }}
+                >
+                  Tác phẩm biểu diễn
+                </Text>
+                <Text numberOfLines={2} className="text-[12px] text-[#687451] mt-0.5">
+                  Xem, mua và luyện theo các tác phẩm đã xuất bản
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" />
+          </TouchableOpacity>
+        </AnimatedBlock>
+
         {/* Free Practice with AI Banner */}
         <AnimatedBlock variant="button" delay={210}>
           <TouchableOpacity
             activeOpacity={0.95}
-            disabled={!continueLesson}
+            disabled={!freePracticeLesson}
             onPress={() =>
-              openPractice(continueLesson?._id, continueLesson?.techniques?.[0])
+              openPractice(freePracticeLesson?._id)
             }
             className="w-full bg-[#FFF9E6] py-4.5 px-5 rounded-[24px] flex-row justify-between items-center border border-[#F4E0AC] mb-8"
           >
-            <View className="flex-row items-center py-2">
+            <View className="min-w-0 flex-1 flex-row items-center py-2 pr-3">
               <View className="w-12 h-12 rounded-2xl bg-[#F4E0AC]/40 justify-center items-center shadow-sm">
                 <Ionicons name="sparkles" size={22} color="#7C672D" />
               </View>
-              <View className="ml-4">
+              <View className="min-w-0 flex-1 ml-4">
                 <Text
+                  numberOfLines={1}
                   className="text-[#4B421F] text-base font-bold"
                   style={{ fontFamily: "BeVietnamPro-Medium" }}
                 >
                   Luyện tập tự do với AI
                 </Text>
-                <Text className="text-[12px] text-[#7C672D] mt-0.5">
+                <Text numberOfLines={2} className="text-[12px] text-[#7C672D] mt-0.5">
                   Thổi sáo và nhận đánh giá từ AI ngay lập tức
                 </Text>
               </View>
@@ -379,7 +511,7 @@ export default function HomeScreen() {
             {reviewLessons.map((lesson, index) => (
               <View key={lesson._id} className="items-center flex-1">
                 <TouchableOpacity
-                  onPress={() => openPractice(lesson._id, lesson.techniques?.[0])}
+                  onPress={() => openPractice(lesson._id)}
                   className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2"
                 >
                   {index < 2 ? (
@@ -388,7 +520,7 @@ export default function HomeScreen() {
                     <Ionicons name="musical-notes-outline" size={22} color="#8E9E6E" />
                   )}
                 </TouchableOpacity>
-                <Text numberOfLines={2} className="text-[12px] text-charcoal font-bold text-center">
+                <Text numberOfLines={2} ellipsizeMode="tail" className="text-[12px] text-charcoal font-bold text-center">
                   {lesson.title}
                 </Text>
               </View>
@@ -433,7 +565,7 @@ export default function HomeScreen() {
                   </Text>
                   <View className="flex-row items-center">
                     <Ionicons name="time-outline" size={12} color="gray" />
-                    <Text className="text-[12px] text-gray-400 ml-1 font-bold">
+                    <Text numberOfLines={1} className="min-w-0 flex-1 text-[12px] text-gray-400 ml-1 font-bold">
                       {Math.max(1, Math.ceil(lesson.duration / 60))} phút
                     </Text>
                   </View>

@@ -7,7 +7,6 @@ export type User = {
   avatar: string | null;
   phoneNumber: string | null;
   role: "admin" | "instructor" | "user" | "moderator" | "learner" | "guest";
-  currentSubscription?: string | null;
   isActive: boolean;
   isVerified: boolean;
   isSubscribed?: boolean;

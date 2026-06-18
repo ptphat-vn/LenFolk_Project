@@ -9,7 +9,14 @@ export type PerformanceDocument = {
 
 export type Performance = {
   _id: string;
-  instructorId: string;
+  instructorId:
+    | string
+    | {
+        _id: string;
+        name?: string;
+        email?: string;
+        avatar?: string | null;
+      };
   title: string;
   description: string | null;
   thumbnail: string | null;
@@ -27,4 +34,17 @@ export type Performance = {
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CreatePerformancePayload = {
+  title: string;
+  description?: string;
+  thumbnail?: string;
+  videoUrl?: string;
+  isFree?: boolean;
+  genre?: string;
+  duration?: number;
+  price?: number;
+  currency?: "VND" | "USD";
+  tags?: string[];
 };

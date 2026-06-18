@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>LenFolk – Hướng dẫn sử dụng</title>
+<style>
+  :root {
+    --green: #8E9E6E;
+    --green-dark: #687451;
+    --ink: #10120C;
+    --muted: #777B70;
+    --line: #E5E7E1;
+    --cream: #FDF8EA;
+    --soft: #F7F8F3;
+    --danger: #A84236;
+  }
+
+  * { box-sizing: border-box; }
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+  }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Segoe UI", "Be Vietnam Pro", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 11pt;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  h1, h2, h3 { font-weight: 700; line-height: 1.25; }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    page-break-after: always;
+    height: 252mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: var(--green);
+    color: #fff;
+    border-radius: 18px;
+    padding: 40px 44px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover .blob1 { position: absolute; right: -40px; top: -50px; width: 220px; height: 220px; border-radius: 50%; background: rgba(255,255,255,.10); }
+  .cover .blob2 { position: absolute; bottom: -70px; right: 90px; width: 180px; height: 180px; border-radius: 50%; border: 26px solid rgba(255,255,255,.06); }
+  .cover .mascot { position: absolute; right: 30px; bottom: 34px; width: 74mm; height: auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,.18)); }
+  .cover .kicker { text-transform: uppercase; letter-spacing: 3px; font-size: 11pt; font-weight: 700; color: rgba(255,255,255,.8); }
+  .cover h1 { font-size: 46pt; margin: 8px 0 0; }
+  .cover .sub { font-size: 15pt; margin-top: 14px; max-width: 380px; color: rgba(255,255,255,.9); line-height: 1.5; }
+  .cover .meta { margin-top: 48px; font-size: 11pt; color: rgba(255,255,255,.85); }
+  .cover .meta b { color: #fff; }
+  .cover .badge { display: inline-block; margin-top: 26px; background: #fff; color: var(--green-dark); font-weight: 700; padding: 10px 18px; border-radius: 999px; font-size: 11pt; }
+
+  /* ---------- TOC ---------- */
+  .toc { page-break-after: always; }
+  .toc h2 { color: var(--green-dark); font-size: 20pt; border-bottom: 3px solid var(--green); padding-bottom: 8px; }
+  .toc ol { list-style: none; padding: 0; margin: 18px 0 0; counter-reset: toc; }
+  .toc li { counter-increment: toc; padding: 9px 0; border-bottom: 1px dashed var(--line); font-size: 12pt; display: flex; }
+  .toc li::before { content: counter(toc) "."; font-weight: 700; color: var(--green); width: 28px; }
+
+  /* ---------- Sections ---------- */
+  /* Nội dung chảy liên tục để không tạo khoảng trắng lớn cuối trang. */
+  section { margin-top: 10px; }
+  h2.chapter {
+    color: var(--green-dark);
+    font-size: 19pt;
+    margin: 26px 0 4px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--green);
+    break-after: avoid;
+  }
+  .chapter-no { color: var(--green); }
+  h3 { color: var(--ink); font-size: 13.5pt; margin: 20px 0 6px; break-after: avoid; }
+  p { margin: 7px 0; }
+  ul, ol { margin: 7px 0 7px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  strong { color: var(--green-dark); }
+
+  .lead { color: var(--muted); font-size: 11.5pt; margin-top: 10px; }
+
+  /* step list */
+  ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding-left: 38px; margin: 10px 0; }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: -1px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--green); color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 10.5pt;
+  }
+
+  /* callouts */
+  .note, .tip, .warn {
+    border-radius: 12px; padding: 12px 16px; margin: 14px 0; font-size: 10.5pt;
+    border: 1px solid var(--line);
+  }
+  .note { background: var(--soft); border-left: 5px solid var(--green); }
+  .tip  { background: #F3F7EC; border-left: 5px solid var(--green-dark); }
+  .warn { background: #FFF2F0; border-left: 5px solid var(--danger); }
+  .note b, .tip b { color: var(--green-dark); }
+  .warn b { color: var(--danger); }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 10.5pt; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--green); color: #fff; font-weight: 700; }
+  tr:nth-child(even) td { background: var(--soft); }
+
+  /* feature cards */
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+  .card { flex: 1 1 45%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: #fff; }
+  .card h4 { margin: 0 0 4px; color: var(--green-dark); font-size: 11.5pt; }
+  .card p { margin: 0; font-size: 10pt; color: var(--muted); }
+
+  .pill { display: inline-block; background: var(--soft); border: 1px solid var(--line); color: var(--green-dark); border-radius: 999px; padding: 2px 10px; font-size: 9.5pt; font-weight: 700; }
+
+  .footer-note { margin-top: 26px; color: var(--muted); font-size: 9.5pt; text-align: center; }
+  a { color: var(--green-dark); }
+
+  /* contact */
+  .contact {
+    display: flex; gap: 24px; align-items: center;
+    background: var(--soft); border: 1px solid var(--line);
+    border-radius: 18px; padding: 22px 26px; margin: 18px 0;
+    break-inside: avoid;
+  }
+  .contact .qr {
+    width: 46mm; height: 46mm; flex: 0 0 auto;
+    border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 6px;
+  }
+  .contact-info { min-width: 0; }
+  .contact-info h3 { margin: 0 0 10px; color: var(--green-dark); font-size: 14pt; }
+  .contact-info p { margin: 6px 0; font-size: 11pt; }
+  .contact-info .email { color: var(--green-dark); font-weight: 700; }
+  .contact-info .label { display: inline-block; width: 64px; color: var(--muted); }
+
+  /* screenshots */
+  .shots {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    justify-content: center; align-items: flex-start;
+    margin: 16px 0 6px;
+  }
+  .shot { text-align: center; break-inside: avoid; margin: 0; }
+  .shot img {
+    height: 92mm; width: auto; max-width: 100%;
+    border: 1px solid var(--line); border-radius: 16px; background: #fff;
+  }
+  .shot figcaption {
+    margin-top: 6px; font-size: 9.5pt; color: var(--muted); font-weight: 600;
+    max-width: 52mm; margin-left: auto; margin-right: auto; line-height: 1.35;
+  }
+  .shot .cap-no {
+    display: inline-block; background: var(--green); color: #fff;
+    border-radius: 999px; padding: 0 7px; margin-right: 5px; font-size: 9pt;
+  }
+  .shots.trio .shot img { height: 80mm; }
+</style>
+</head>
+<body>
+
+<!-- ===================== COVER ===================== -->
+<div class="cover">
+  <div class="blob1"></div>
+  <div class="blob2"></div>
+  <img class="mascot" src="mascot.png" alt="LenFolk mascot" />
+  <div class="kicker">Hướng dẫn sử dụng</div>
+  <h1>LenFolk</h1>
+  <div class="sub">Ứng dụng học sáo trúc thông minh cùng trợ lý AI — luyện cao độ, thổi sáo và nhận đánh giá tức thì.</div>
+  <span class="badge">Sổ tay người dùng</span>
+  <div class="meta">
+    Phiên bản ứng dụng: <b>1.0.0</b><br/>
+    Nền tảng: <b>iOS &amp; Android</b><br/>
+    Cập nhật tài liệu: <b>17/06/2026</b>
+  </div>
+</div>
+
+<!-- ===================== TOC ===================== -->
+<div class="toc">
+  <h2>Mục lục</h2>
+  <ol>
+    <li>Giới thiệu về LenFolk</li>
+    <li>Bắt đầu: Đăng ký &amp; Đăng nhập</li>
+    <li>Trang chủ</li>
+    <li>Bài học</li>
+    <li>Luyện tập cùng AI</li>
+    <li>Tiến độ &amp; Thành tích</li>
+    <li>Hồ sơ &amp; Cài đặt</li>
+    <li>Gói học &amp; Xác thực tài khoản</li>
+    <li>Thông báo &amp; Quyền riêng tư</li>
+    <li>Xử lý sự cố &amp; Câu hỏi thường gặp</li>
+    <li>Liên hệ &amp; Hỗ trợ</li>
+  </ol>
+  <div class="footer-note">© 2026 LenFolk. Tài liệu dành cho người dùng cuối.</div>
+</div>
+
+<!-- ===================== 1. GIỚI THIỆU ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">1.</span> Giới thiệu về LenFolk</h2>
+  <p class="lead">LenFolk là ứng dụng giúp bạn học và luyện <strong>sáo trúc</strong> mọi lúc, mọi nơi. Ứng dụng kết hợp bài học có âm thanh/video, lộ trình theo cấp độ và một trợ lý <strong>AI</strong> chấm điểm tiếng sáo bạn vừa thổi.</p>
+
+  <h3>Bạn làm được gì với LenFolk?</h3>
+  <div class="cards">
+    <div class="card"><h4>Học theo bài</h4><p>Bài học từ Nhập môn đến Nâng cao, có mục tiêu, lý thuyết và video minh hoạ.</p></div>
+    <div class="card"><h4>Luyện cùng AI</h4><p>Ghi âm tiếng sáo và nhận nhận xét về cao độ, độ ổn định, cách cải thiện.</p></div>
+    <div class="card"><h4>Theo dõi tiến độ</h4><p>Chuỗi ngày học (streak), hoạt động tuần, lịch sử luyện tập và huy hiệu.</p></div>
+    <div class="card"><h4>Cá nhân hoá</h4><p>Hồ sơ, mục tiêu hằng ngày, nhắc nhở và gói học phù hợp với bạn.</p></div>
+  </div>
+
+  <h3>Cấu trúc điều hướng</h3>
+  <p>Thanh điều hướng dưới cùng có <strong>5 mục chính</strong>, luôn có thể truy cập từ mọi màn hình:</p>
+  <table>
+    <tr><th>Mục</th><th>Tên</th><th>Chức năng</th></tr>
+    <tr><td>Trang chủ</td><td>Tổng quan</td><td>Lời chào, chuỗi học, bài học gần nhất, lối tắt luyện tập tự do.</td></tr>
+    <tr><td>Bài học</td><td>Thư viện</td><td>Duyệt và lọc bài học theo cấp độ.</td></tr>
+    <tr><td>Luyện tập</td><td>Trung tâm luyện</td><td>Luyện nốt ngẫu nhiên hoặc luyện theo bài học.</td></tr>
+    <tr><td>Tiến độ</td><td>Thống kê</td><td>XP, hoạt động tuần, huy hiệu, lịch sử luyện tập.</td></tr>
+    <tr><td>Hồ sơ</td><td>Cá nhân</td><td>Thông tin tài khoản, cài đặt, gói học, đăng xuất.</td></tr>
+  </table>
+  <div class="note"><b>Mẹo:</b> Biểu tượng chuông ở góc trên bên phải hầu hết các màn hình sẽ mở <strong>Thông báo</strong>.</div>
+</section>
+
+<!-- ===================== 2. ĐĂNG KÝ & ĐĂNG NHẬP ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">2.</span> Bắt đầu: Đăng ký &amp; Đăng nhập</h2>
+  <p class="lead">Lần đầu mở ứng dụng, bạn sẽ thấy màn hình giới thiệu. Có thể nhấn <strong>Bỏ qua</strong> để vào nhanh phần đăng nhập.</p>
+
+  <div class="shots trio">
+    <figure class="shot"><img src="screenshots/1.jpg" alt="Màn hình chào" /><figcaption><span class="cap-no">1</span>Màn hình chào khi mở ứng dụng</figcaption></figure>
+    <figure class="shot"><img src="screenshots/2.jpg" alt="Đăng nhập" /><figcaption><span class="cap-no">2</span>Đăng nhập bằng email &amp; mật khẩu</figcaption></figure>
+    <figure class="shot"><img src="screenshots/3.jpg" alt="Đăng ký" /><figcaption><span class="cap-no">3</span>Đăng ký tài khoản mới</figcaption></figure>
+  </div>
+
+  <h3>2.1. Tạo tài khoản mới</h3>
+  <ol class="steps">
+    <li>Từ màn hình chào, nhấn <strong>Đăng ký</strong>.</li>
+    <li>Nhập <strong>Họ và tên</strong>, <strong>Email</strong> và <strong>Mật khẩu</strong> (tối thiểu 8 ký tự). Nhấn biểu tượng con mắt để hiện/ẩn mật khẩu.</li>
+    <li>Tích chọn <strong>Đồng ý với Điều khoản &amp; Điều kiện</strong>.</li>
+    <li><strong>Trượt để đăng ký</strong> để hoàn tất.</li>
+  </ol>
+  <div class="note"><b>Trở thành giảng viên?</b> Ở cuối màn hình đăng ký có mục <strong>Đăng ký trở thành giảng viên</strong>. Hồ sơ sẽ được quản trị viên xét duyệt trước khi đăng nhập.</div>
+
+  <h3>2.2. Đăng nhập</h3>
+  <ol class="steps">
+    <li>Nhập <strong>Email</strong> và <strong>Mật khẩu</strong>.</li>
+    <li>Có thể bật <strong>Ghi nhớ đăng nhập</strong> để lần sau vào nhanh hơn.</li>
+    <li><strong>Trượt để đăng nhập</strong>.</li>
+  </ol>
+  <p>Đăng nhập bằng Google / Apple đang được phát triển và sẽ sớm có mặt.</p>
+
+  <h3>2.3. Quên mật khẩu</h3>
+  <ol class="steps">
+    <li>Tại màn hình đăng nhập, nhấn <strong>Quên mật khẩu?</strong></li>
+    <li>Chọn phương thức <strong>Email</strong> và nhập email của bạn, nhấn <strong>Gửi mã</strong>.</li>
+    <li>Nhập <strong>mã OTP 6 số</strong> được gửi tới email. Có thể <strong>Gửi lại mã</strong> khi hết thời gian đếm ngược.</li>
+    <li>Nhấn <strong>Xác minh</strong>, sau đó đặt <strong>mật khẩu mới</strong>.</li>
+  </ol>
+</section>
+
+<!-- ===================== 3. TRANG CHỦ ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">3.</span> Trang chủ</h2>
+  <p class="lead">Trang chủ là bảng điều khiển nhanh: lời chào, tình trạng học tập và các lối tắt quan trọng.</p>
+
+  <div class="shots">
+    <figure class="shot"><img src="screenshots/4.jpg" alt="Trang chủ phần trên" /><figcaption><span class="cap-no">4</span>Lời chào, tìm kiếm, chuỗi học &amp; luyện tập tự do</figcaption></figure>
+    <figure class="shot"><img src="screenshots/5.jpg" alt="Trang chủ phần dưới" /><figcaption><span class="cap-no">5</span>Ôn tập hôm nay, bài học &amp; lộ trình học tập</figcaption></figure>
+  </div>
+
+  <h3>Các thành phần chính</h3>
+  <ul>
+    <li><strong>Lời chào cá nhân</strong> kèm ảnh đại diện; huy hiệu vương miện nếu bạn là thành viên Premium.</li>
+    <li><strong>Thanh tìm kiếm</strong>: tìm bài học theo tên hoặc danh mục.</li>
+    <li><strong>Thẻ chuỗi học (streak)</strong>: số ngày học liên tiếp, có hiệu ứng ngọn lửa.</li>
+    <li><strong>Tiếp tục bài học</strong>: mở nhanh bài học bạn xem gần nhất.</li>
+    <li><strong>Luyện tập tự do với AI</strong>: thổi sáo và nhận đánh giá ngay, không cần chọn bài.</li>
+    <li><strong>Ôn tập hôm nay</strong> &amp; <strong>Bài học hôm nay</strong>: lối tắt tới các bài gợi ý.</li>
+    <li><strong>Lộ trình học tập</strong>: 4 cấp độ — Nhập môn, Cơ bản, Trung cấp, Nâng cao (một số cấp có thể bị khoá).</li>
+  </ul>
+  <div class="tip"><b>Tự động ghi nhận streak:</b> Mỗi ngày bạn mở ứng dụng, hệ thống tự cập nhật chuỗi ngày học. Hãy ghé vào mỗi ngày để giữ chuỗi không bị đứt!</div>
+</section>
+
+<!-- ===================== 4. BÀI HỌC ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">4.</span> Bài học</h2>
+  <p class="lead">Mục <strong>Bài học</strong> là thư viện toàn bộ nội dung, sắp xếp theo cấp độ.</p>
+
+  <div class="shots">
+    <figure class="shot"><img src="screenshots/6.jpg" alt="Danh sách bài học" /><figcaption><span class="cap-no">6</span>Danh sách bài học &amp; lọc theo cấp độ</figcaption></figure>
+    <figure class="shot"><img src="screenshots/7.jpg" alt="Chi tiết Bài 1" /><figcaption><span class="cap-no">7</span>Chi tiết Bài 1 — Giới thiệu sáo trúc (6 lỗ)</figcaption></figure>
+  </div>
+
+  <h3>4.1. Duyệt &amp; tìm bài học</h3>
+  <ul>
+    <li>Dùng <strong>thanh tìm kiếm</strong> theo tên hoặc danh mục.</li>
+    <li>Chọn tab cấp độ: <span class="pill">Tất cả</span> <span class="pill">Cơ bản</span> <span class="pill">Trung cấp</span> <span class="pill">Nâng cao</span></li>
+    <li>Mỗi bài hiển thị <strong>trạng thái</strong> (Chưa học / Đang học / Hoàn thành), tên, danh mục, thanh tiến độ và thời lượng.</li>
+    <li><strong>Nhấn giữ</strong> một bài để xem nhanh thông tin và mở bài học.</li>
+  </ul>
+
+  <h3>4.2. Màn hình chi tiết bài học</h3>
+  <p>Khi mở một bài học, bạn sẽ thấy:</p>
+  <ul>
+    <li><strong>Mục tiêu</strong> và <strong>Nội dung chính</strong> (các ý chính cần nắm).</li>
+    <li><strong>Video / âm thanh</strong> minh hoạ (nếu có) với điều khiển phát, tạm dừng, toàn màn hình.</li>
+    <li><strong>Bài tập thực hành</strong> hoặc — với bài giới thiệu như Bài 1 — phần ghi chú thay cho luyện tập.</li>
+    <li>Nút <strong>Đánh dấu đã hoàn thành</strong> và nút <strong>Bài tiếp theo</strong> ở cuối màn hình.</li>
+  </ul>
+  <div class="note"><b>Bài 1 là bài giới thiệu</b> về sáo trúc Việt Nam (6 lỗ) nên không có phần ghi âm luyện tập — bạn chỉ cần đọc, đánh dấu hoàn thành rồi chuyển sang bài tiếp theo. Ứng dụng tự lưu tiến độ khi bạn mở bài.</div>
+</section>
+
+<!-- ===================== 5. LUYỆN TẬP CÙNG AI ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">5.</span> Luyện tập cùng AI</h2>
+  <p class="lead">Đây là tính năng cốt lõi: bạn ghi âm tiếng sáo, ứng dụng gửi cho AI và trả về nhận xét bằng tiếng Việt.</p>
+
+  <div class="shots">
+    <figure class="shot"><img src="screenshots/8.jpg" alt="Trung tâm luyện tập" /><figcaption><span class="cap-no">8</span>Trung tâm luyện tập: luyện nốt &amp; theo bài học</figcaption></figure>
+    <figure class="shot"><img src="screenshots/9.jpg" alt="Ghi âm và phân tích AI" /><figcaption><span class="cap-no">9</span>Ghi âm tiếng sáo &amp; nhận phân tích từ AI</figcaption></figure>
+  </div>
+
+  <h3>5.1. Hai chế độ luyện tập</h3>
+  <table>
+    <tr><th>Chế độ</th><th>Mục tiêu</th><th>Phù hợp khi</th></tr>
+    <tr><td><strong>Luyện nốt</strong></td><td>Thổi đúng một nốt (Đô, Rê, Mi…); AI chấm cao độ &amp; độ ổn định.</td><td>Luyện tai và độ chính xác từng nốt.</td></tr>
+    <tr><td><strong>Luyện theo bài học</strong></td><td>Luyện nội dung của một bài cụ thể.</td><td>Học bài bản theo lộ trình.</td></tr>
+  </table>
+
+  <h3>5.2. Bài 2 — Cách đặt môi &amp; thổi ra tiếng sáo</h3>
+  <p>Bài học này có chế độ riêng <strong>“Luyện thổi sáo”</strong>:</p>
+  <ul>
+    <li>Phần <strong>Hình mẫu thực hành</strong> hiển thị 3 ảnh hướng dẫn <strong>đặt môi</strong>, cầm sáo và hướng hơi. Nhấn vào ảnh để xem <strong>toàn màn hình</strong> (vuốt xuống hoặc nhấn ✕ để đóng).</li>
+    <li>Mục tiêu là tạo được <strong>“âm sáo rõ”</strong> — không chỉ toàn tiếng gió.</li>
+    <li>AI sẽ đánh giá bạn đã ra tiếng sáo rõ chưa và gợi ý về khẩu hình, hướng hơi.</li>
+  </ul>
+
+  <h3>5.3. Quy trình ghi âm &amp; phân tích</h3>
+  <ol class="steps">
+    <li>Mở một phiên luyện tập (từ Trang chủ, mục Luyện tập, hoặc một bài học).</li>
+    <li>Lần đầu, cấp <strong>quyền truy cập micro</strong> khi được hỏi.</li>
+    <li>Đặt điện thoại cách sáo khoảng <strong>30 cm</strong>. Nhấn nút <strong>micro</strong> và thổi, giữ khoảng <strong>3–6 giây</strong>.</li>
+    <li>Nhấn <strong>Dừng</strong>. Bản ghi xuất hiện trong danh sách “File đã ghi âm” — nhấn để <strong>nghe lại</strong>.</li>
+    <li>Nhấn <strong>Phân tích với AI</strong> và chờ kết quả.</li>
+    <li>Xem <strong>bảng kết quả</strong>: điểm số, nhận xét, các lỗi và gợi ý cải thiện. Nhấn <strong>Thử nốt khác</strong> / <strong>Thử lại</strong> để luyện tiếp.</li>
+  </ol>
+
+  <h3>5.4. Tên nốt tiếng Việt</h3>
+  <p>Ứng dụng dùng tên nốt tiếng Việt; AI cũng nhận xét bằng tên tiếng Việt thay vì ký hiệu nhạc lý.</p>
+  <table>
+    <tr><th>Ký hiệu</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>A</th><th>B</th></tr>
+    <tr><td><strong>Tên Việt</strong></td><td>Đô</td><td>Rê</td><td>Mi</td><td>Pha</td><td>Sol</td><td>La</td><td>Si</td></tr>
+  </table>
+
+  <h3>5.5. AI cơ bản vs AI nâng cao</h3>
+  <table>
+    <tr><th>Tiêu chí</th><th>AI cơ bản (miễn phí)</th><th>AI nâng cao (Premium)</th></tr>
+    <tr><td>Điểm số</td><td>Có (thang 100)</td><td>Có (thang 100)</td></tr>
+    <tr><td>Nhận xét</td><td>Ngắn gọn</td><td>Chi tiết theo từng khía cạnh</td></tr>
+    <tr><td>Liệt kê lỗi &amp; gợi ý</td><td>Hạn chế</td><td>Đầy đủ, cá nhân hoá</td></tr>
+  </table>
+  <div class="tip"><b>Gợi ý chất lượng ghi âm:</b> luyện ở nơi yên tĩnh, tránh gió mạnh và tạp âm; giữ khoảng cách micro ổn định để AI đánh giá chính xác hơn.</div>
+</section>
+
+<!-- ===================== 6. TIẾN ĐỘ ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">6.</span> Tiến độ &amp; Thành tích</h2>
+  <p class="lead">Mục <strong>Tiến độ</strong> tổng hợp thống kê học tập cá nhân của bạn.</p>
+
+  <div class="shots">
+    <figure class="shot"><img src="screenshots/10.jpg" alt="Trang tiến độ" /><figcaption><span class="cap-no">10</span>Hồ sơ, XP, hoạt động tuần, huy hiệu &amp; lịch sử luyện tập</figcaption></figure>
+  </div>
+
+  <ul>
+    <li><strong>Thẻ hồ sơ</strong>: ảnh đại diện, tên, email, huy hiệu Premium.</li>
+    <li><strong>Thanh XP / hoàn thiện hồ sơ</strong> (0–100%) dựa trên 5 trường: tên, email, ảnh đại diện, số điện thoại, ngày sinh.</li>
+    <li><strong>Lưới thống kê</strong>: Vai trò, Trạng thái tài khoản, Gói học, Lần đăng nhập gần nhất.</li>
+    <li><strong>Hoạt động tuần này</strong>: biểu đồ cột theo 7 ngày (T2–CN), ngày hiện tại được tô đậm.</li>
+    <li><strong>Huy hiệu</strong>: xác thực email, ảnh đại diện, số điện thoại, ngày sinh.</li>
+    <li><strong>Lịch sử luyện tập</strong>: các phiên đã thực hiện kèm điểm/trạng thái.</li>
+  </ul>
+  <div class="note"><b>Tăng % hồ sơ:</b> Hoàn thiện đủ 5 trường thông tin trong phần Chỉnh sửa hồ sơ để đạt 100%.</div>
+</section>
+
+<!-- ===================== 7. HỒ SƠ & CÀI ĐẶT ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">7.</span> Hồ sơ &amp; Cài đặt</h2>
+  <p class="lead">Mục <strong>Hồ sơ</strong> để quản lý tài khoản, tuỳ chọn học tập và đăng xuất.</p>
+
+  <div class="shots">
+    <figure class="shot"><img src="screenshots/11.jpg" alt="Trang hồ sơ" /><figcaption><span class="cap-no">11</span>Hồ sơ: tài khoản, tuỳ chọn học tập &amp; cài đặt</figcaption></figure>
+  </div>
+
+  <h3>7.1. Thẻ tài khoản</h3>
+  <ul>
+    <li>Hiển thị ảnh đại diện, tên, email, <strong>gói học</strong> và <strong>trạng thái xác thực</strong>.</li>
+    <li>Cho biết mức độ hoàn thiện hồ sơ dạng <strong>X/5</strong>.</li>
+    <li>Nút <strong>Chỉnh sửa hồ sơ</strong> để cập nhật thông tin.</li>
+  </ul>
+
+  <h3>7.2. Chỉnh sửa hồ sơ</h3>
+  <ol class="steps">
+    <li>Nhấn <strong>Thay đổi ảnh</strong> để chọn ảnh đại diện mới (cấp quyền thư viện ảnh khi được hỏi, cắt theo tỉ lệ 1:1).</li>
+    <li>Cập nhật <strong>Họ tên, Email, Số điện thoại, Ngày sinh, Giới tính</strong>.</li>
+    <li>Nhấn <strong>Lưu thay đổi</strong>.</li>
+  </ol>
+
+  <h3>7.3. Tuỳ chọn học tập &amp; cài đặt</h3>
+  <ul>
+    <li><strong>Nhắc nhở hàng ngày</strong>: bật/tắt thông báo nhắc luyện tập.</li>
+    <li><strong>Độ nhạy micro</strong> và <strong>Mục tiêu hằng ngày</strong> (ví dụ 20 phút).</li>
+    <li>Lối tắt tới <strong>Gói học hiện tại</strong>, <strong>Xác thực tài khoản</strong>, <strong>Chính sách bảo mật</strong>.</li>
+    <li><strong>Đăng xuất</strong> ở cuối màn hình.</li>
+  </ul>
+</section>
+
+<!-- ===================== 8. GÓI HỌC & XÁC THỰC ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">8.</span> Gói học &amp; Xác thực tài khoản</h2>
+
+  <div class="shots">
+    <figure class="shot"><img src="screenshots/12.jpg" alt="Đăng ký gói học" /><figcaption><span class="cap-no">12</span>Xem &amp; đăng ký gói học (thanh toán qua QR)</figcaption></figure>
+  </div>
+
+  <h3>8.1. Gói học</h3>
+  <p>Trong <strong>Gói học</strong>, bạn xem và mua các gói:</p>
+  <ul>
+    <li>Chuyển giữa các tab gói (ví dụ <strong>Nền tảng</strong> miễn phí và <strong>Kỹ thuật</strong> trả phí).</li>
+    <li>Mỗi gói có giá, chu kỳ, điểm nổi bật và danh sách tính năng.</li>
+    <li>Gói đang dùng hiển thị <strong>Đã đăng ký</strong>; gói khác có nút <strong>Mua ngay</strong>.</li>
+  </ul>
+  <ol class="steps">
+    <li>Nhấn <strong>Mua ngay</strong> để mở cửa sổ thanh toán kèm <strong>mã QR</strong>.</li>
+    <li>Quét QR và thanh toán; ứng dụng tự kiểm tra trạng thái giao dịch.</li>
+    <li>Khi thành công, quyền lợi Premium được kích hoạt (huy hiệu vương miện xuất hiện).</li>
+  </ol>
+  <div class="note"><b>Premium mở khoá:</b> AI nâng cao và các nội dung/đặc quyền của gói tương ứng.</div>
+
+  <h3>8.2. Xác thực tài khoản (email)</h3>
+  <ol class="steps">
+    <li>Vào <strong>Hồ sơ → Xác thực tài khoản</strong>.</li>
+    <li>Nhấn <strong>Gửi mã xác thực</strong>; mã OTP 6 số được gửi tới email của bạn.</li>
+    <li>Nhập mã và nhấn <strong>Xác thực</strong>. Có thể <strong>Gửi lại mã</strong> khi hết đếm ngược.</li>
+  </ol>
+</section>
+
+<!-- ===================== 9. THÔNG BÁO & QUYỀN RIÊNG TƯ ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">9.</span> Thông báo &amp; Quyền riêng tư</h2>
+
+  <h3>9.1. Trung tâm thông báo</h3>
+  <p>Mở bằng biểu tượng <strong>chuông</strong> ở góc trên. Tại đây bạn xem cập nhật về bài học, huy hiệu, giao dịch, streak, kiểm duyệt và hệ thống.</p>
+  <ul>
+    <li>Thông báo <strong>chưa đọc</strong> có chấm đỏ và nền nổi bật.</li>
+    <li><strong>Nhấn</strong> một thông báo để đánh dấu đã đọc và mở màn hình liên quan.</li>
+    <li>Nhấn nút <strong>làm mới</strong> để tải lại danh sách.</li>
+  </ul>
+
+  <h3>9.2. Quyền riêng tư</h3>
+  <p>Mục <strong>Chính sách bảo mật</strong> (Hồ sơ → Chính sách bảo mật) nêu rõ:</p>
+  <ul>
+    <li><strong>Dữ liệu thu thập</strong>: thông tin tài khoản, tiến độ học, lịch sử luyện tập, dữ liệu âm thanh khi phân tích AI.</li>
+    <li><strong>Âm thanh luyện tập</strong>: chỉ truy cập micro khi bạn cấp quyền và bắt đầu luyện; không dùng cho quảng cáo.</li>
+    <li><strong>Quyền của bạn</strong>: cập nhật thông tin, thu hồi quyền micro, yêu cầu xem/sửa/xoá dữ liệu tài khoản.</li>
+  </ul>
+</section>
+
+<!-- ===================== 10. XỬ LÝ SỰ CỐ ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">10.</span> Xử lý sự cố &amp; Câu hỏi thường gặp</h2>
+
+  <table>
+    <tr><th>Tình huống</th><th>Cách xử lý</th></tr>
+    <tr>
+      <td>Không ghi âm được / không thấy file</td>
+      <td>Kiểm tra đã <strong>cấp quyền micro</strong> (Cài đặt hệ thống → LenFolk → Micro). Đóng các ứng dụng đang dùng micro (cuộc gọi, nhạc) rồi thử lại. Giữ nút ghi <strong>3–6 giây</strong>.</td>
+    </tr>
+    <tr>
+      <td>Nghe lại bản ghi không có tiếng</td>
+      <td>Tăng âm lượng thiết bị, tắt chế độ im lặng. Ghi lại ở nơi yên tĩnh và giữ micro gần sáo hơn.</td>
+    </tr>
+    <tr>
+      <td>AI phân tích lỗi / không trả kết quả</td>
+      <td>Kiểm tra <strong>kết nối mạng</strong> và thử <strong>Phân tích</strong> lại. Bản ghi quá ngắn hoặc quá nhỏ tiếng có thể khiến AI không đánh giá được.</td>
+    </tr>
+    <tr>
+      <td>Không nhận được mã OTP</td>
+      <td>Kiểm tra hộp thư rác/spam, đợi hết đếm ngược rồi nhấn <strong>Gửi lại mã</strong>. Đảm bảo nhập đúng email.</td>
+    </tr>
+    <tr>
+      <td>Quên mật khẩu</td>
+      <td>Dùng <strong>Quên mật khẩu?</strong> tại màn hình đăng nhập để nhận mã OTP và đặt lại mật khẩu.</td>
+    </tr>
+    <tr>
+      <td>Chuỗi học (streak) bị mất</td>
+      <td>Streak được tính khi bạn mở ứng dụng mỗi ngày. Hãy ghé vào hằng ngày để duy trì.</td>
+    </tr>
+    <tr>
+      <td>Một số cấp độ bị khoá</td>
+      <td>Các cấp Trung cấp/Nâng cao có thể yêu cầu hoàn thành cấp trước hoặc nâng cấp gói học.</td>
+    </tr>
+  </table>
+
+  <h3>Mẹo để học hiệu quả</h3>
+  <ul>
+    <li>Luyện <strong>mỗi ngày một chút</strong> để giữ streak và tạo thói quen.</li>
+    <li>Bắt đầu từ <strong>Bài 1–2</strong> để nắm tổng quan, cách đặt môi và tạo tiếng sáo rõ.</li>
+    <li>Dùng <strong>Luyện nốt</strong> để rèn cao độ từng nốt trước khi ghép bài.</li>
+    <li>Hoàn thiện hồ sơ và xác thực email để mở đầy đủ tính năng.</li>
+  </ul>
+
+</section>
+
+<!-- ===================== 11. LIÊN HỆ & HỖ TRỢ ===================== -->
+<section>
+  <h2 class="chapter"><span class="chapter-no">11.</span> Liên hệ &amp; Hỗ trợ</h2>
+  <p class="lead">Cần hỗ trợ, báo lỗi hay góp ý cho LenFolk? Hãy liên hệ với chúng tôi qua các kênh dưới đây — đội ngũ luôn sẵn sàng đồng hành cùng bạn.</p>
+
+  <div class="contact">
+    <img class="qr" src="screenshots/QR_Code.png" alt="Mã QR liên hệ LenFolk" />
+    <div class="contact-info">
+      <h3>Kết nối với LenFolk</h3>
+      <p><span class="label">Email:</span> <span class="email">crony1705@gmail.com</span></p>
+      <p><span class="label">Mã QR:</span> Quét mã bên cạnh để liên hệ nhanh với đội ngũ hỗ trợ.</p>
+      <p>Khi gửi yêu cầu hỗ trợ, vui lòng mô tả ngắn gọn vấn đề và (nếu có) ảnh chụp màn hình để chúng tôi xử lý nhanh hơn.</p>
+    </div>
+  </div>
+
+  <div class="tip"><b>Mẹo:</b> Trước khi liên hệ, bạn có thể xem nhanh <strong>Chương 10 — Xử lý sự cố</strong>; phần lớn vấn đề thường gặp (micro, âm thanh, OTP…) đã có hướng dẫn khắc phục tại đó.</div>
+
+  <div class="footer-note">
+    LenFolk – Hướng dẫn sử dụng • Phiên bản ứng dụng 1.0.0 • Cập nhật 17/06/2026<br/>
+    Mọi góp ý xin gửi về: crony1705@gmail.com
+  </div>
+</section>
+
+</body>
+</html>
