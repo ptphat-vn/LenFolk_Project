@@ -62,6 +62,7 @@ const options = {
       { name: 'Notifications', description: 'Thông báo' },
       { name: 'Progress', description: 'Tiến độ học' },
       { name: 'PracticeSessions', description: 'Phiên luyện tập' },
+      { name: 'AIAnalysis', description: 'Phân tích luyện tập bằng AI qua HTTP upload hoặc WebSocket chunk' },
       { name: 'Streaks', description: 'Chuỗi ngày luyện tập' },
       { name: 'InstructorProfiles', description: 'Hồ sơ giảng viên' },
       { name: 'Permissions', description: 'Phân quyền (admin)' },

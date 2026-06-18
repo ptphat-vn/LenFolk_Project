@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Vibration,
 } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -90,10 +91,10 @@ export default function AccountVerificationScreen() {
       {
         onSuccess: () => {
           updateUser({ isVerified: true }).catch(() => undefined);
+          Vibration.vibrate(100);
           Alert.alert("Thành công", "Xác thực email thành công!", [
             { text: "Vào trang chính", onPress: () => router.replace("/(tabs)") },
           ]);
-          navigator.vibrate(100);
         },
         onError: (error: any) => {
           Alert.alert(

@@ -558,7 +558,7 @@ export default function NotePracticeScreen() {
         },
         message: analysisMessage,
         useLlm: true,
-        ...(hasAdvancedAccess ? { fast: false } : {}),
+        ...(hasAdvancedAccess ? { fast: true } : {}),
       },
       {
         onSuccess: () => {

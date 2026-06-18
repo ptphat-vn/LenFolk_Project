@@ -42,5 +42,6 @@ router.use('/coupons', require('./coupon.route'));
 router.use('/wallets', require('./wallet.route'));
 router.use('/payments', require('./sepay.route'));
 router.use('/site-stats', require('./site-stat.route'));
+router.use('/ai-analysis', require('./ai-analysis.route'));
 
 module.exports = router;

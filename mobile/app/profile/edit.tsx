@@ -29,11 +29,18 @@ const toDateInputValue = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const parseDateInputValue = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 12);
+};
+
 const formatDateOfBirth = (value: string) => {
   if (!value) return "";
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
 };
+
+const toDateApiValue = (value: string) => parseDateInputValue(value).toISOString();
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -51,6 +58,7 @@ export default function EditProfileScreen() {
   const [dob, setDob] = useState<Date>(
     user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date()
   );
+  const [pickerDob, setPickerDob] = useState(dob);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [gender, setGender] = useState<"male" | "female" | "other">(
@@ -59,16 +67,39 @@ export default function EditProfileScreen() {
   const [avatar, setAvatar] = useState(user?.avatar || "");
 
   const handleOpenDatePicker = () => {
+    setPickerDob(dob);
     setShowDatePicker(true);
   };
 
+  const commitDob = (nextDate: Date) => {
+    const normalizedDate = new Date(
+      nextDate.getFullYear(),
+      nextDate.getMonth(),
+      nextDate.getDate(),
+      12,
+    );
+
+    setDob(normalizedDate);
+    setDateOfBirth(toDateInputValue(normalizedDate));
+  };
+
   const onChangeDob = (event: any, selectedDate?: Date) => {
+    if (event?.type === "dismissed") {
+      setShowDatePicker(false);
+      return;
+    }
+
     if (Platform.OS === "android") {
       setShowDatePicker(false);
     }
+
     if (selectedDate) {
-      setDob(selectedDate);
-      setDateOfBirth(toDateInputValue(selectedDate));
+      if (Platform.OS === "ios") {
+        setPickerDob(selectedDate);
+        return;
+      }
+
+      commitDob(selectedDate);
     }
   };
 
@@ -118,7 +149,7 @@ export default function EditProfileScreen() {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         phoneNumber: phoneNumber || null,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : null,
+        dateOfBirth: dateOfBirth ? toDateApiValue(dateOfBirth) : null,
         gender,
         avatar: avatarFile,
       });
@@ -320,14 +351,17 @@ export default function EditProfileScreen() {
               <View className="flex-row justify-between items-center mb-4">
                 <Text numberOfLines={1} className="min-w-0 flex-1 pr-3 text-lg font-bold text-[#10120C]">Chọn ngày sinh</Text>
                 <TouchableOpacity
-                  onPress={() => setShowDatePicker(false)}
+                  onPress={() => {
+                    commitDob(pickerDob);
+                    setShowDatePicker(false);
+                  }}
                   className="bg-[#8E9E6E] px-4 py-2 rounded-full"
                 >
                   <Text className="text-white font-bold text-sm">Xong</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
-                value={dob}
+                value={pickerDob}
                 mode="date"
                 display="spinner"
                 locale="vi-VN"
