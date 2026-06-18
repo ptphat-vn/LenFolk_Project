@@ -8,7 +8,7 @@ export const CTA = () => {
       <h2 className="text-4xl md:text-5xl font-bold text-black mb-10 font-sans">
         Sẵn sàng bắt đầu hành trình?
       </h2>
-      <Link href="/user/courses" className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-black text-white font-medium text-lg hover:bg-gray-800 transition-all hover:scale-105 shadow-xl shadow-black/20">
+      <Link href="/courses" className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-black text-white font-medium text-lg hover:bg-gray-800 transition-all hover:scale-105 shadow-xl shadow-black/20">
         Xem các khóa học <ArrowRight size={20} />
       </Link>
     </section>

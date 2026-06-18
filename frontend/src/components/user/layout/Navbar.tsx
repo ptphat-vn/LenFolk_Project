@@ -23,11 +23,11 @@ export const Navbar = () => {
   }, [pathname]);
 
   const navLinks = [
-    { name: 'Trang chủ', href: '/user' },
-    { name: 'Giới thiệu', href: '/user/about' },
-    { name: 'Khóa học', href: '/user/courses' },
-    { name: 'Tin tức', href: '/user/news' },
-    { name: 'Liên hệ', href: '/user/contact' },
+    { name: 'Trang chủ', href: '/' },
+    { name: 'Giới thiệu', href: '/about' },
+    { name: 'Khóa học', href: '/courses' },
+    { name: 'Tin tức', href: '/news' },
+    { name: 'Liên hệ', href: '/contact' },
   ];
 
   return (
@@ -40,7 +40,7 @@ export const Navbar = () => {
           }`}
       >
         <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
-           <Link href="/user" className="flex items-center gap-2 group">
+           <Link href="/" className="flex items-center gap-2 group">
             <img src="/images/logo_black.png" alt="Lenfolk Logo" className="h-[50px] w-auto object-contain" />
             <img src="/images/name_black.png" alt="Lenfolk" className="h-[34px] w-auto object-contain ml-[-20px]" />
           </Link>
