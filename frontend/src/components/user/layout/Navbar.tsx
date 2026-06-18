@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -23,11 +24,11 @@ export const Navbar = () => {
   }, [pathname]);
 
   const navLinks = [
-    { name: 'Trang chủ', href: '/user' },
-    { name: 'Giới thiệu', href: '/user/about' },
-    { name: 'Khóa học', href: '/user/courses' },
-    { name: 'Tin tức', href: '/user/news' },
-    { name: 'Liên hệ', href: '/user/contact' },
+    { name: 'Trang chủ', href: '/' },
+    { name: 'Giới thiệu', href: '/about' },
+    { name: 'Khóa học', href: '/courses' },
+    { name: 'Tin tức', href: '/news' },
+    { name: 'Liên hệ', href: '/contact' },
   ];
 
   return (
@@ -36,13 +37,24 @@ export const Navbar = () => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/85 backdrop-blur-md border-b border-gray-200 shadow-sm py-2' : 'bg-transparent py-3'
-          }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? 'bg-white/85 backdrop-blur-md border-b border-gray-200 shadow-sm py-2'
+            : 'bg-transparent py-3'
+        }`}
       >
         <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
-          <Link href="/user" className="flex items-center gap-2 group">
-            <img src="/images/logo_black.png" alt="Lenfolk Logo" className="h-[50px] w-auto object-contain" />
-            <img src="/images/name_black.png" alt="Lenfolk" className="h-[34px] w-auto object-contain ml-[-20px]" />
+          <Link href="/" className="flex items-center gap-2 group">
+            <Image
+              src="/images/logo_black.png"
+              alt="Lenfolk Logo"
+              className="h-[50px] w-auto object-contain"
+            />
+            <Image
+              src="/images/name_black.png"
+              alt="Lenfolk"
+              className="h-[34px] w-auto object-contain ml-[-20px]"
+            />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
@@ -55,7 +67,9 @@ export const Navbar = () => {
                   className={`relative transition-colors duration-300 group font-medium ${isActive ? 'text-[#1a3a2a]' : 'text-gray-600 hover:text-[#1a3a2a]'}`}
                 >
                   {link.name}
-                  <span className={`absolute -bottom-1 left-0 h-[1px] bg-[#1a3a2a] transition-all duration-300 ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                  <span
+                    className={`absolute -bottom-1 left-0 h-[1px] bg-[#1a3a2a] transition-all duration-300 ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`}
+                  ></span>
                 </Link>
               );
             })}
@@ -70,7 +84,10 @@ export const Navbar = () => {
             </Link>
           </div>
 
-          <button className="md:hidden text-black" onClick={() => setIsMobileMenuOpen(true)}>
+          <button
+            className="md:hidden text-black"
+            onClick={() => setIsMobileMenuOpen(true)}
+          >
             <Menu size={24} />
           </button>
         </div>
@@ -87,10 +104,21 @@ export const Navbar = () => {
           >
             <div className="flex items-center justify-between p-6">
               <div className="flex items-center gap-2">
-                <img src="/images/logo_black.png" alt="Lenfolk Logo" className="h-8 w-auto object-contain" />
-                <img src="/images/name_black.png" alt="Lenfolk" className="h-5 w-auto object-contain" />
+                <Image
+                  src="/images/logo_black.png"
+                  alt="Lenfolk Logo"
+                  className="h-8 w-auto object-contain"
+                />
+                <Image
+                  src="/images/name_black.png"
+                  alt="Lenfolk"
+                  className="h-5 w-auto object-contain"
+                />
               </div>
-              <button onClick={() => setIsMobileMenuOpen(false)} className="text-black">
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-black"
+              >
                 <X size={24} />
               </button>
             </div>

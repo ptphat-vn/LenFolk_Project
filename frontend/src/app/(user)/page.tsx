@@ -1,6 +1,7 @@
 import React from 'react';
 import { Hero } from '@/components/user/home/Hero';
 import { Stats } from '@/components/user/home/Stats';
+import { VisitorCounter } from '@/components/user/home/VisitorCounter';
 import { Features } from '@/components/user/home/Features';
 import { Heritage } from '@/components/user/home/Heritage';
 import { AppShowcase } from '@/components/user/home/AppShowcase';
@@ -13,6 +14,7 @@ export default function UserHomePage() {
     <div className="bg-white min-h-screen text-black font-sans selection:bg-sage-dark/20">
       <Hero />
       <Stats />
+      <VisitorCounter />
       <Heritage />
       <Features />
       <AppShowcase />

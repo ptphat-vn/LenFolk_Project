@@ -154,6 +154,7 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
 
           <Text
+            numberOfLines={1}
             className="text-xl font-bold text-[#10120C] text-center"
             style={{ fontFamily: "BeVietnamPro-Medium" }}
           >
@@ -249,7 +250,7 @@ export default function EditProfileScreen() {
               onPress={handleOpenDatePicker}
               className="w-full bg-[#F3F4F6]/50 border border-gray-200 rounded-2xl px-4 py-3.5 flex-row justify-between items-center"
             >
-              <Text className={dateOfBirth ? "text-[#10120C] text-sm" : "text-[#9CA3AF] text-sm"}>
+              <Text numberOfLines={1} className={dateOfBirth ? "min-w-0 flex-1 text-[#10120C] text-sm" : "min-w-0 flex-1 text-[#9CA3AF] text-sm"}>
                 {formatDateOfBirth(dateOfBirth) || "Chọn ngày sinh của bạn"}
               </Text>
               <Ionicons name="calendar-outline" size={20} color="#8E9E6E" />
@@ -317,7 +318,7 @@ export default function EditProfileScreen() {
           <View className="flex-1 justify-end bg-black/40">
             <View className="bg-white rounded-t-[30px] p-6 pb-10">
               <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-lg font-bold text-[#10120C]">Chọn ngày sinh</Text>
+                <Text numberOfLines={1} className="min-w-0 flex-1 pr-3 text-lg font-bold text-[#10120C]">Chọn ngày sinh</Text>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(false)}
                   className="bg-[#8E9E6E] px-4 py-2 rounded-full"

@@ -41,5 +41,6 @@ router.use('/audit-logs', require('./audit-log.route'));
 router.use('/coupons', require('./coupon.route'));
 router.use('/wallets', require('./wallet.route'));
 router.use('/payments', require('./sepay.route'));
+router.use('/site-stats', require('./site-stat.route'));
 
 module.exports = router;

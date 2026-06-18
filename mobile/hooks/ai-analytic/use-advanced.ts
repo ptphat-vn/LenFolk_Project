@@ -15,6 +15,7 @@ export const useAdvanced = <AnalysisResult>() =>
       fast = false,
       maxDurationSec,
       useLlm = false,
+      onUploadProgress,
     }: AdvancedAnalysisPayload) => {
       const response = await aiAxios.post<AnalysisResult>(
         "/analyze/advanced",
@@ -24,6 +25,13 @@ export const useAdvanced = <AnalysisResult>() =>
             fast,
             max_duration_sec: maxDurationSec,
             use_llm: useLlm,
+          },
+          onUploadProgress: (event) => {
+            if (!onUploadProgress) return;
+            const total = event.total ?? 0;
+            if (total > 0) {
+              onUploadProgress(Math.round((event.loaded / total) * 100));
+            }
           },
         }
       );

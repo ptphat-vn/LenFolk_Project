@@ -11,6 +11,12 @@ export type BaseAnalysisPayload = {
   message?: string;
   maxDurationSec?: number;
   useLlm?: boolean;
+  /**
+   * Called with the upload progress (0-100) while the audio file is being sent
+   * to the AI service. Useful to show that the recorded file is readable and is
+   * actually being uploaded.
+   */
+  onUploadProgress?: (percent: number) => void;
 };
 
 export type AdvancedAnalysisPayload = BaseAnalysisPayload & {
