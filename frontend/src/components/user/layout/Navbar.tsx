@@ -48,11 +48,15 @@ export const Navbar = () => {
             <Image
               src="/images/logo_black.png"
               alt="Lenfolk Logo"
-              className="h-[50px] w-auto object-contain"
+              width={50}
+              height={50}
+              className="h-12.5 w-auto object-contain"
             />
             <Image
               src="/images/name_black.png"
               alt="Lenfolk"
+              width={74}
+              height={34}
               className="h-[34px] w-auto object-contain ml-[-20px]"
             />
           </Link>
@@ -107,11 +111,15 @@ export const Navbar = () => {
                 <Image
                   src="/images/logo_black.png"
                   alt="Lenfolk Logo"
+                  width={50}
+                  height={50}
                   className="h-8 w-auto object-contain"
                 />
                 <Image
                   src="/images/name_black.png"
                   alt="Lenfolk"
+                  width={74}
+                  height={34}
                   className="h-5 w-auto object-contain"
                 />
               </div>
