@@ -132,6 +132,16 @@ const documentFileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
+const practiceMediaFileFilter = (req, file, cb) => {
+  if (
+    !file.mimetype.startsWith('audio/') &&
+    !file.mimetype.startsWith('video/')
+  ) {
+    return cb(new Error('Only audio or video files are allowed for AI analysis'));
+  }
+  cb(null, true);
+};
+
 const upload = multer({ storage: avatarStorage });
 upload.lessonVideo = multer({
   storage: lessonVideoStorage,
@@ -152,6 +162,11 @@ upload.courseThumbnail = multer({
   storage: courseThumbnailStorage,
   fileFilter: imageFileFilter,
   limits: { fileSize: 10 * 1024 * 1024 },
+});
+upload.practiceMedia = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: practiceMediaFileFilter,
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
 module.exports = upload;

@@ -7,4 +7,5 @@ module.exports = {
   ...require('./lesson'),
   ...require('./commerce'),
   ...require('./misc'),
+  ...require('./aiAnalysis'),
 };

@@ -19,4 +19,5 @@ module.exports = {
   ...require('./instructorProfiles'),
   ...require('./permissions'),
   ...require('./auditLogs'),
+  ...require('./aiAnalysis'),
 };

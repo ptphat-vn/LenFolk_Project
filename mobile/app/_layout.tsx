@@ -46,6 +46,9 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="lesson/[id]" />
             <Stack.Screen name="practice/[lessonId]" />
+            <Stack.Screen name="profile/edit" />
+            <Stack.Screen name="profile/subscription" />
+            <Stack.Screen name="profile/verify" />
             <Stack.Screen name="privacy" />
           </Stack>
           <StatusBar style="dark" />
