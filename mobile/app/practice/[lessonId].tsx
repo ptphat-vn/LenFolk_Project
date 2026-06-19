@@ -20,6 +20,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -54,6 +55,16 @@ type RecordedAudioFile = {
   createdAt: number;
 };
 
+type ReferenceTrackId = "4.1" | "4.2" | "5.1" | "5.2" | "8";
+
+type ReferencePracticeTrack = {
+  id: ReferenceTrackId;
+  title: string;
+  noteSequence: string;
+  sheets: number[];
+  audio?: number;
+};
+
 const mouthPlacementPracticeImages = [
   require("../../assets/images/dat_moi_1.png"),
   require("../../assets/images/dat_moi_2.png"),
@@ -62,13 +73,82 @@ const mouthPlacementPracticeImages = [
 
 const basicNotesPracticeImage = require("../../assets/images/bai_3.png");
 
+const lessonFourReferenceTracks: ReferencePracticeTrack[] = [
+  {
+    id: "4.1",
+    title: "Bài 4.1",
+    noteSequence: "C D E F G A B C2 C2 B A G F E D C",
+    sheets: [
+      require("../../assets/images/bai_4_1_sheet_1.png"),
+      require("../../assets/images/bai_4_1_sheet_2.png"),
+    ],
+    audio: require("../../assets/audio/4.1.m4a"),
+  },
+  {
+    id: "4.2",
+    title: "Bài 4.2",
+    noteSequence: "C D E F G A B, B A G F E D C",
+    sheets: [
+      require("../../assets/images/bai_4_2_sheet_1.png"),
+      require("../../assets/images/bai_4_2_sheet_2.png"),
+    ],
+    audio: require("../../assets/audio/4.2.m4a"),
+  },
+];
+
+const lessonFiveReferenceTracks: ReferencePracticeTrack[] = [
+  {
+    id: "5.1",
+    title: "Bài 5.1",
+    noteSequence:
+      "G G G G A A A A B B B B A A A A G G G G A A A A B B B B G A B B A G G A B A G",
+    sheets: [
+      require("../../assets/images/bai_5_1_sheet_1.png"),
+      require("../../assets/images/bai_5_1_sheet_2.png"),
+      require("../../assets/images/bai_5_1_sheet_3.png"),
+    ],
+    audio: require("../../assets/audio/5.1.m4a"),
+  },
+  {
+    id: "5.2",
+    title: "Bài 5.2",
+    noteSequence:
+      "C C C C D D D D E E E E F F F F E E E E D D D D C C C C C D E F E D C D E F E D C",
+    sheets: [
+      require("../../assets/images/bai_5_2_sheet_1.png"),
+      require("../../assets/images/bai_5_2_sheet_2.png"),
+      require("../../assets/images/bai_5_2_sheet_3.png"),
+    ],
+    audio: require("../../assets/audio/5.2.m4a"),
+  },
+];
+
+const lessonEightReferenceTracks: ReferencePracticeTrack[] = [
+  {
+    id: "8",
+    title: "Bài 8",
+    noteSequence:
+      "D2 F2 A G A C2 D2\nD2 F2 A G A C2 D2\nD2 F2 D2 D2 D2 F2 F C2\nF C2 F C2 D2 A D2\nA G F G A D\nC2 A C2 E2 D2 C2 D2",
+    sheets: [
+      require("../../assets/images/bai_8_sheet_1.png"),
+      require("../../assets/images/bai_8_sheet_2.png"),
+      require("../../assets/images/bai_8_sheet_3.png"),
+      require("../../assets/images/bai_8_sheet_4.png"),
+      require("../../assets/images/bai_8_sheet_5.png"),
+      require("../../assets/images/bai_8_sheet_6.png"),
+    ],
+  },
+];
+
 export default function NotePracticeScreen() {
   const router = useRouter();
-  const { lessonId, lessonNumber, note, practiceMode } = useLocalSearchParams<{
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { lessonId, lessonNumber, note, practiceMode, exercise } = useLocalSearchParams<{
     lessonId: string;
     lessonNumber?: string;
     note?: string;
     practiceMode?: "note" | "lesson";
+    exercise?: ReferenceTrackId;
   }>();
 
   const { data: dbLesson } = useGetDetailLesson(lessonId || "");
@@ -122,6 +202,30 @@ export default function NotePracticeScreen() {
     lessonTitle.toLowerCase().includes("the bam") ||
     lessonTitle.toLowerCase().includes("nốt nhạc cơ bản") ||
     lessonTitle.toLowerCase().includes("not nhac co ban");
+  const isBreathingLesson =
+    !isNotePracticeMode &&
+    (mockLesson?.id === 4 ||
+      Number(lessonNumber) === 4 ||
+      lessonTitle.toLowerCase().includes("lấy hơi") ||
+      lessonTitle.toLowerCase().includes("lay hoi"));
+  const isFingerPracticeLesson =
+    !isNotePracticeMode &&
+    (mockLesson?.id === 5 ||
+      Number(lessonNumber) === 5 ||
+      lessonTitle.toLowerCase().includes("bấm sáo") ||
+      lessonTitle.toLowerCase().includes("bam sao") ||
+      lessonTitle.toLowerCase().includes("6 lỗ") ||
+      lessonTitle.toLowerCase().includes("6 lo"));
+  const isBasicTuneLesson =
+    !isNotePracticeMode &&
+    (mockLesson?.id === 8 ||
+      Number(lessonNumber) === 8 ||
+      lessonTitle.toLowerCase().includes("thổi bài cơ bản") ||
+      lessonTitle.toLowerCase().includes("thoi bai co ban"));
+  const isReferencePracticeLesson =
+    isBreathingLesson || isFingerPracticeLesson || isBasicTuneLesson;
+  const isCompactReferenceSheetLesson =
+    isFingerPracticeLesson || isBasicTuneLesson;
 
   const lesson = useMemo(() => {
     if (!dbLesson) return null;
@@ -142,6 +246,8 @@ export default function NotePracticeScreen() {
   const recorderState = useAudioRecorderState(recorder);
   const playbackPlayer = useAudioPlayer(undefined, { updateInterval: 250 });
   const playbackStatus = useAudioPlayerStatus(playbackPlayer);
+  const referencePlayer = useAudioPlayer(undefined, { updateInterval: 100 });
+  const referenceStatus = useAudioPlayerStatus(referencePlayer);
   const basicAnalysis = useBasicAnalysis<AnalysisResult>();
   const advancedAnalysis = useAdvancedAnalysis<AnalysisResult>();
   const hasAdvancedAccess = freshUser?.isSubscribed ?? user?.isSubscribed ?? false;
@@ -150,6 +256,19 @@ export default function NotePracticeScreen() {
   const [recordedFiles, setRecordedFiles] = useState<RecordedAudioFile[]>([]);
   const [playingUri, setPlayingUri] = useState<string>();
   const [pendingPlaybackUri, setPendingPlaybackUri] = useState<string>();
+  const [playingReferenceTrackId, setPlayingReferenceTrackId] =
+    useState<ReferenceTrackId>();
+  const [pendingReferenceTrackId, setPendingReferenceTrackId] =
+    useState<ReferenceTrackId>();
+  const [selectedReferenceTrackId, setSelectedReferenceTrackId] =
+    useState<ReferenceTrackId>(
+      exercise === "4.2" ||
+        exercise === "5.1" ||
+        exercise === "5.2" ||
+        exercise === "8"
+        ? exercise
+        : "4.1",
+    );
   const [permissionGranted, setPermissionGranted] = useState<boolean>();
   const [isPreparingRecorder, setIsPreparingRecorder] = useState(false);
   const [isResultModalVisible, setIsResultModalVisible] = useState(false);
@@ -157,30 +276,114 @@ export default function NotePracticeScreen() {
     useState<number | null>(null);
   const [isBasicNotesImageVisible, setIsBasicNotesImageVisible] =
     useState(false);
+  const [isReferenceSheetViewerVisible, setIsReferenceSheetViewerVisible] =
+    useState(false);
   const imageViewerTranslateY = useRef(new Animated.Value(0)).current;
   const recorderOperationRef = useRef(false);
   const playbackStartedAtRef = useRef(0);
+  const referenceStartedAtRef = useRef(0);
 
   const practiceTitle = isMouthPlacementLesson
     ? "Luyện thổi sáo"
     : isBasicNotesLesson
       ? "Luyện nốt cơ bản"
+      : isBreathingLesson
+      ? "Luyện lấy hơi"
+      : isFingerPracticeLesson
+      ? "Luyện bấm sáo"
+      : isBasicTuneLesson
+      ? "Luyện bài cơ bản"
       : "Luyện cao độ";
   const recordingTargetTitle = isMouthPlacementLesson
     ? "Mục tiêu"
     : isBasicNotesLesson
-      ? "Nốt đang luyện"
-      : "Nốt mục tiêu";
-  const recordingTargetLabel = isMouthPlacementLesson ? "Âm sáo rõ" : targetNoteLabel;
+    ? "Nốt đang luyện"
+    : isBreathingLesson
+    ? "Mẫu hơi"
+    : isFingerPracticeLesson
+    ? "Mẫu bài"
+    : isBasicTuneLesson
+    ? "Sheet bài"
+    : "Nốt mục tiêu";
+  const recordingTargetLabel = isMouthPlacementLesson
+    ? "Âm sáo rõ"
+    : isBreathingLesson
+    ? "Giữ đều hơi"
+    : isFingerPracticeLesson
+    ? "Đổi ngón đều"
+    : isBasicTuneLesson
+    ? "Thổi theo sheet"
+    : targetNoteLabel;
   const recordingTargetDetail = isMouthPlacementLesson
     ? "Không chỉ toàn tiếng gió"
+    : isBreathingLesson || isFingerPracticeLesson
+    ? "Nghe sheet mẫu rồi thổi theo"
+    : isBasicTuneLesson
+    ? "Xem sheet rồi ghi âm bài thổi"
     : targetNote;
+  const referencePracticeTracks = isBasicTuneLesson
+    ? lessonEightReferenceTracks
+    : isFingerPracticeLesson
+    ? lessonFiveReferenceTracks
+    : lessonFourReferenceTracks;
+  const selectedReferenceTrack = useMemo(
+    () =>
+      referencePracticeTracks.find(
+        (track) => track.id === selectedReferenceTrackId,
+      ) || referencePracticeTracks[0],
+    [referencePracticeTracks, selectedReferenceTrackId],
+  );
+  const selectedReferenceTrackIsPlaying =
+    playingReferenceTrackId === selectedReferenceTrack.id &&
+    referenceStatus.playing;
+  const referenceSheetCardWidth = isCompactReferenceSheetLesson
+    ? Math.max(windowWidth - 132, 230)
+    : 620;
+  const referenceSheetCardImageWidth = isCompactReferenceSheetLesson
+    ? referenceSheetCardWidth - 24
+    : referenceSheetCardWidth;
+  const referenceSheetCardHeight = isCompactReferenceSheetLesson ? 56 : 88;
+  const referenceSheetViewerWidth = isCompactReferenceSheetLesson
+    ? Math.max(windowWidth - 36, 360)
+    : Math.max(windowWidth - 36, 980);
+  const referenceSheetViewerHeight = Math.max(
+    isCompactReferenceSheetLesson ? 74 : 96,
+    Math.min(
+      isCompactReferenceSheetLesson ? 96 : 180,
+      (windowHeight - 170) / selectedReferenceTrack.sheets.length,
+    ),
+  );
 
   useEffect(() => {
     if (freshUser) {
       updateUser(freshUser);
     }
   }, [freshUser, updateUser]);
+
+  useEffect(() => {
+    if (
+      exercise === "4.1" ||
+      exercise === "4.2" ||
+      exercise === "5.1" ||
+      exercise === "5.2" ||
+      exercise === "8"
+    ) {
+      setSelectedReferenceTrackId(exercise);
+    }
+  }, [exercise]);
+
+  useEffect(() => {
+    if (
+      isReferencePracticeLesson &&
+      !referencePracticeTracks.some((track) => track.id === selectedReferenceTrackId)
+    ) {
+      setSelectedReferenceTrackId(referencePracticeTracks[0].id);
+    }
+  }, [
+    isReferencePracticeLesson,
+    referencePracticeTracks,
+    selectedReferenceTrackId,
+  ]);
 
   useEffect(() => {
     setTargetNote(note || lesson?.targetNote || mockLesson?.targetNote || "C4");
@@ -266,6 +469,7 @@ export default function NotePracticeScreen() {
     imageViewerTranslateY.setValue(0);
     setSelectedPracticeImageIndex(null);
     setIsBasicNotesImageVisible(false);
+    setIsReferenceSheetViewerVisible(false);
   }, [imageViewerTranslateY]);
 
   const imageViewerPanResponder = useMemo(
@@ -303,6 +507,17 @@ export default function NotePracticeScreen() {
   }, [playbackStatus.didJustFinish, playingUri]);
 
   useEffect(() => {
+    if (
+      playingReferenceTrackId &&
+      referenceStatus.didJustFinish &&
+      Date.now() - referenceStartedAtRef.current > 600
+    ) {
+      setPlayingReferenceTrackId(undefined);
+      setPendingReferenceTrackId(undefined);
+    }
+  }, [playingReferenceTrackId, referenceStatus.didJustFinish]);
+
+  useEffect(() => {
     if (!pendingPlaybackUri || pendingPlaybackUri !== playingUri) return;
     if (!playbackStatus.isLoaded || playbackStatus.isBuffering) return;
 
@@ -315,6 +530,26 @@ export default function NotePracticeScreen() {
     playbackStatus.isBuffering,
     playbackStatus.isLoaded,
     playingUri,
+  ]);
+
+  useEffect(() => {
+    if (
+      !pendingReferenceTrackId ||
+      pendingReferenceTrackId !== playingReferenceTrackId
+    ) {
+      return;
+    }
+    if (!referenceStatus.isLoaded || referenceStatus.isBuffering) return;
+
+    referencePlayer.seekTo(0).catch(() => undefined);
+    referencePlayer.play();
+    setPendingReferenceTrackId(undefined);
+  }, [
+    pendingReferenceTrackId,
+    playingReferenceTrackId,
+    referencePlayer,
+    referenceStatus.isBuffering,
+    referenceStatus.isLoaded,
   ]);
 
   const selectedRecordedFile = useMemo(
@@ -377,6 +612,29 @@ export default function NotePracticeScreen() {
     setPlayingUri(undefined);
   };
 
+  const stopReferencePlayback = async () => {
+    referencePlayer.pause();
+    await referencePlayer.seekTo(0).catch(() => undefined);
+    setPendingReferenceTrackId(undefined);
+    setPlayingReferenceTrackId(undefined);
+  };
+
+  const selectReferenceTrackPage = async (
+    trackId: ReferenceTrackId,
+  ) => {
+    if (trackId === selectedReferenceTrackId) return;
+    if (recorderState.isRecording || analysis.isPending) return;
+
+    Haptics.selectionAsync().catch(() => undefined);
+    await stopPlayback();
+    await stopReferencePlayback();
+    analysis.reset();
+    setIsResultModalVisible(false);
+    setRecordingUri(undefined);
+    setRecordedFiles([]);
+    setSelectedReferenceTrackId(trackId);
+  };
+
   const startRecording = async () => {
     if (isPrerequisiteLocked) {
       Alert.alert(
@@ -427,6 +685,7 @@ export default function NotePracticeScreen() {
       }
 
       await stopPlayback();
+      await stopReferencePlayback();
       analysis.reset();
       setIsResultModalVisible(false);
       setRecordingUri(undefined);
@@ -530,11 +789,32 @@ export default function NotePracticeScreen() {
     }
 
     await configurePlaybackSession().catch(() => undefined);
+    await stopReferencePlayback();
     playbackPlayer.pause();
     setPendingPlaybackUri(file.uri);
     playbackPlayer.replace({ uri: file.uri });
     playbackStartedAtRef.current = Date.now();
     setPlayingUri(file.uri);
+  };
+
+  const playReferenceTrack = async (track: ReferencePracticeTrack) => {
+    if (!track.audio) return;
+    if (recorderState.isRecording || analysis.isPending) return;
+
+    Haptics.selectionAsync().catch(() => undefined);
+
+    if (playingReferenceTrackId === track.id && referenceStatus.playing) {
+      await stopReferencePlayback();
+      return;
+    }
+
+    await configurePlaybackSession().catch(() => undefined);
+    await stopPlayback();
+    referencePlayer.pause();
+    setPendingReferenceTrackId(track.id);
+    referencePlayer.replace(track.audio);
+    referenceStartedAtRef.current = Date.now();
+    setPlayingReferenceTrackId(track.id);
   };
 
   const analyzeRecording = () => {
@@ -544,9 +824,13 @@ export default function NotePracticeScreen() {
       selectedRecordedFile?.name ||
       (isMouthPlacementLesson
         ? `flute-sound-${Date.now()}.m4a`
+        : isReferencePracticeLesson
+        ? `practice-${selectedReferenceTrack.id}-${Date.now()}.m4a`
         : `note-${targetNote}-${Date.now()}.m4a`);
     const analysisMessage = isMouthPlacementLesson
       ? "Phân tích bản ghi người học thổi sáo. Chỉ cần đánh giá người học đã tạo được âm thanh sáo rõ hay chưa, âm có bị toàn tiếng gió hoặc quá yếu không. Nhận xét ngắn gọn bằng tiếng Việt và đưa 1-2 gợi ý về khẩu hình, hướng hơi nếu cần."
+      : isReferencePracticeLesson
+      ? `Phân tích bản ghi người học thổi sáo theo sheet "${selectedReferenceTrack.title}". Chuỗi nốt mẫu là:\n${selectedReferenceTrack.noteSequence}\nHãy so sánh bản ghi với chuỗi nốt mẫu về đúng/sai cao độ, thứ tự nốt, độ đều hơi và độ liền mạch khi chuyển nốt. Nhận xét ngắn gọn bằng tiếng Việt, nêu 1-2 lỗi chính và 1-2 gợi ý luyện lại. Khi nhắc tên nốt, dùng đúng ký hiệu trong chuỗi mẫu như C, D, E, F, G, A, B, C2, D2, E2.`
       : `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là "${targetNoteLabel}". Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện. Khi nhắc tên nốt trong phần nhận xét, BẮT BUỘC dùng tên tiếng Việt (Đô, Rê, Mi, Pha, Sol, La, Si), tuyệt đối không dùng ký hiệu nhạc lý như C5, D5, E5.`;
 
     analysis.mutate(
@@ -774,6 +1058,172 @@ export default function NotePracticeScreen() {
           </View>
         )}
 
+        {isReferencePracticeLesson && (
+          <View className="gap-4 rounded-[26px] bg-white p-5">
+            <View>
+              <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
+                Page luyện tập
+              </Text>
+              <Text className="mt-1 text-sm leading-5 text-[#777B70]">
+                {isBasicTuneLesson
+                  ? "Chạm vào sheet để phóng to và luyện theo từng dòng."
+                  : `Chọn ${isFingerPracticeLesson ? "5.1 hoặc 5.2" : "4.1 hoặc 4.2"}, chạm vào sheet để nghe mẫu và thổi theo.`}
+              </Text>
+            </View>
+
+            {referencePracticeTracks.length > 1 && (
+              <View className="flex-row rounded-[18px] bg-[#F1F2EC] p-1">
+                {referencePracticeTracks.map((track) => {
+                  const isSelected = selectedReferenceTrackId === track.id;
+
+                  return (
+                    <TouchableOpacity
+                      key={track.id}
+                      activeOpacity={0.85}
+                      disabled={
+                        recorderState.isRecording ||
+                        analysis.isPending ||
+                        isPreparingRecorder
+                      }
+                      onPress={() => selectReferenceTrackPage(track.id)}
+                      className={`flex-1 items-center rounded-[15px] px-4 py-3 ${
+                        isSelected ? "bg-white" : "bg-transparent"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-bold ${
+                          isSelected ? "text-[#10120C]" : "text-[#687451]"
+                        }`}
+                      >
+                        {track.id}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            <View
+              className={`overflow-hidden rounded-[22px] border ${
+                selectedReferenceTrackIsPlaying
+                  ? "border-[#8E9E6E] bg-[#F7F8F3]"
+                  : "border-[#E5E7E1] bg-white"
+              }`}
+            >
+              <View className="flex-row items-center gap-3 px-4 py-3">
+                {selectedReferenceTrack.audio ? (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    disabled={recorderState.isRecording || analysis.isPending}
+                    onPress={() => playReferenceTrack(selectedReferenceTrack)}
+                    className={`h-10 w-10 items-center justify-center rounded-full ${
+                      selectedReferenceTrackIsPlaying
+                        ? "bg-[#8E9E6E]"
+                        : "bg-[#F1F2EC]"
+                    }`}
+                  >
+                    <Ionicons
+                      name={selectedReferenceTrackIsPlaying ? "pause" : "play"}
+                      size={18}
+                      color={
+                        selectedReferenceTrackIsPlaying ? "white" : "#687451"
+                      }
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F1F2EC]">
+                    <Ionicons name="expand-outline" size={18} color="#687451" />
+                  </View>
+                )}
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-[#10120C]">
+                    {selectedReferenceTrack.title}
+                  </Text>
+                  <Text className="mt-0.5 text-xs leading-4 text-[#777B70]">
+                    {selectedReferenceTrackIsPlaying
+                      ? "Đang phát audio mẫu"
+                      : "Chạm sheet để phóng to"}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="gap-3 px-3 pb-4">
+                {selectedReferenceTrack.sheets.map((sheet, sheetIndex) => (
+                  <ScrollView
+                    key={`${selectedReferenceTrack.id}-sheet-${sheetIndex}`}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    scrollEnabled={!isCompactReferenceSheetLesson}
+                    contentContainerStyle={{
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minWidth: referenceSheetCardWidth,
+                    }}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.92}
+                      onPress={() => setIsReferenceSheetViewerVisible(true)}
+                      className="items-center justify-center rounded-[14px] bg-white"
+                      style={{
+                        height: referenceSheetCardHeight,
+                        width: referenceSheetCardWidth,
+                        paddingHorizontal: isCompactReferenceSheetLesson ? 12 : 0,
+                      }}
+                    >
+                      <Image
+                        source={sheet}
+                        contentFit={isBasicTuneLesson ? "fill" : "contain"}
+                        style={{
+                          height: referenceSheetCardHeight,
+                          width: referenceSheetCardImageWidth,
+                        }}
+                      />
+                    </TouchableOpacity>
+                  </ScrollView>
+                ))}
+              </View>
+            </View>
+
+            {referencePracticeTracks.length > 1 && (
+            <View className="flex-row gap-3">
+              {referencePracticeTracks.map((track) => {
+                const isSelected = selectedReferenceTrackId === track.id;
+
+                return (
+                  <TouchableOpacity
+                    key={`${track.id}-page-button`}
+                    activeOpacity={0.85}
+                    disabled={
+                      isSelected ||
+                      recorderState.isRecording ||
+                      analysis.isPending ||
+                      isPreparingRecorder
+                    }
+                    onPress={() => selectReferenceTrackPage(track.id)}
+                    className={`flex-1 flex-row items-center justify-center gap-2 rounded-[18px] px-4 py-3 ${
+                      isSelected ? "bg-[#E2E8D3]" : "bg-[#10120C]"
+                    }`}
+                  >
+                    <Ionicons
+                      name={track.id.endsWith(".1") ? "chevron-back" : "chevron-forward"}
+                      size={16}
+                      color={isSelected ? "#687451" : "white"}
+                    />
+                    <Text
+                      className={`text-sm font-bold ${
+                        isSelected ? "text-[#687451]" : "text-white"
+                      }`}
+                    >
+                      {track.title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            )}
+          </View>
+        )}
+
         <View className="overflow-hidden rounded-[34px] bg-[#8E9E6E] px-6 pb-7 pt-5">
           <View className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
           <View className="mb-7 flex-row items-center justify-between">
@@ -797,7 +1247,7 @@ export default function NotePracticeScreen() {
             <Text
               selectable
               className={`mt-2 font-bold text-white ${
-                isMouthPlacementLesson ? "text-4xl" : "text-6xl"
+                isMouthPlacementLesson ? "text-3xl" : "text-4xl"
               }`}
               style={{ fontFamily: "BeVietnamPro-Medium" }}
             >
@@ -809,7 +1259,7 @@ export default function NotePracticeScreen() {
           </View>
         </View>
 
-        {!isMouthPlacementLesson && (
+        {!isMouthPlacementLesson && !isReferencePracticeLesson && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1169,6 +1619,78 @@ export default function NotePracticeScreen() {
               contentFit="contain"
               style={{ flex: 1, width: "100%" }}
             />
+          </Animated.View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isReferenceSheetViewerVisible}
+        supportedOrientations={[
+          "portrait",
+          "portrait-upside-down",
+          "landscape",
+          "landscape-left",
+          "landscape-right",
+        ]}
+        onRequestClose={closePracticeImageViewer}
+      >
+        <View className="flex-1 bg-black">
+          <View className="absolute left-5 right-5 top-12 z-10 flex-row items-center justify-between">
+            <View className="rounded-full bg-white/15 px-4 py-2">
+              <Text className="text-sm font-bold text-white">
+                {selectedReferenceTrack.title}
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={closePracticeImageViewer}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+            >
+              <Ionicons name="close" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          <Animated.View
+            className="flex-1"
+            style={{ transform: [{ translateY: imageViewerTranslateY }] }}
+            {...imageViewerPanResponder.panHandlers}
+          >
+            <ScrollView
+              className="flex-1"
+              contentContainerStyle={{
+                minHeight: "100%",
+                justifyContent: "center",
+                paddingHorizontal: 18,
+                paddingVertical: 96,
+                gap: 18,
+              }}
+            >
+              {selectedReferenceTrack.sheets.map((sheet, sheetIndex) => (
+                <ScrollView
+                  key={`${selectedReferenceTrack.id}-viewer-sheet-${sheetIndex}`}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: referenceSheetViewerWidth,
+                  }}
+                >
+                  <View className="items-center justify-center overflow-hidden rounded-[10px] bg-white">
+                    <Image
+                      source={sheet}
+                      contentFit={isBasicTuneLesson ? "fill" : "contain"}
+                      style={{
+                        height: referenceSheetViewerHeight,
+                        width: referenceSheetViewerWidth,
+                      }}
+                    />
+                  </View>
+                </ScrollView>
+              ))}
+            </ScrollView>
           </Animated.View>
         </View>
       </Modal>
