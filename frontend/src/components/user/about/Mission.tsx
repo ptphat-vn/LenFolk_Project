@@ -36,7 +36,7 @@ export const Mission = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-3xl md:text-xl lg:text-5xl font-medium leading-[1.2] tracking-tight mb-8 uppercase ml-5 md:ml-20 lg:ml-20"
+            className="text-2xl md:text-3xl lg:text-5xl font-medium leading-[1.2] tracking-tight mb-8 uppercase ml-4 md:ml-20 lg:ml-20"
           >
             VƯỢT MỌI RÀO CẢN ĐỊA LÝ <br className="hidden md:block" />
             ĐƯA <span className="text-[#DCD74C] inline-block -translate-y-1 lg:-translate-y-2">→</span> TINH HOA SÁO TRÚC <br className="hidden md:block" />
@@ -84,7 +84,7 @@ export const Mission = () => {
               Về chúng tôi
             </div>
 
-            <div className="md:col-span-9 lg:col-span-8 translate-x-[250px]">
+            <div className="md:col-span-9 lg:col-span-8 lg:translate-x-[250px]">
               <p className="text-3xl md:text-4xl lg:text-5xl font-be-vietnam-pro leading-[1.1] tracking-[-0.02em]">
                 <span className="text-black">
                   &emsp;&emsp;Đồng hành cùng thế hệ trẻ<br />LENFOLK{' '}

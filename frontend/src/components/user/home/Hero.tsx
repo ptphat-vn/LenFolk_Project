@@ -40,7 +40,7 @@ export const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
-          className="text-5xl md:text-[5rem] lg:text-[5rem] font-bold tracking-tight mb-6 leading-tight font-sans"
+          className="text-4xl sm:text-5xl md:text-[5rem] lg:text-[5rem] font-bold tracking-tight mb-6 leading-tight font-sans"
         >
           DIGITAL BREATH<br />
           <span className="italic font-light font-serif">Timeless Soul</span>
@@ -75,9 +75,8 @@ export const Hero = () => {
           <img
             src="/images/3phones_header.png"
             alt="Lenfolk App mockup"
-            className="h-auto object-contain drop-shadow-2xl z-10 -translate-y-[60px]"
+            className="h-auto object-contain drop-shadow-2xl z-10 -translate-y-[60px] w-[95%] sm:w-[85%] md:w-[calc(100%-180px)]"
             style={{
-              width: 'calc(100% - 180px)',
               WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 70%)',
               maskImage: 'linear-gradient(to bottom, black 50%, transparent 80%)'
             }}
