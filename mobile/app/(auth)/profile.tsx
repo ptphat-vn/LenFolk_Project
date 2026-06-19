@@ -28,11 +28,18 @@ const toDateInputValue = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const parseDateInputValue = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 12);
+};
+
 const formatDateOfBirth = (value: string) => {
   if (!value) return "";
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
 };
+
+const toDateApiValue = (value: string) => parseDateInputValue(value).toISOString();
 
 export default function CompleteProfileScreen() {
   const router = useRouter();
@@ -47,19 +54,46 @@ export default function CompleteProfileScreen() {
   const [dob, setDob] = useState<Date>(
     user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date(2005, 0, 1),
   );
+  const [pickerDob, setPickerDob] = useState(dob);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState<"male" | "female" | "other">(
     user?.gender || "other",
   );
 
-  const onChangeDob = (_event: unknown, selectedDate?: Date) => {
+  const handleOpenDatePicker = () => {
+    setPickerDob(dob);
+    setShowDatePicker(true);
+  };
+
+  const commitDob = (nextDate: Date) => {
+    const normalizedDate = new Date(
+      nextDate.getFullYear(),
+      nextDate.getMonth(),
+      nextDate.getDate(),
+      12,
+    );
+
+    setDob(normalizedDate);
+    setDateOfBirth(toDateInputValue(normalizedDate));
+  };
+
+  const onChangeDob = (event: any, selectedDate?: Date) => {
+    if (event?.type === "dismissed") {
+      setShowDatePicker(false);
+      return;
+    }
+
     if (Platform.OS === "android") {
       setShowDatePicker(false);
     }
 
     if (selectedDate) {
-      setDob(selectedDate);
-      setDateOfBirth(toDateInputValue(selectedDate));
+      if (Platform.OS === "ios") {
+        setPickerDob(selectedDate);
+        return;
+      }
+
+      commitDob(selectedDate);
     }
   };
 
@@ -79,7 +113,7 @@ export default function CompleteProfileScreen() {
       return;
     }
 
-    const parsedDate = new Date(dateOfBirth);
+    const parsedDate = parseDateInputValue(dateOfBirth);
     if (Number.isNaN(parsedDate.getTime())) {
       Alert.alert("Ngày sinh không hợp lệ", "Vui lòng chọn lại ngày sinh.");
       return;
@@ -90,7 +124,7 @@ export default function CompleteProfileScreen() {
         name: name.trim(),
         email: user.email,
         phoneNumber: phoneNumber.trim(),
-        dateOfBirth: parsedDate.toISOString(),
+        dateOfBirth: toDateApiValue(dateOfBirth),
         gender,
       });
 
@@ -204,7 +238,7 @@ export default function CompleteProfileScreen() {
               </Text>
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => setShowDatePicker(true)}
+                onPress={handleOpenDatePicker}
                 className="flex-row items-center justify-between rounded-2xl border border-[#E5E7E1] bg-[#F7F8F3] px-4 py-4"
               >
                 <View className="min-w-0 flex-1 flex-row items-center">
@@ -291,17 +325,22 @@ export default function CompleteProfileScreen() {
                   Chọn ngày sinh
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setShowDatePicker(false)}
+                  onPress={() => {
+                    commitDob(pickerDob);
+                    setShowDatePicker(false);
+                  }}
                   className="rounded-full bg-[#8E9E6E] px-4 py-2"
                 >
                   <Text className="text-sm font-bold text-white">Xong</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
-                value={dob}
+                value={pickerDob}
                 mode="date"
                 display="spinner"
                 locale="vi-VN"
+                themeVariant="light"
+                textColor="#10120C"
                 maximumDate={new Date()}
                 onChange={onChangeDob}
                 style={{ width: "100%", height: 180 }}

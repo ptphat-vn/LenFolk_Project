@@ -32,6 +32,12 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().default(''),
   // Brevo (Sendinblue) — gửi email qua HTTP API, xác thực 1 email người gửi (không cần domain)
   BREVO_API_KEY: z.string().default(''),
+  // AI analysis providers
+  OPENAI_API_KEY: z.string().default(''),
+  OPENAI_TRANSCRIPTION_MODEL: z.string().default('gpt-4o-mini-transcribe'),
+  OPENAI_ANALYSIS_MODEL: z.string().default('gpt-4o-mini'),
+  GEMINI_API_KEY: z.string().default(''),
+  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-1.5-flash'),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
@@ -80,6 +86,13 @@ module.exports = {
     resendApiKey: env.RESEND_API_KEY,
     brevoApiKey: env.BREVO_API_KEY,
     replyTo: env.MAIL_REPLY_TO,
+  },
+  ai: {
+    openaiApiKey: env.OPENAI_API_KEY,
+    openaiTranscriptionModel: env.OPENAI_TRANSCRIPTION_MODEL,
+    openaiAnalysisModel: env.OPENAI_ANALYSIS_MODEL,
+    geminiApiKey: env.GEMINI_API_KEY,
+    geminiAnalysisModel: env.GEMINI_ANALYSIS_MODEL,
   },
   appName: env.APP_NAME,
   clientUrl: env.CLIENT_URL,
