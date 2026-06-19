@@ -44,7 +44,7 @@ export const AppShowcase = () => {
             {/* Vệt sáng nền (Glow Effect) */}
             <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[350px] bg-[#DCD74C] rounded-[50%] blur-[120px] opacity-80 z-0 pointer-events-none"></div>
 
-            <div className="relative z-10 w-[300px] h-[600px] bg-white rounded-[48px] border-[8px] border-gray-100 shadow-2xl overflow-hidden flex flex-col">
+            <div className="relative z-10 w-[280px] h-[560px] sm:w-[300px] sm:h-[600px] bg-white rounded-[48px] border-[8px] border-gray-100 shadow-2xl overflow-hidden flex flex-col">
               <div className="absolute top-3 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-100 rounded-full z-20"></div>
 
               <div className="flex-1 bg-gray-50 pt-16 px-6 pb-6 flex flex-col">
