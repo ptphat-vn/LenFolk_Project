@@ -60,6 +60,7 @@ type ReferenceTrackId = "4.1" | "4.2" | "5.1" | "5.2" | "8";
 type ReferencePracticeTrack = {
   id: ReferenceTrackId;
   title: string;
+  noteSequence: string;
   sheets: number[];
   audio?: number;
 };
@@ -76,6 +77,7 @@ const lessonFourReferenceTracks: ReferencePracticeTrack[] = [
   {
     id: "4.1",
     title: "Bài 4.1",
+    noteSequence: "C D E F G A B C2 C2 B A G F E D C",
     sheets: [
       require("../../assets/images/bai_4_1_sheet_1.png"),
       require("../../assets/images/bai_4_1_sheet_2.png"),
@@ -85,6 +87,7 @@ const lessonFourReferenceTracks: ReferencePracticeTrack[] = [
   {
     id: "4.2",
     title: "Bài 4.2",
+    noteSequence: "C D E F G A B, B A G F E D C",
     sheets: [
       require("../../assets/images/bai_4_2_sheet_1.png"),
       require("../../assets/images/bai_4_2_sheet_2.png"),
@@ -97,6 +100,8 @@ const lessonFiveReferenceTracks: ReferencePracticeTrack[] = [
   {
     id: "5.1",
     title: "Bài 5.1",
+    noteSequence:
+      "G G G G A A A A B B B B A A A A G G G G A A A A B B B B G A B B A G G A B A G",
     sheets: [
       require("../../assets/images/bai_5_1_sheet_1.png"),
       require("../../assets/images/bai_5_1_sheet_2.png"),
@@ -107,6 +112,8 @@ const lessonFiveReferenceTracks: ReferencePracticeTrack[] = [
   {
     id: "5.2",
     title: "Bài 5.2",
+    noteSequence:
+      "C C C C D D D D E E E E F F F F E E E E D D D D C C C C C D E F E D C D E F E D C",
     sheets: [
       require("../../assets/images/bai_5_2_sheet_1.png"),
       require("../../assets/images/bai_5_2_sheet_2.png"),
@@ -120,6 +127,8 @@ const lessonEightReferenceTracks: ReferencePracticeTrack[] = [
   {
     id: "8",
     title: "Bài 8",
+    noteSequence:
+      "D2 F2 A G A C2 D2\nD2 F2 A G A C2 D2\nD2 F2 D2 D2 D2 F2 F C2\nF C2 F C2 D2 A D2\nA G F G A D\nC2 A C2 E2 D2 C2 D2",
     sheets: [
       require("../../assets/images/bai_8_sheet_1.png"),
       require("../../assets/images/bai_8_sheet_2.png"),
@@ -815,9 +824,13 @@ export default function NotePracticeScreen() {
       selectedRecordedFile?.name ||
       (isMouthPlacementLesson
         ? `flute-sound-${Date.now()}.m4a`
+        : isReferencePracticeLesson
+        ? `practice-${selectedReferenceTrack.id}-${Date.now()}.m4a`
         : `note-${targetNote}-${Date.now()}.m4a`);
     const analysisMessage = isMouthPlacementLesson
       ? "Phân tích bản ghi người học thổi sáo. Chỉ cần đánh giá người học đã tạo được âm thanh sáo rõ hay chưa, âm có bị toàn tiếng gió hoặc quá yếu không. Nhận xét ngắn gọn bằng tiếng Việt và đưa 1-2 gợi ý về khẩu hình, hướng hơi nếu cần."
+      : isReferencePracticeLesson
+      ? `Phân tích bản ghi người học thổi sáo theo sheet "${selectedReferenceTrack.title}". Chuỗi nốt mẫu là:\n${selectedReferenceTrack.noteSequence}\nHãy so sánh bản ghi với chuỗi nốt mẫu về đúng/sai cao độ, thứ tự nốt, độ đều hơi và độ liền mạch khi chuyển nốt. Nhận xét ngắn gọn bằng tiếng Việt, nêu 1-2 lỗi chính và 1-2 gợi ý luyện lại. Khi nhắc tên nốt, dùng đúng ký hiệu trong chuỗi mẫu như C, D, E, F, G, A, B, C2, D2, E2.`
       : `Phân tích nốt sáo người học vừa thổi. Nốt mục tiêu là "${targetNoteLabel}". Hãy nhận xét ngắn gọn bằng tiếng Việt về cao độ, độ ổn định và cách cải thiện. Khi nhắc tên nốt trong phần nhận xét, BẮT BUỘC dùng tên tiếng Việt (Đô, Rê, Mi, Pha, Sol, La, Si), tuyệt đối không dùng ký hiệu nhạc lý như C5, D5, E5.`;
 
     analysis.mutate(
