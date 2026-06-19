@@ -11,7 +11,7 @@ import { Testimonials } from '@/components/user/home/Testimonials';
 
 export default function UserHomePage() {
   return (
-    <div className="bg-white min-h-screen text-black font-sans selection:bg-sage-dark/20">
+    <div className="bg-white min-h-screen text-black font-sans selection:bg-sage-dark/20 overflow-x-hidden">
       <Hero />
       <Stats />
       <VisitorCounter />
