@@ -26,7 +26,10 @@ router
   .post(
     verifyToken,
     verifyInstructorOrAdmin,
-    upload.performanceDocuments.array('documents', 10),
+    upload.performanceDocuments.fields([
+      { name: 'documents', maxCount: 10 },
+      { name: 'images', maxCount: 10 },
+    ]),
     validate(createPerformanceSchema),
     performanceController.createOne,
   );
@@ -40,7 +43,10 @@ router
   .patch(
     verifyToken,
     verifyInstructorOrAdmin,
-    upload.performanceDocuments.array('documents', 10),
+    upload.performanceDocuments.fields([
+      { name: 'documents', maxCount: 10 },
+      { name: 'images', maxCount: 10 },
+    ]),
     validate(updatePerformanceSchema),
     performanceController.updateOne,
   )

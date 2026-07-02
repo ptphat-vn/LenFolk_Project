@@ -24,6 +24,10 @@ const performanceSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    imageUrls: {
+      type: [String],
+      default: [],
+    },
     // URL video tiết mục (preview hoặc full tùy theo quyền truy cập)
     videoUrl: {
       type: String,
