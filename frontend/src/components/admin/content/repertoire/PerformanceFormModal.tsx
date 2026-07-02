@@ -18,12 +18,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FormDialog } from '@/components/admin/FormDialog';
-import { Music, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, Music, Loader2, X } from 'lucide-react';
 import { performanceSchema, zodFieldErrors } from '@/schema/form.schema';
 
 type PerformanceFormField =
   | 'title'
   | 'thumbnail'
+  | 'imageUrls'
+  | 'images'
   | 'videoUrl'
   | 'genre'
   | 'duration'
@@ -43,6 +45,8 @@ const EMPTY_FORM: CreatePerformanceInput = {
   title: '',
   description: '',
   thumbnail: '',
+  imageUrls: [],
+  images: [],
   videoUrl: '',
   genre: '',
   isFree: true,
@@ -70,6 +74,8 @@ export function PerformanceFormModal({
         title: performance.title,
         description: performance.description ?? '',
         thumbnail: performance.thumbnail ?? '',
+        imageUrls: performance.imageUrls ?? (performance.thumbnail ? [performance.thumbnail] : []),
+        images: [],
         videoUrl: performance.videoUrl ?? '',
         genre: performance.genre ?? '',
         status: performance.status,
@@ -281,8 +287,61 @@ export function PerformanceFormModal({
               {renderFieldError('documents')}
             </div>
 
+            <div className="col-span-2 space-y-2">
+              <Label>Hình ảnh tiết mục</Label>
+              {(form.imageUrls?.length ?? 0) > 0 && (
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
+                  {form.imageUrls!.map((url) => (
+                    <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200">
+                      <img src={url} alt="Ảnh tiết mục" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => set('imageUrls', (form.imageUrls ?? []).filter((u) => u !== url))}
+                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {(form.images?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {form.images!.map((file, i) => (
+                    <span key={`new-${i}`} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] text-[#2d6a4f]">
+                      <ImageIcon className="h-3 w-3" />
+                      <span className="max-w-32 truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => set('images', (form.images ?? []).filter((_, idx) => idx !== i))}
+                        className="text-[#2d6a4f]/70 hover:text-[#2d6a4f]"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <Input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length) set('images', [...(form.images ?? []), ...files]);
+                  e.target.value = '';
+                }}
+              />
+              <p className="text-[11px] text-gray-500">
+                Có thể chọn nhiều ảnh. Ảnh đầu tiên sẽ được dùng làm thumbnail nếu chưa nhập URL riêng.
+              </p>
+              {renderFieldError('images')}
+            </div>
+
             <div className="col-span-2 space-y-1.5">
-              <Label>Ảnh thumbnail (URL)</Label>
+              <Label>Ảnh thumbnail (URL, tùy chọn)</Label>
               <Input
                 value={form.thumbnail ?? ''}
                 onChange={(e) => set('thumbnail', e.target.value)}

@@ -12,6 +12,8 @@ import {
   ArrowLeft,
   Loader2,
   UploadCloud,
+  Image as ImageIcon,
+  X,
   Clock,
   CheckCircle2,
 } from 'lucide-react';
@@ -40,6 +42,10 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [keptImageUrls, setKeptImageUrls] = useState<string[]>(
+    initialData?.imageUrls ?? (initialData?.thumbnail ? [initialData.thumbnail] : []),
+  );
 
   const {
     register,
@@ -56,6 +62,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
       isFree: initialData?.isFree ?? false,
       videoUrl: initialData?.videoUrl || '',
       thumbnail: initialData?.thumbnail || '',
+      imageUrls: keptImageUrls,
       adminCommissionPercentage: initialData?.adminCommissionPercentage ?? 30,
       price: initialData?.price ?? undefined,
     },
@@ -69,6 +76,8 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
     const payload: CreatePerformanceInput = {
       ...data,
       documents: documentFiles.length > 0 ? documentFiles : undefined,
+      imageUrls: keptImageUrls,
+      images: imageFiles.length > 0 ? imageFiles : undefined,
     };
     try {
       if (initialData) {
@@ -226,6 +235,59 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
           </div>
         </div>
 
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">
+            Hình ảnh tiết mục
+          </label>
+          {keptImageUrls.length > 0 && (
+            <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
+              {keptImageUrls.map((url) => (
+                <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200">
+                  <img src={url} alt="Ảnh tiết mục" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setKeptImageUrls((prev) => prev.filter((item) => item !== url))}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {imageFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {imageFiles.map((file, index) => (
+                <span key={`${file.name}-${index}`} className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] text-blue-700">
+                  <ImageIcon className="h-3 w-3" />
+                  <span className="max-w-32 truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setImageFiles((prev) => prev.filter((_, i) => i !== index))}
+                    className="text-blue-700/70 hover:text-blue-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length) setImageFiles((prev) => [...prev, ...files]);
+              e.target.value = '';
+            }}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700"
+          />
+          <p className="text-[11px] text-gray-400">
+            Có thể chọn nhiều ảnh. Ảnh đầu tiên sẽ được dùng làm thumbnail nếu chưa nhập URL riêng.
+          </p>
+        </div>
         {/* Video URL */}
         <div className="space-y-1.5">
           <label className="text-sm font-semibold text-gray-700">

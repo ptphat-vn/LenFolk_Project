@@ -90,9 +90,9 @@ export default function RepertoireDetailPage() {
 
       {/* Main Info Card */}
       <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-8 items-start">
-        {performance.thumbnail ? (
+        {(performance.imageUrls?.[0] || performance.thumbnail) ? (
           <div className="w-full md:w-80 aspect-video relative rounded-xl overflow-hidden shadow-sm group">
-            <img src={performance.thumbnail} alt={performance.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img src={(performance.imageUrls?.[0] || performance.thumbnail)!} alt={performance.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <PlayCircle className="w-12 h-12 text-white" />
             </div>
@@ -157,7 +157,7 @@ export default function RepertoireDetailPage() {
               src={performance.videoUrl} 
               controls 
               className="w-full h-full object-contain"
-              poster={performance.thumbnail}
+              poster={(performance.imageUrls?.[0] || performance.thumbnail) || undefined}
             >
               Trình duyệt của bạn không hỗ trợ thẻ video.
             </video>

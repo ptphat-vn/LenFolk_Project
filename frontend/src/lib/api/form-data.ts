@@ -8,13 +8,11 @@ export function toFormData(body: Record<string, unknown>) {
     if (value === undefined || value === null) return;
 
     if (Array.isArray(value)) {
-      value.forEach((item) => {
-        if (isFile(item)) {
-          formData.append(key, item);
-        } else {
-          formData.append(key, String(item));
-        }
-      });
+      if (value.length > 0 && value.every((item) => isFile(item))) {
+        value.forEach((item) => formData.append(key, item));
+      } else {
+        formData.append(key, JSON.stringify(value));
+      }
       return;
     }
 
