@@ -15,6 +15,18 @@ function mapUploadedDocuments(files = []) {
   }));
 }
 
+function getUploadedFiles(files, field) {
+  if (!files) return [];
+  if (Array.isArray(files)) return field === 'documents' ? files : [];
+  return Array.isArray(files[field]) ? files[field] : [];
+}
+
+function getStringArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+}
+
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 /**
@@ -102,9 +114,19 @@ exports.getOne = async (req, res, next) => {
 exports.createOne = async (req, res, next) => {
   try {
     const performanceData = { ...req.body };
-    const uploadedDocuments = mapUploadedDocuments(req.files);
+    const uploadedDocuments = mapUploadedDocuments(getUploadedFiles(req.files, 'documents'));
+    const uploadedImages = getUploadedFiles(req.files, 'images').map((file) => file.path);
     if (uploadedDocuments.length > 0) {
       performanceData.documents = uploadedDocuments;
+    }
+    if (uploadedImages.length > 0) {
+      performanceData.imageUrls = [
+        ...getStringArray(performanceData.imageUrls),
+        ...uploadedImages,
+      ];
+      if (!performanceData.thumbnail) {
+        performanceData.thumbnail = performanceData.imageUrls[0];
+      }
     }
 
     if (req.user.role === 'instructor') {
@@ -153,15 +175,32 @@ exports.updateOne = async (req, res, next) => {
     }
 
     const before = performance.toObject();
-    const uploadedDocuments = mapUploadedDocuments(req.files);
+    const uploadedDocuments = mapUploadedDocuments(getUploadedFiles(req.files, 'documents'));
+    const uploadedImages = getUploadedFiles(req.files, 'images').map((file) => file.path);
+    const setFields = { ...req.body };
+    const pushFields = {};
+
+    if (uploadedDocuments.length > 0) {
+      pushFields.documents = { $each: uploadedDocuments };
+    }
+    if (uploadedImages.length > 0) {
+      const keptImages =
+        setFields.imageUrls !== undefined
+          ? getStringArray(setFields.imageUrls)
+          : getStringArray(performance.imageUrls);
+      setFields.imageUrls = [...keptImages, ...uploadedImages];
+      if (!setFields.thumbnail) {
+        setFields.thumbnail = setFields.imageUrls[0];
+      }
+    }
 
     const updatePayload =
-      uploadedDocuments.length > 0
+      Object.keys(pushFields).length > 0
         ? {
-            ...(Object.keys(req.body).length > 0 ? { $set: req.body } : {}),
-            $push: { documents: { $each: uploadedDocuments } },
+            ...(Object.keys(setFields).length > 0 ? { $set: setFields } : {}),
+            $push: pushFields,
           }
-        : req.body;
+        : setFields;
 
     const updated = await Performance.findByIdAndUpdate(req.params.id, updatePayload, {
       returnDocument: 'after',

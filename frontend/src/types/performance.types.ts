@@ -17,6 +17,7 @@ export interface Performance {
   title: string;
   description?: string;
   thumbnail?: string;
+  imageUrls?: string[];
   videoUrl?: string;
   documents?: PerformanceDocument[];
   isFree: boolean;
@@ -38,6 +39,8 @@ export interface CreatePerformanceInput {
   title: string;
   description?: string;
   thumbnail?: string;
+  imageUrls?: string[];
+  images?: File[];
   videoUrl?: string;
   documents?: File[];
   isFree?: boolean;
