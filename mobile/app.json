@@ -23,6 +23,8 @@
       "package": "com.lenfolk.lenfolkapp",
       "permissions": [
         "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
@@ -62,6 +64,12 @@
       "eas": {
         "projectId": "b13d4903-2914-4419-8f65-7abc639ec11c"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b13d4903-2914-4419-8f65-7abc639ec11c"
     }
   }
 }
