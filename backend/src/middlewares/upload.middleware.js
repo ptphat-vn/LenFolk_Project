@@ -54,12 +54,21 @@ const lessonMaterialStorage = new CloudinaryStorage({
   },
 });
 
-const performanceDocumentStorage = new CloudinaryStorage({
+const performanceMaterialStorage = new CloudinaryStorage({
   cloudinary,
-  params: {
-    folder: 'lenfolk/performance-documents',
-    resource_type: 'raw',
-    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'zip'],
+  params: (req, file) => {
+    if (file.fieldname === 'images') {
+      return {
+        folder: 'lenfolk/performance-images',
+        resource_type: 'image',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      };
+    }
+    return {
+      folder: 'lenfolk/performance-documents',
+      resource_type: 'raw',
+      allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'zip'],
+    };
   },
 });
 
@@ -115,6 +124,13 @@ const lessonMaterialFileFilter = (req, file, cb) => {
 };
 
 const documentFileFilter = (req, file, cb) => {
+  if (file.fieldname === 'images') {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed for performance images'));
+    }
+    return cb(null, true);
+  }
+
   const allowedMimeTypes = [
     'application/pdf',
     'application/msword',
@@ -154,7 +170,7 @@ upload.lessonMaterial = multer({
   limits: { fileSize: 500 * 1024 * 1024 },
 });
 upload.performanceDocuments = multer({
-  storage: performanceDocumentStorage,
+  storage: performanceMaterialStorage,
   fileFilter: documentFileFilter,
   limits: { fileSize: 50 * 1024 * 1024 },
 });

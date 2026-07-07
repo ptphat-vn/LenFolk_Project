@@ -106,10 +106,12 @@ export default function InstructorPerformancesPage() {
       header: 'Tiết mục',
       render: (p) => (
         <div className="flex items-center gap-3">
-          {p.thumbnail ? (
+          {(p.imageUrls?.[0] || p.thumbnail) ? (
             <Image
-              src={p.thumbnail}
+              src={(p.imageUrls?.[0] || p.thumbnail)!}
               alt={p.title}
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-md object-cover"
             />
           ) : (

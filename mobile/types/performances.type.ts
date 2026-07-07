@@ -20,6 +20,7 @@ export type Performance = {
   title: string;
   description: string | null;
   thumbnail: string | null;
+  imageUrls?: string[];
   videoUrl: string | null;
   documents: PerformanceDocument[];
   isFree: boolean;
@@ -40,6 +41,8 @@ export type CreatePerformancePayload = {
   title: string;
   description?: string;
   thumbnail?: string;
+  imageUrls?: string[];
+  images?: MobileImageFile[];
   videoUrl?: string;
   isFree?: boolean;
   genre?: string;
@@ -47,4 +50,10 @@ export type CreatePerformancePayload = {
   price?: number;
   currency?: "VND" | "USD";
   tags?: string[];
+};
+
+export type MobileImageFile = {
+  uri: string;
+  name: string;
+  type: string;
 };
