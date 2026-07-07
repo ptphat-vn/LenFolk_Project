@@ -2,6 +2,7 @@ import React from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,9 +15,11 @@ import {
 import { Href, Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import SafeScreen from "@/components/SafeScreen";
 import { useCreatePerformance } from "@/hooks/performance/use-create-performance";
 import { useAuthStore } from "@/store/authStore";
+import { MobileImageFile } from "@/types/performances.type";
 
 const parseNumber = (value: string) => {
   const normalized = value.replace(/[^\d]/g, "");
@@ -30,6 +33,7 @@ export default function CreatePerformanceScreen() {
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [thumbnail, setThumbnail] = React.useState("");
+  const [selectedImages, setSelectedImages] = React.useState<MobileImageFile[]>([]);
   const [videoUrl, setVideoUrl] = React.useState("");
   const [genre, setGenre] = React.useState("");
   const [duration, setDuration] = React.useState("");
@@ -38,6 +42,38 @@ export default function CreatePerformanceScreen() {
   const [isFree, setIsFree] = React.useState(false);
 
   const canManage = user?.role === "instructor" || user?.role === "admin";
+  const pickImages = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Quyền truy cập",
+        "Bạn cần cấp quyền truy cập thư viện ảnh để thêm hình tác phẩm.",
+      );
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 10,
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const nextImages = result.assets.map((asset, index) => ({
+          uri: asset.uri,
+          name:
+            asset.fileName ||
+            `performance-${Date.now()}-${index}.${asset.uri.split(".").pop() || "jpg"}`,
+          type: asset.mimeType || "image/jpeg",
+        }));
+        setSelectedImages((current) => [...current, ...nextImages].slice(0, 10));
+      }
+    } catch {
+      Alert.alert("Lỗi", "Không thể chọn ảnh từ thư viện");
+    }
+  };
 
   const submit = () => {
     const cleanTitle = title.trim();
@@ -57,6 +93,7 @@ export default function CreatePerformanceScreen() {
         title: cleanTitle,
         description: description.trim() || undefined,
         thumbnail: thumbnail.trim() || undefined,
+        images: selectedImages.length > 0 ? selectedImages : undefined,
         videoUrl: videoUrl.trim() || undefined,
         genre: genre.trim() || undefined,
         duration: duration.trim() ? Number(duration.trim()) * 60 : undefined,
@@ -158,11 +195,47 @@ export default function CreatePerformanceScreen() {
                 <TextInput
                   value={thumbnail}
                   onChangeText={setThumbnail}
-                  placeholder="URL ảnh thumbnail"
+                  placeholder="URL ảnh thumbnail (tùy chọn)"
                   placeholderTextColor="#9CA3AF"
                   autoCapitalize="none"
                   className="mb-3 rounded-2xl bg-[#F8F9FA] px-4 py-3 text-sm text-charcoal"
                 />
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={pickImages}
+                  className="mb-3 flex-row items-center justify-center gap-2 rounded-2xl border border-dashed border-[#8E9E6E] bg-[#E2E8D3] px-4 py-3"
+                >
+                  <Ionicons name="images-outline" size={18} color="#687451" />
+                  <Text className="text-sm font-bold text-[#687451]">
+                    {selectedImages.length > 0
+                      ? `Đã chọn ${selectedImages.length} ảnh`
+                      : "Chọn nhiều ảnh"}
+                  </Text>
+                </TouchableOpacity>
+                {selectedImages.length > 0 && (
+                  <View className="mb-3 flex-row flex-wrap gap-2">
+                    {selectedImages.map((image, index) => (
+                      <View key={`${image.uri}-${index}`} className="relative">
+                        <Image
+                          source={{ uri: image.uri }}
+                          style={{ width: 72, height: 72, borderRadius: 18 }}
+                          resizeMode="cover"
+                        />
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() =>
+                            setSelectedImages((current) =>
+                              current.filter((_, itemIndex) => itemIndex !== index),
+                            )
+                          }
+                          className="absolute -right-1 -top-1 h-6 w-6 items-center justify-center rounded-full bg-[#10120C]"
+                        >
+                          <Ionicons name="close" size={14} color="white" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
                 <TextInput
                   value={videoUrl}
                   onChangeText={setVideoUrl}

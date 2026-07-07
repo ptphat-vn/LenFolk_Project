@@ -100,6 +100,7 @@ export default function PerformanceDetailScreen() {
     title: params.title || "Tác phẩm",
     description: null,
     thumbnail: params.thumbnail || null,
+    imageUrls: params.thumbnail ? [params.thumbnail] : [],
     videoUrl: null,
     documents: [],
     isFree: params.isFree === "true" || fallbackPrice <= 0,
@@ -117,6 +118,7 @@ export default function PerformanceDetailScreen() {
     updatedAt: "",
   };
   const hasAccess = performance.isFree || isOwned || !!detail;
+  const performanceImage = detail?.imageUrls?.[0] || performance.thumbnail;
   const youtubeVideoId = React.useMemo(
     () => getYoutubeVideoId(detail?.videoUrl),
     [detail?.videoUrl],
@@ -246,9 +248,9 @@ export default function PerformanceDetailScreen() {
               allowsPictureInPicture
             />
           </View>
-        ) : performance.thumbnail ? (
+        ) : performanceImage ? (
           <Image
-            source={{ uri: performance.thumbnail }}
+            source={{ uri: performanceImage }}
             style={{ width: "100%", height: 220, borderRadius: 28 }}
             resizeMode="cover"
           />

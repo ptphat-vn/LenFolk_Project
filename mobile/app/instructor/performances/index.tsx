@@ -126,7 +126,7 @@ export default function InstructorPerformancesScreen() {
                       title: item.title,
                       price: String(item.price || 0),
                       currency: item.currency,
-                      thumbnail: item.thumbnail || "",
+                      thumbnail: item.imageUrls?.[0] || item.thumbnail || "",
                       isFree: item.isFree ? "true" : "false",
                     },
                   } as unknown as Href)

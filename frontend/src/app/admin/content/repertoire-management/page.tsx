@@ -152,8 +152,8 @@ export default function RepertoireManagementPage() {
       header: 'Tiết mục',
       render: (perf) => (
         <div className="flex items-center gap-3">
-          {perf.thumbnail ? (
-            <Image src={perf.thumbnail} alt={perf.title} className="w-12 h-8 object-cover rounded shadow-sm" />
+          {(perf.imageUrls?.[0] || perf.thumbnail) ? (
+            <Image src={(perf.imageUrls?.[0] || perf.thumbnail)!} alt={perf.title} width={48} height={32} className="w-12 h-8 object-cover rounded shadow-sm" />
           ) : (
             <div className="w-12 h-8 bg-gray-100 flex items-center justify-center rounded">
               <PlayCircle className="w-4 h-4 text-gray-400" />
