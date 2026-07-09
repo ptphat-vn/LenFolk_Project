@@ -21,7 +21,17 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded && !isCheckingAuth) {
       SplashScreen.hideAsync();
+      return;
     }
+
+    const timeout = setTimeout(() => {
+      console.warn(
+        `Splash timeout sau 5s — fontsLoaded=${fontsLoaded}, isCheckingAuth=${isCheckingAuth}`,
+      );
+      SplashScreen.hideAsync();
+    }, 5000);
+
+    return () => clearTimeout(timeout);
   }, [fontsLoaded, isCheckingAuth]);
 
   useEffect(() => {
