@@ -3,8 +3,7 @@ import SlideToConfirm from '@/components/SlideToConfirm';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { gsap } from 'gsap';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -13,52 +12,60 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const [slide, setSlide] = useState(0);
-  const splashMotion = useRef({ y: 28, scale: 0.9, opacity: 0 });
-  const [mascotStyle, setMascotStyle] = useState({
-    transform: [{ translateY: 28 }, { scale: 0.9 }],
-    opacity: 0,
-  });
+  const mascotY = useSharedValue(28);
+  const mascotScale = useSharedValue(0.9);
+  const mascotOpacity = useSharedValue(0);
+
+  const mascotStyle = useAnimatedStyle(() => ({
+    opacity: mascotOpacity.value,
+    transform: [
+      { translateY: mascotY.value },
+      { scale: mascotScale.value },
+    ],
+  }));
 
   useEffect(() => {
     if (slide !== 0) return;
-    const motion = splashMotion.current;
 
-    const syncStyle = () => {
-      setMascotStyle({
-        transform: [{ translateY: motion.y }, { scale: motion.scale }],
-        opacity: motion.opacity,
-      });
-    };
-
-    const timeline = gsap.timeline();
-
-    timeline.to(motion, {
-      y: 0,
-      scale: 1,
-      opacity: 1,
-      duration: 0.95,
-      ease: 'power3.out',
-      onUpdate: syncStyle,
+    mascotScale.value = withTiming(1, {
+      duration: 950,
+      easing: Easing.out(Easing.cubic),
     });
-
-    timeline.to(motion, {
-      y: -14,
-      duration: 1.8,
-      ease: 'sine.inOut',
-      yoyo: true,
-      repeat: -1,
-      onUpdate: syncStyle,
+    mascotOpacity.value = withTiming(1, {
+      duration: 950,
+      easing: Easing.out(Easing.cubic),
     });
+    mascotY.value = withSequence(
+      withTiming(0, { duration: 950, easing: Easing.out(Easing.cubic) }),
+      withRepeat(
+        withTiming(-14, {
+          duration: 1800,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        -1,
+        true,
+      ),
+    );
 
     return () => {
-      timeline.kill();
-      gsap.killTweensOf(motion);
+      cancelAnimation(mascotY);
+      cancelAnimation(mascotScale);
+      cancelAnimation(mascotOpacity);
     };
   }, [slide]);
 
@@ -112,7 +119,7 @@ export default function OnboardingScreen() {
               <FontAwesome5 name="music" size={22} color="#F4E0AC" />
             </View>
 
-            <Image
+            <Animated.Image
               source={require('../../assets/images/mascot 3d.png')}
               style={[
                 {
