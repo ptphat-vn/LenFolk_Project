@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
             </View>
 
             <Animated.Image
-              source={require('../../assets/images/mascot 3d.png')}
+              source={require('../../assets/images/mascot_3d.png')}
               style={[
                 {
                   width: width * 0.85,
