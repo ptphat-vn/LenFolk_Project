@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { secureStorage } from "@/lib/secure-storage";
 import { User } from "@/types/users.type";
+import { API_URL } from "@/constants/api";
 
 type AuthState = {
   user: User | null;
@@ -14,7 +15,12 @@ type AuthState = {
   updateUser: (updatedFields: Partial<User>) => Promise<void>;
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+};
+
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   refreshToken: null,
@@ -38,14 +44,31 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   checkAuth: async () => {
     try {
-      const [user, token, refreshToken] = await Promise.all([
+      const [storedUser, token, refreshToken] = await Promise.all([
         secureStorage.getItem("user"),
         secureStorage.getItem("token"),
         secureStorage.getItem("refreshToken"),
       ]);
 
-      if (user && token) {
-        set({ user: JSON.parse(user), token, refreshToken });
+      if (storedUser && token) {
+        const cachedUser = JSON.parse(storedUser) as User;
+        set({ user: cachedUser, token, refreshToken });
+
+        try {
+          const response = await fetch(API_URL + "/users/me", {
+            headers: { Authorization: "Bearer " + token },
+          });
+
+          if (response.ok) {
+            const body = (await response.json()) as ApiResponse<User>;
+            if (body.data) {
+              set({ user: body.data });
+              await secureStorage.setItem("user", JSON.stringify(body.data));
+            }
+          }
+        } catch (error) {
+          console.warn("Không thể đồng bộ người dùng khi khởi động", error);
+        }
       }
     } finally {
       set({ isCheckingAuth: false });
@@ -53,11 +76,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   updateUser: async (updatedFields) => {
-    set((state) => {
-      if (!state.user) return state;
-      const mergedUser = { ...state.user, ...updatedFields };
-      secureStorage.setItem("user", JSON.stringify(mergedUser)).catch(console.error);
-      return { user: mergedUser };
-    });
+    const currentUser = get().user;
+    if (!currentUser) return;
+
+    const mergedUser = { ...currentUser, ...updatedFields };
+    set({ user: mergedUser });
+    await secureStorage.setItem("user", JSON.stringify(mergedUser));
   },
 }));
