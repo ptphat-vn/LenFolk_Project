@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { useAuthStore } from "../store/authStore";
 import { useEffect } from "react";
 import { QueryProvider } from "../providers/query";
+import { PushNotificationManager } from "../components/PushNotificationManager";
 import "../global.css";
 
 SplashScreen.preventAutoHideAsync();
@@ -43,6 +44,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
+        <PushNotificationManager />
         <SafeAreaProvider>
           <Stack
             screenOptions={{

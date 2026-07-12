@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React from "react";
 import {
   ActivityIndicator,
@@ -121,7 +122,7 @@ export default function CreatePerformanceScreen() {
         onError: (error: any) => {
           Alert.alert(
             "Không thể tạo tác phẩm",
-            error?.response?.data?.message || "Vui lòng kiểm tra dữ liệu và thử lại.",
+            getApiErrorMessage(error, "Vui lòng kiểm tra dữ liệu và thử lại."),
           );
         },
       },
@@ -329,3 +330,4 @@ export default function CreatePerformanceScreen() {
     </SafeScreen>
   );
 }
+

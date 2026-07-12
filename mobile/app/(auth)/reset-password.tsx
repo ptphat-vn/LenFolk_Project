@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -38,7 +39,7 @@ export default function ResetPasswordScreen() {
         onError: (error: any) => {
           Alert.alert(
             "Không thể đặt lại mật khẩu",
-            error?.response?.data?.message || "Mã không đúng hoặc đã hết hạn. Vui lòng thử lại.",
+            getApiErrorMessage(error, "Mã không đúng hoặc đã hết hạn. Vui lòng thử lại."),
           );
         },
       },
@@ -148,3 +149,4 @@ export default function ResetPasswordScreen() {
     </KeyboardAvoidingView>
   );
 }
+

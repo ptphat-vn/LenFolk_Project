@@ -1,6 +1,6 @@
 import { AnimatedBlock } from "@/components/AnimatedPage";
 import { useRegisterInstructor } from "@/hooks/auth/use-register-instructor";
-import { AxiosError } from "axios";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -17,24 +17,7 @@ import {
   View,
 } from "react-native";
 
-type ApiErrorResponse = {
-  message?: string;
-};
-
 const optionalValue = (value: string) => value.trim() || undefined;
-
-const getErrorMessage = (error: unknown) => {
-  if (error instanceof AxiosError) {
-    return (
-      (error.response?.data as ApiErrorResponse | undefined)?.message ??
-      "Không thể gửi đơn đăng ký. Vui lòng thử lại."
-    );
-  }
-
-  return error instanceof Error
-    ? error.message
-    : "Không thể gửi đơn đăng ký. Vui lòng thử lại.";
-};
 
 export default function RegisterInstructorScreen() {
   const router = useRouter();
@@ -103,7 +86,10 @@ export default function RegisterInstructorScreen() {
           ]);
         },
         onError: (error) => {
-          Alert.alert("Đăng ký thất bại", getErrorMessage(error));
+          Alert.alert(
+            "Đăng ký thất bại",
+            getApiErrorMessage(error, "Không thể gửi đơn đăng ký. Vui lòng thử lại."),
+          );
         },
       },
     );
@@ -269,3 +255,4 @@ function FormField({ icon, ...props }: FormFieldProps) {
     </View>
   );
 }
+

@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
@@ -26,6 +27,7 @@ type PackageTab = "foundation" | "technique";
 // Không hiển thị nguyên văn message backend cho người dùng.
 function friendlyPurchaseError(raw?: string): string {
   const msg = (raw || "").toLowerCase();
+  if (msg.includes("không thể kết nối đến máy chủ")) return raw!;
   if (msg.includes("not configured"))
     return "Hệ thống thanh toán đang bảo trì. Vui lòng thử lại sau.";
   if (msg.includes("already have active access") || msg.includes("already have access"))
@@ -181,7 +183,7 @@ export default function SubscriptionScreen() {
           onError: (error: any) => {
             Alert.alert(
               "Không thể tạo giao dịch",
-              friendlyPurchaseError(error?.response?.data?.message),
+              friendlyPurchaseError(getApiErrorMessage(error)),
             );
           },
         }
@@ -601,3 +603,5 @@ export default function SubscriptionScreen() {
     </SafeScreen>
   );
 }
+
+

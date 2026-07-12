@@ -31,6 +31,7 @@ router.use('/lessons', require('./lesson.route'));
 router.use('/instructor-profiles', require('./instructor-profile.route'));
 router.use('/badges', require('./badge.route'));
 router.use('/notifications', require('./notification.route'));
+router.use('/push-tokens', require('./push-token.route'));
 router.use('/progress', require('./progress.route'));
 router.use('/practice-sessions', require('./practice-session.route'));
 router.use('/streaks', require('./streak.route'));

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import Animated, {
   cancelAnimation,
@@ -82,7 +83,7 @@ export default function LoginScreen() {
         onError: (error) => {
           Alert.alert(
             "Đăng nhập thất bại",
-            error instanceof Error ? error.message : "Vui lòng thử lại."
+            getApiErrorMessage(error, "Không thể đăng nhập. Vui lòng thử lại.")
           );
         },
       }
@@ -287,3 +288,5 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+
