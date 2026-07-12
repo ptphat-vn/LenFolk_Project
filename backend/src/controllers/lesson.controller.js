@@ -1,6 +1,20 @@
 const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
 const { hasCourseAccess } = require('../utils/access');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
+const { sendToUsers } = require('../services/push-notification.service');
+
+async function announcePublishedLesson(lesson) {
+  const users = await User.find({ role: 'user', isActive: true }).select('_id').lean();
+  if (!users.length) return;
+  const userIds = users.map((user) => user._id);
+  const title = 'Có bài học mới';
+  const body = lesson.title;
+  const data = { type: 'lesson', lessonId: String(lesson._id), url: `/lesson/${lesson._id}` };
+  await Notification.insertMany(userIds.map((userId) => ({ userId, title, body, type: 'lesson', data })));
+  await sendToUsers(userIds, { title, body, data });
+}
 
 // Only show published lessons; admin/instructor can see all
 exports.getAll = async (req, res, next) => {
@@ -177,6 +191,10 @@ exports.createOne = async (req, res, next) => {
       $inc: { totalLessons: 1 },
     });
 
+    if (lesson.status === 'published') {
+      announcePublishedLesson(lesson).catch((error) => console.error('Failed to announce lesson:', error));
+    }
+
     res.status(201).json({
       success: true,
       message: 'Tạo bài học thành công',
@@ -189,6 +207,7 @@ exports.createOne = async (req, res, next) => {
 
 exports.updateOne = async (req, res, next) => {
   try {
+    const previous = await Lesson.findById(req.params.id).select('status');
     if (req.files?.video?.[0]) {
       req.body.videoUrl = req.files.video[0].path;
     }
@@ -213,6 +232,9 @@ exports.updateOne = async (req, res, next) => {
       return res
         .status(404)
         .json({ success: false, message: 'Không tìm thấy bài học' });
+    if (previous?.status !== 'published' && doc.status === 'published') {
+      announcePublishedLesson(doc).catch((error) => console.error('Failed to announce lesson:', error));
+    }
     res
       .status(200)
       .json({

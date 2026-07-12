@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState } from "react";
 import {
   View,
@@ -160,7 +161,7 @@ export default function EditProfileScreen() {
     } catch (error: any) {
       Alert.alert(
         "Lỗi",
-        error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật hồ sơ",
+        getApiErrorMessage(error, "Có lỗi xảy ra khi cập nhật hồ sơ"),
       );
     }
   };
@@ -389,3 +390,4 @@ export default function EditProfileScreen() {
     </SafeScreen>
   );
 }
+

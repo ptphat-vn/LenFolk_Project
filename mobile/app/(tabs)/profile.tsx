@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Alert, View, Text, ScrollView, TouchableOpacity, Switch, Image } from "react-native";
+import { Alert, View, Text, ScrollView, TouchableOpacity, Image, Platform } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -19,11 +20,15 @@ import SafeScreen from "../../components/SafeScreen";
 import NotificationButton from "@/components/NotificationButton";
 import { useGetMe } from "@/hooks/user/use-get-me";
 import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
+import { secureStorage } from "@/lib/secure-storage";
+import axios from "@/setup/axios";
 
 export default function ProfileTabScreen() {
   const router = useRouter();
   const scrollRef = useScrollToTopOnFocus();
-  const [reminders, setReminders] = useState(true);
+  const [studyReminderHour, setStudyReminderHour] = useState(19);
+  const [studyReminderMinute, setStudyReminderMinute] = useState(0);
+  const [showStudyTimePicker, setShowStudyTimePicker] = useState(false);
   const logoutMutation = useLogout();
   const logoutOffset = useSharedValue(0);
   const user = useAuthStore((state) => state.user);
@@ -52,6 +57,38 @@ export default function ProfileTabScreen() {
     }
   }, [freshUser, updateUser]);
 
+  React.useEffect(() => {
+    Promise.all([secureStorage.getItem("studyReminderHour"), secureStorage.getItem("studyReminderMinute")]).then(([value, minute]) => {
+      if (value !== null && Number.isInteger(Number(value))) {
+        setStudyReminderHour(Number(value));
+      }
+      if (minute !== null && Number.isInteger(Number(minute))) {
+        setStudyReminderMinute(Number(minute));
+      }
+    });
+  }, []);
+
+  const handleStudyTimeChange = async (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === "android") setShowStudyTimePicker(false);
+    if (event.type === "dismissed" || !selected) return;
+    const hour = selected.getHours();
+    const minute = selected.getMinutes();
+    setStudyReminderHour(hour);
+    setStudyReminderMinute(minute);
+    await Promise.all([
+      secureStorage.setItem("studyReminderHour", String(hour)),
+      secureStorage.setItem("studyReminderMinute", String(minute)),
+    ]);
+    const expoPushToken = await secureStorage.getItem("expoPushToken");
+    if (!expoPushToken) return;
+    axios.post("/push-tokens", {
+      token: expoPushToken,
+      platform: Platform.OS,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Ho_Chi_Minh",
+      studyReminderHour: hour,
+      studyReminderMinute: minute,
+    }).catch(() => Alert.alert("Chưa đồng bộ được", "Giờ nhắc học sẽ được đồng bộ lại khi bạn mở ứng dụng lần sau."));
+  };
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSettled: () => router.replace("/(auth)"),
@@ -253,23 +290,36 @@ export default function ProfileTabScreen() {
               </View>
             </TouchableOpacity> */}
 
-            {/* Item 2: Notifications Switch */}
-            <View className="flex-row justify-between items-center p-4.5 border-b border-white/40 p-4">
+            {/* Item 2: Study reminder time */}
+            <TouchableOpacity
+              onPress={() => setShowStudyTimePicker(true)}
+              className="flex-row justify-between items-center p-4.5 border-b border-white/40 active:bg-white/10 p-4"
+            >
               <View className="min-w-0 flex-row items-center flex-1 pr-4">
                 <View className="w-8 h-8 rounded-full bg-white/40 items-center justify-center mr-3">
                   <Ionicons name="notifications" size={16} color="#8E9E6E" />
                 </View>
                 <Text numberOfLines={2} className="min-w-0 flex-1 text-sm font-bold text-charcoal" style={{ fontFamily: "BeVietnamPro-Medium" }}>
-                  Nhắc nhở hàng ngày
+                  Giờ nhắc học
                 </Text>
               </View>
-              <Switch
-                value={reminders}
-                onValueChange={setReminders}
-                trackColor={{ false: "#D1D5DB", true: "#8E9E6E" }}
-                thumbColor={reminders ? "white" : "#F4F3F4"}
+              <View className="flex-row items-center shrink-0">
+                <Text className="text-xs text-gray-500 font-bold mr-2">
+                  {String(studyReminderHour).padStart(2, "0")}:{String(studyReminderMinute).padStart(2, "0")}
+                </Text>
+                <Ionicons name="time-outline" size={17} color="#6B7280" />
+              </View>
+            </TouchableOpacity>
+
+            {showStudyTimePicker && (
+              <DateTimePicker
+                value={new Date(2020, 0, 1, studyReminderHour, studyReminderMinute)}
+                mode="time"
+                is24Hour
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleStudyTimeChange}
               />
-            </View>
+            )}
 
             {/* Item 3: Mic Sensitivity */}
             <TouchableOpacity

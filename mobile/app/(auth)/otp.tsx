@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState, useEffect } from "react";
 import { Alert, View, Text, TouchableOpacity } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -49,7 +50,7 @@ export default function OtpScreen() {
         Alert.alert("Đã gửi lại mã", `Mã mới đã được gửi tới ${email}.`);
       },
       onError: (error: any) => {
-        Alert.alert("Lỗi", error?.response?.data?.message || "Vui lòng thử lại sau.");
+        Alert.alert("Lỗi", getApiErrorMessage(error, "Vui lòng thử lại sau."));
       },
     });
   };
@@ -236,3 +237,4 @@ export default function OtpScreen() {
     </View>
   );
 }
+

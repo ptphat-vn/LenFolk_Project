@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -132,7 +133,7 @@ export default function CompleteProfileScreen() {
     } catch (error: any) {
       Alert.alert(
         "Không thể lưu hồ sơ",
-        error?.response?.data?.message || "Vui lòng thử lại sau.",
+        getApiErrorMessage(error, "Vui lòng thử lại sau."),
       );
     }
   };
@@ -363,3 +364,4 @@ export default function CompleteProfileScreen() {
     </SafeScreen>
   );
 }
+

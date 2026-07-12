@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { Href, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRegister } from "@/hooks/auth/use-register";
 import { AnimatedBlock } from "@/components/AnimatedPage";
@@ -37,7 +38,7 @@ export default function SignupScreen() {
         onError: (error) => {
           Alert.alert(
             "Đăng ký thất bại",
-            error instanceof Error ? error.message : "Vui lòng thử lại."
+            getApiErrorMessage(error, "Không thể đăng ký. Vui lòng thử lại.")
           );
         },
       }
@@ -207,3 +208,5 @@ export default function SignupScreen() {
     </KeyboardAvoidingView>
   );
 }
+
+

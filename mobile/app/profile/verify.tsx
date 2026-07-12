@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -63,7 +64,7 @@ export default function AccountVerificationScreen() {
         );
       },
       onError: (error: any) => {
-        Alert.alert("Không gửi được mã", error?.response?.data?.message || "Vui lòng thử lại sau.");
+        Alert.alert("Không gửi được mã", getApiErrorMessage(error, "Vui lòng thử lại sau."));
       },
     });
   };
@@ -99,7 +100,7 @@ export default function AccountVerificationScreen() {
         onError: (error: any) => {
           Alert.alert(
             "Xác thực thất bại",
-            error?.response?.data?.message || "Mã không đúng hoặc đã hết hạn.",
+            getApiErrorMessage(error, "Mã không đúng hoặc đã hết hạn."),
           );
         },
       },
@@ -115,7 +116,7 @@ export default function AccountVerificationScreen() {
         Alert.alert("Đã gửi lại mã", `Mã mới đã được gửi tới ${email}.`);
       },
       onError: (error: any) => {
-        Alert.alert("Không gửi được mã", error?.response?.data?.message || "Vui lòng thử lại sau.");
+        Alert.alert("Không gửi được mã", getApiErrorMessage(error, "Vui lòng thử lại sau."));
       },
     });
   };
@@ -312,3 +313,4 @@ export default function AccountVerificationScreen() {
     </KeyboardAvoidingView>
   );
 }
+

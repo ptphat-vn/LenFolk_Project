@@ -7,6 +7,7 @@ import { useFonts } from "expo-font";
 import { useAuthStore } from "../store/authStore";
 import { useEffect } from "react";
 import { QueryProvider } from "../providers/query";
+import { PushNotificationManager } from "../components/PushNotificationManager";
 import "../global.css";
 
 SplashScreen.preventAutoHideAsync();
@@ -21,7 +22,17 @@ export default function RootLayout() {
   useEffect(() => {
     if (fontsLoaded && !isCheckingAuth) {
       SplashScreen.hideAsync();
+      return;
     }
+
+    const timeout = setTimeout(() => {
+      console.warn(
+        `Splash timeout sau 5s — fontsLoaded=${fontsLoaded}, isCheckingAuth=${isCheckingAuth}`,
+      );
+      SplashScreen.hideAsync();
+    }, 5000);
+
+    return () => clearTimeout(timeout);
   }, [fontsLoaded, isCheckingAuth]);
 
   useEffect(() => {
@@ -33,6 +44,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
+        <PushNotificationManager />
         <SafeAreaProvider>
           <Stack
             screenOptions={{
