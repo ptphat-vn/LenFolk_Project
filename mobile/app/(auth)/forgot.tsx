@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, TextInput, View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
@@ -29,7 +30,7 @@ export default function ForgotChoiceScreen() {
         router.push({ pathname: "/otp", params: { email: value } });
       },
       onError: (error: any) => {
-        Alert.alert("Lỗi", error?.response?.data?.message || "Vui lòng thử lại sau.");
+        Alert.alert("Lỗi", getApiErrorMessage(error, "Vui lòng thử lại sau."));
       },
     });
   };
@@ -144,3 +145,4 @@ export default function ForgotChoiceScreen() {
     </View>
   );
 }
+
