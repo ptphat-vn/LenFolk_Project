@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/lib/api-error";
 import React from "react";
 import {
   ActivityIndicator,
@@ -38,6 +39,7 @@ function getYoutubeVideoId(url: string | null | undefined): string | null {
 
 function friendlyPurchaseError(raw?: string): string {
   const msg = (raw || "").toLowerCase();
+  if (msg.includes("không thể kết nối đến máy chủ")) return raw!;
   if (msg.includes("already")) return "Bạn đã sở hữu tác phẩm này rồi.";
   if (msg.includes("pending")) return "Bạn đang có một đơn thanh toán chờ xử lý.";
   if (msg.includes("coupon")) return "Mã giảm giá không hợp lệ hoặc đã hết hạn.";
@@ -154,7 +156,7 @@ export default function PerformanceDetailScreen() {
         onError: (err: any) => {
           Alert.alert(
             "Không thể tạo giao dịch",
-            friendlyPurchaseError(err?.response?.data?.message),
+            friendlyPurchaseError(getApiErrorMessage(err)),
           );
         },
       },
@@ -463,3 +465,5 @@ export default function PerformanceDetailScreen() {
     </SafeScreen>
   );
 }
+
+
