@@ -4,6 +4,7 @@ const connectDB = require('./src/config/db')
 const logger = require('./src/config/logger')
 const http = require('http')
 const initAiAnalysisWebSocket = require('./src/websocket/ai-analysis.ws')
+const startNotificationScheduler = require('./src/services/notification-scheduler')
 
 const PORT = config.port
 
@@ -19,3 +20,5 @@ server.listen(PORT, () => {
   logger.info(`API docs available at http://localhost:${PORT}/api/docs`);
   logger.info(`AI WebSocket available at ws://localhost:${PORT}/api/ai-analysis/stream`);
 })
+
+startNotificationScheduler()
