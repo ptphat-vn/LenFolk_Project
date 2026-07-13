@@ -2,6 +2,23 @@ const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
 
+class AppError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+    this.isOperational = true;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+// Single source of truth: fileFilter must reject anything Cloudinary's
+// allowed_formats would reject, or the upload succeeds on disk/Cloudinary
+// before the mismatch surfaces as an unhandled 500 further down the chain.
+const PERFORMANCE_IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+
+const getExtension = (filename) => (filename.split('.').pop() || '').toLowerCase();
+
 const avatarStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -61,7 +78,7 @@ const performanceMaterialStorage = new CloudinaryStorage({
       return {
         folder: 'lenfolk/performance-images',
         resource_type: 'image',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
+        allowed_formats: PERFORMANCE_IMAGE_FORMATS,
       };
     }
     return {
@@ -125,8 +142,14 @@ const lessonMaterialFileFilter = (req, file, cb) => {
 
 const documentFileFilter = (req, file, cb) => {
   if (file.fieldname === 'images' || file.fieldname === 'imageUrls') {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed for performance images'));
+    const ext = getExtension(file.originalname);
+    if (!file.mimetype.startsWith('image/') || !PERFORMANCE_IMAGE_FORMATS.includes(ext)) {
+      return cb(
+        new AppError(
+          `Only ${PERFORMANCE_IMAGE_FORMATS.join(', ')} images are allowed for performance images`,
+          400,
+        ),
+      );
     }
     return cb(null, true);
   }
@@ -143,7 +166,7 @@ const documentFileFilter = (req, file, cb) => {
   ];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error('Only document files are allowed for performance uploads'));
+    return cb(new AppError('Only document files are allowed for performance uploads', 400));
   }
   cb(null, true);
 };
@@ -158,31 +181,68 @@ const practiceMediaFileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const upload = multer({ storage: avatarStorage });
-upload.lessonVideo = multer({
-  storage: lessonVideoStorage,
-  fileFilter: videoFileFilter,
-  limits: { fileSize: 500 * 1024 * 1024 },
-});
-upload.lessonMaterial = multer({
-  storage: lessonMaterialStorage,
-  fileFilter: lessonMaterialFileFilter,
-  limits: { fileSize: 500 * 1024 * 1024 },
-});
-upload.performanceDocuments = multer({
-  storage: performanceMaterialStorage,
-  fileFilter: documentFileFilter,
-  limits: { fileSize: 50 * 1024 * 1024 },
-});
-upload.courseThumbnail = multer({
-  storage: courseThumbnailStorage,
-  fileFilter: imageFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-upload.practiceMedia = multer({
-  storage: multer.memoryStorage(),
-  fileFilter: practiceMediaFileFilter,
-  limits: { fileSize: 25 * 1024 * 1024 },
-});
+// multer's own errors (MulterError) and storage-engine errors (e.g. Cloudinary
+// rejecting a file that slipped past fileFilter) are plain Errors without a
+// statusCode, so the global error handler treats them as unknown/500. Wrap
+// every multer entrypoint so upload failures always surface as a 400.
+const normalizeUploadError = (err) => {
+  if (!err || err instanceof AppError) return err;
+  if (err instanceof multer.MulterError) {
+    return new AppError(`Upload error: ${err.message}`, 400);
+  }
+  return new AppError(err.message || 'File upload failed', 400);
+};
+
+const wrapUploadMiddleware = (multerMiddleware) => (req, res, next) => {
+  multerMiddleware(req, res, (err) => {
+    if (err) return next(normalizeUploadError(err));
+    next();
+  });
+};
+
+const wrapUploader = (multerInstance) => {
+  ['single', 'array', 'fields', 'none'].forEach((method) => {
+    const original = multerInstance[method].bind(multerInstance);
+    multerInstance[method] = (...args) => wrapUploadMiddleware(original(...args));
+  });
+  return multerInstance;
+};
+
+const upload = wrapUploader(multer({ storage: avatarStorage }));
+upload.lessonVideo = wrapUploader(
+  multer({
+    storage: lessonVideoStorage,
+    fileFilter: videoFileFilter,
+    limits: { fileSize: 500 * 1024 * 1024 },
+  }),
+);
+upload.lessonMaterial = wrapUploader(
+  multer({
+    storage: lessonMaterialStorage,
+    fileFilter: lessonMaterialFileFilter,
+    limits: { fileSize: 500 * 1024 * 1024 },
+  }),
+);
+upload.performanceDocuments = wrapUploader(
+  multer({
+    storage: performanceMaterialStorage,
+    fileFilter: documentFileFilter,
+    limits: { fileSize: 50 * 1024 * 1024 },
+  }),
+);
+upload.courseThumbnail = wrapUploader(
+  multer({
+    storage: courseThumbnailStorage,
+    fileFilter: imageFileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 },
+  }),
+);
+upload.practiceMedia = wrapUploader(
+  multer({
+    storage: multer.memoryStorage(),
+    fileFilter: practiceMediaFileFilter,
+    limits: { fileSize: 25 * 1024 * 1024 },
+  }),
+);
 
 module.exports = upload;

@@ -140,6 +140,10 @@ exports.createOne = async (req, res, next) => {
     if (req.user.role === 'instructor') {
       performanceData.instructorId = req.user._id;
       performanceData.status = 'pending';
+    } else if (!performanceData.instructorId) {
+      // Admin không chọn instructor cụ thể → gán chính admin làm instructor,
+      // giống hành vi mặc định của Course.createOne.
+      performanceData.instructorId = req.user._id;
     }
 
     const performance = await Performance.create(performanceData);
