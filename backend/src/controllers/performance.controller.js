@@ -115,16 +115,20 @@ exports.createOne = async (req, res, next) => {
   try {
     const performanceData = { ...req.body };
     const uploadedDocuments = mapUploadedDocuments(getUploadedFiles(req.files, 'documents'));
-    const uploadedImages = getUploadedFiles(req.files, 'images').map((file) => file.path);
+    const uploadedImages = [
+      ...getUploadedFiles(req.files, 'imageUrls'),
+      ...getUploadedFiles(req.files, 'images'),
+    ].map((file) => file.path);
     if (uploadedDocuments.length > 0) {
       performanceData.documents = uploadedDocuments;
     }
     if (uploadedImages.length > 0) {
       performanceData.imageUrls = [
-        ...getStringArray(performanceData.imageUrls),
+        ...getStringArray(performanceData.existingImageUrls ?? performanceData.imageUrls),
         ...uploadedImages,
       ];
     }
+    delete performanceData.existingImageUrls;
 
     if (req.user.role === 'instructor') {
       performanceData.instructorId = req.user._id;
@@ -173,20 +177,32 @@ exports.updateOne = async (req, res, next) => {
 
     const before = performance.toObject();
     const uploadedDocuments = mapUploadedDocuments(getUploadedFiles(req.files, 'documents'));
-    const uploadedImages = getUploadedFiles(req.files, 'images').map((file) => file.path);
+    const uploadedImages = [
+      ...getUploadedFiles(req.files, 'imageUrls'),
+      ...getUploadedFiles(req.files, 'images'),
+    ].map((file) => file.path);
     const setFields = { ...req.body };
     const pushFields = {};
 
     if (uploadedDocuments.length > 0) {
       pushFields.documents = { $each: uploadedDocuments };
     }
+    const submittedExistingImages =
+      setFields.existingImageUrls !== undefined
+        ? getStringArray(setFields.existingImageUrls)
+        : undefined;
     if (uploadedImages.length > 0) {
       const keptImages =
-        setFields.imageUrls !== undefined
-          ? getStringArray(setFields.imageUrls)
-          : getStringArray(performance.imageUrls);
+        submittedExistingImages !== undefined
+          ? submittedExistingImages
+          : setFields.imageUrls !== undefined
+            ? getStringArray(setFields.imageUrls)
+            : getStringArray(performance.imageUrls);
       setFields.imageUrls = [...keptImages, ...uploadedImages];
+    } else if (submittedExistingImages !== undefined) {
+      setFields.imageUrls = submittedExistingImages;
     }
+    delete setFields.existingImageUrls;
 
     const updatePayload =
       Object.keys(pushFields).length > 0

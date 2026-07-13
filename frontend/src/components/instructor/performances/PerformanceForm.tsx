@@ -62,7 +62,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
       isFree: initialData?.isFree ?? false,
       videoUrl: initialData?.videoUrl || '',
       thumbnail: initialData?.thumbnail || '',
-      imageUrls: keptImageUrls,
+      existingImageUrls: keptImageUrls,
       adminCommissionPercentage: initialData?.adminCommissionPercentage ?? 30,
       price: initialData?.price ?? undefined,
     },
@@ -76,8 +76,8 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
     const payload: CreatePerformanceInput = {
       ...data,
       documents: documentFiles.length > 0 ? documentFiles : undefined,
-      imageUrls: keptImageUrls,
-      images: imageFiles.length > 0 ? imageFiles : undefined,
+      existingImageUrls: keptImageUrls,
+      imageUrls: imageFiles.length > 0 ? imageFiles : undefined,
     };
     try {
       if (initialData) {

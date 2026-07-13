@@ -57,7 +57,7 @@ const lessonMaterialStorage = new CloudinaryStorage({
 const performanceMaterialStorage = new CloudinaryStorage({
   cloudinary,
   params: (req, file) => {
-    if (file.fieldname === 'images') {
+    if (file.fieldname === 'images' || file.fieldname === 'imageUrls') {
       return {
         folder: 'lenfolk/performance-images',
         resource_type: 'image',
@@ -124,7 +124,7 @@ const lessonMaterialFileFilter = (req, file, cb) => {
 };
 
 const documentFileFilter = (req, file, cb) => {
-  if (file.fieldname === 'images') {
+  if (file.fieldname === 'images' || file.fieldname === 'imageUrls') {
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Only image files are allowed for performance images'));
     }
