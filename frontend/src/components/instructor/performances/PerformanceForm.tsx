@@ -62,6 +62,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
       isFree: initialData?.isFree ?? false,
       videoUrl: initialData?.videoUrl || '',
       thumbnail: initialData?.thumbnail || '',
+      imageUrl: '',
       existingImageUrls: keptImageUrls,
       adminCommissionPercentage: initialData?.adminCommissionPercentage ?? 30,
       price: initialData?.price ?? undefined,
@@ -77,6 +78,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
       ...data,
       documents: documentFiles.length > 0 ? documentFiles : undefined,
       existingImageUrls: keptImageUrls,
+      imageUrl: imageFiles.length > 0 ? undefined : data.imageUrl,
       imageUrls: imageFiles.length > 0 ? imageFiles : undefined,
     };
     try {
@@ -284,8 +286,23 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
             }}
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700"
           />
+          <div className="flex items-center gap-3 text-[11px] text-gray-400">
+            <span className="h-px flex-1 bg-gray-200" />
+            hoặc dùng URL
+            <span className="h-px flex-1 bg-gray-200" />
+          </div>
+          <input
+            {...register('imageUrl')}
+            type="url"
+            disabled={imageFiles.length > 0}
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none transition-colors focus:border-blue-500 focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            placeholder="https://.../sheet-nhac.jpg"
+          />
+          {errors.imageUrl && (
+            <p className="text-xs text-red-500">{errors.imageUrl.message}</p>
+          )}
           <p className="text-[11px] text-gray-400">
-            Chọn nhiều ảnh theo đúng thứ tự các trang sheet. Các ảnh này không được dùng làm thumbnail.
+            Nếu đã chọn file từ thiết bị thì URL sẽ được bỏ qua.
           </p>
         </div>
         {/* Video URL */}
