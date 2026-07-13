@@ -59,6 +59,8 @@ Trả về DUY NHẤT một JSON object hợp lệ, không markdown:
 Quy tắc bắt buộc:
 - Lời nói, đọc tên nốt, hát, huýt sáo, tiếng nền hoặc im lặng KHÔNG phải tiếng sáo.
 - Chỉ chọn dominant_sound="flute" khi tiếng sáo là âm thanh chính và có bằng chứng âm sắc hơi thổi cùng cao độ nhạc cụ kéo dài.
+- Nếu nghe được câu nói hoặc nhiều từ có nghĩa, dominant_sound phải là "speech" hoặc "mixed"; speech_probability tối thiểu 0.9 khi file chỉ có giọng nói.
+- Không được xem nguyên âm kéo dài, hát, đọc tên nốt hoặc huýt sáo là âm sắc sáo; detected_notes_or_ranges phải để rỗng nếu chỉ nghe giọng người.
 - Nếu không chắc, giảm flute_probability và chọn "mixed" hoặc "unknown".
 `;
 
@@ -80,8 +82,10 @@ const normalizeAudioDetection = (value) => {
     : [];
   const isFlute =
     dominantSound === 'flute' &&
-    fluteProbability >= 0.7 &&
-    speechRatio <= 0.35 &&
+    fluteProbability >= 0.9 &&
+    speechProbability <= 0.15 &&
+    speechRatio <= 0.1 &&
+    detectedNotesOrRanges.length > 0 &&
     value?.has_sustained_tonal_notes === true &&
     value?.has_breath_blown_flute_timbre === true;
 
@@ -133,6 +137,9 @@ Trả về DUY NHẤT một JSON object hợp lệ, không markdown, theo schema
 Chế độ phân tích: ${mode}.
 ${fast ? 'Ưu tiên tốc độ: nhận xét thật ngắn, không phân tích dài.' : 'Ưu tiên chất lượng nhận xét nhưng vẫn ngắn gọn.'}
 Chỉ đánh giá những gì có bằng chứng trong kết quả kiểm duyệt audio. Không cộng điểm vì lời nói hoặc transcript. Nếu thiếu bằng chứng cho một tiêu chí thì nêu là chưa đủ dữ liệu, không tự suy diễn.
+- Điểm 80 trở lên chỉ khi có bằng chứng rõ về cao độ ổn định, luồng hơi và chuyển nốt.
+- Điểm 90 trở lên chỉ khi các tiêu chí kỹ thuật đều rất tốt; không dùng điểm cao như điểm mặc định.
+- Nếu phát hiện lời nói chiếm ưu thế thì score bắt buộc bằng 0.
 `;
 
 const getErrorMessage = (error) =>
@@ -208,6 +215,39 @@ const detectFluteWithGemini = async (file) => {
   }
 };
 
+const countTranscriptWords = (transcript) =>
+  String(transcript || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+
+const transcriptConfirmsSpeech = (transcript, detection) =>
+  countTranscriptWords(transcript) >= 6 &&
+  (detection.speech_probability >= 0.08 || detection.speech_ratio >= 0.05);
+
+const normalizeAnalysisResult = (result, detection, fallbackFileInfo = {}) => {
+  const rawScore = Number(result?.summary?.score);
+  const evidenceCeiling = Math.round(
+    100 * detection.flute_probability * (1 - detection.speech_probability),
+  );
+  const score = Number.isFinite(rawScore)
+    ? Math.min(100, evidenceCeiling, Math.max(0, Math.round(rawScore)))
+    : null;
+
+  return {
+    ...result,
+    file_info: {
+      ...fallbackFileInfo,
+      ...(result?.file_info || {}),
+      audio_detection: detection,
+    },
+    summary: {
+      ...(result?.summary || {}),
+      score,
+    },
+  };
+};
+
 const createNonFluteResult = (detection, provider) => ({
   file_info: {
     transcript: '',
@@ -256,6 +296,22 @@ const analyzeWithOpenAI = async ({ file, detection, message, mode, fast }) => {
     );
 
     const transcript = transcriptionResponse.data?.text || '';
+    if (transcriptConfirmsSpeech(transcript, detection)) {
+      return createNonFluteResult(
+        {
+          ...detection,
+          dominant_sound: 'speech',
+          speech_probability: Math.max(detection.speech_probability, 0.9),
+          is_flute: false,
+          evidence: [
+            ...detection.evidence,
+            'Bản chuyển lời chứa một câu nói có nghĩa.',
+          ].slice(0, 3),
+        },
+        'openai',
+      );
+    }
+
     const analysisResponse = await axios.post(
       `${OPENAI_BASE_URL}/responses`,
       {
@@ -289,7 +345,7 @@ const analyzeWithOpenAI = async ({ file, detection, message, mode, fast }) => {
     const outputText = extractOpenAIOutputText(analysisResponse.data);
     const parsed = parseJsonObject(outputText);
 
-    return (
+    const result =
       parsed || {
         file_info: {
           transcript,
@@ -303,8 +359,13 @@ const analyzeWithOpenAI = async ({ file, detection, message, mode, fast }) => {
           issues: [],
           recommendations: [],
         },
-      }
-    );
+      };
+
+    return normalizeAnalysisResult(result, detection, {
+      transcript,
+      model: config.ai.openaiAnalysisModel,
+      provider: 'openai',
+    });
   } catch (error) {
     const err = new Error(getErrorMessage(error));
     err.statusCode = error.response?.status || 502;
@@ -363,7 +424,7 @@ const analyzeWithGemini = async ({ file, detection, message, mode, fast }) => {
     const outputText = extractGeminiOutputText(response.data);
     const parsed = parseJsonObject(outputText);
 
-    return (
+    const result =
       parsed || {
         file_info: {
           transcript: '',
@@ -377,8 +438,13 @@ const analyzeWithGemini = async ({ file, detection, message, mode, fast }) => {
           issues: [],
           recommendations: [],
         },
-      }
-    );
+      };
+
+    return normalizeAnalysisResult(result, detection, {
+      transcript: '',
+      model: config.ai.geminiAnalysisModel,
+      provider: 'gemini',
+    });
   } catch (error) {
     const err = new Error(getErrorMessage(error));
     err.statusCode = error.response?.status || 502;
