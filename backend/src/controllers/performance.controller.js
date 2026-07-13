@@ -60,7 +60,7 @@ exports.getAll = async (req, res, next) => {
     query = query
       .skip(skip)
       .limit(limit)
-      .select('-__v')
+      .select(isPrivileged ? '-__v' : '-__v -imageUrls -documents')
       .populate({ path: 'instructorId', select: 'name email avatar' });
 
     const docs = await query;
@@ -124,9 +124,6 @@ exports.createOne = async (req, res, next) => {
         ...getStringArray(performanceData.imageUrls),
         ...uploadedImages,
       ];
-      if (!performanceData.thumbnail) {
-        performanceData.thumbnail = performanceData.imageUrls[0];
-      }
     }
 
     if (req.user.role === 'instructor') {
@@ -189,9 +186,6 @@ exports.updateOne = async (req, res, next) => {
           ? getStringArray(setFields.imageUrls)
           : getStringArray(performance.imageUrls);
       setFields.imageUrls = [...keptImages, ...uploadedImages];
-      if (!setFields.thumbnail) {
-        setFields.thumbnail = setFields.imageUrls[0];
-      }
     }
 
     const updatePayload =

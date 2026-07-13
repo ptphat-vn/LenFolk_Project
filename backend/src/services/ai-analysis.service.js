@@ -33,7 +33,73 @@ const parseJsonObject = (text) => {
   }
 };
 
-const createAnalysisPrompt = ({ transcript, message, mode, provider, fast = true }) => `
+const clampProbability = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(1, Math.max(0, number));
+};
+
+const createAudioDetectionPrompt = () => `
+Bạn là bộ kiểm duyệt audio nghiêm ngặt trước khi chấm bài luyện sáo trúc.
+Hãy nghe toàn bộ file và phân loại âm thanh thực tế, không suy đoán từ tên file hay yêu cầu của người dùng.
+
+Trả về DUY NHẤT một JSON object hợp lệ, không markdown:
+{
+  "dominant_sound": "flute" | "speech" | "noise" | "music_other" | "silence" | "mixed" | "unknown",
+  "flute_probability": số từ 0 đến 1,
+  "speech_probability": số từ 0 đến 1,
+  "speech_ratio": số từ 0 đến 1,
+  "has_sustained_tonal_notes": boolean,
+  "has_breath_blown_flute_timbre": boolean,
+  "evidence": ["tối đa 3 dấu hiệu nghe được"],
+  "detected_notes_or_ranges": ["cao độ hoặc vùng cao độ nếu đủ chắc chắn"],
+  "quality_observations": ["độ ổn định cao độ, hơi, tiếng gió, chuyển nốt nếu có"]
+}
+
+Quy tắc bắt buộc:
+- Lời nói, đọc tên nốt, hát, huýt sáo, tiếng nền hoặc im lặng KHÔNG phải tiếng sáo.
+- Chỉ chọn dominant_sound="flute" khi tiếng sáo là âm thanh chính và có bằng chứng âm sắc hơi thổi cùng cao độ nhạc cụ kéo dài.
+- Nếu không chắc, giảm flute_probability và chọn "mixed" hoặc "unknown".
+`;
+
+const normalizeAudioDetection = (value) => {
+  const dominantSound = typeof value?.dominant_sound === 'string'
+    ? value.dominant_sound
+    : 'unknown';
+  const fluteProbability = clampProbability(value?.flute_probability);
+  const speechProbability = clampProbability(value?.speech_probability);
+  const speechRatio = clampProbability(value?.speech_ratio);
+  const evidence = Array.isArray(value?.evidence)
+    ? value.evidence.filter((item) => typeof item === 'string').slice(0, 3)
+    : [];
+  const qualityObservations = Array.isArray(value?.quality_observations)
+    ? value.quality_observations.filter((item) => typeof item === 'string').slice(0, 4)
+    : [];
+  const detectedNotesOrRanges = Array.isArray(value?.detected_notes_or_ranges)
+    ? value.detected_notes_or_ranges.filter((item) => typeof item === 'string').slice(0, 8)
+    : [];
+  const isFlute =
+    dominantSound === 'flute' &&
+    fluteProbability >= 0.7 &&
+    speechRatio <= 0.35 &&
+    value?.has_sustained_tonal_notes === true &&
+    value?.has_breath_blown_flute_timbre === true;
+
+  return {
+    dominant_sound: dominantSound,
+    flute_probability: fluteProbability,
+    speech_probability: speechProbability,
+    speech_ratio: speechRatio,
+    has_sustained_tonal_notes: value?.has_sustained_tonal_notes === true,
+    has_breath_blown_flute_timbre: value?.has_breath_blown_flute_timbre === true,
+    evidence,
+    detected_notes_or_ranges: detectedNotesOrRanges,
+    quality_observations: qualityObservations,
+    is_flute: isFlute,
+  };
+};
+
+const createAnalysisPrompt = ({ transcript, detection, message, mode, provider, fast = true }) => `
 Bạn là trợ lý luyện thổi sáo trúc cho người mới học.
 
 Yêu cầu từ app:
@@ -44,6 +110,9 @@ ${
     ? `Bản ghi đã được chuyển thành văn bản:\n${transcript}`
     : 'Hãy phân tích trực tiếp file âm thanh/video người học gửi lên.'
 }
+
+Kết quả kiểm duyệt audio trực tiếp (đã xác nhận có tiếng sáo):
+${JSON.stringify(detection)}
 
 Trả về DUY NHẤT một JSON object hợp lệ, không markdown, theo schema:
 {
@@ -63,7 +132,7 @@ Trả về DUY NHẤT một JSON object hợp lệ, không markdown, theo schema
 
 Chế độ phân tích: ${mode}.
 ${fast ? 'Ưu tiên tốc độ: nhận xét thật ngắn, không phân tích dài.' : 'Ưu tiên chất lượng nhận xét nhưng vẫn ngắn gọn.'}
-Nếu file chủ yếu là tiếng sáo không lời, hãy nói rõ giới hạn nhận diện và vẫn đưa gợi ý luyện tập hữu ích.
+Chỉ đánh giá những gì có bằng chứng trong kết quả kiểm duyệt audio. Không cộng điểm vì lời nói hoặc transcript. Nếu thiếu bằng chứng cho một tiêu chí thì nêu là chưa đủ dữ liệu, không tự suy diễn.
 `;
 
 const getErrorMessage = (error) =>
@@ -86,7 +155,82 @@ const assertProviderKey = (provider) => {
   }
 };
 
-const analyzeWithOpenAI = async ({ file, message, mode, fast }) => {
+const detectFluteWithGemini = async (file) => {
+  assertProviderKey('gemini');
+
+  try {
+    const response = await axios.post(
+      `${GEMINI_BASE_URL}/models/${config.ai.geminiAnalysisModel}:generateContent`,
+      {
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: createAudioDetectionPrompt() },
+              {
+                inline_data: {
+                  mime_type: file.mimetype,
+                  data: file.buffer.toString('base64'),
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0,
+          candidateCount: 1,
+          maxOutputTokens: 360,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      },
+      {
+        params: { key: config.ai.geminiApiKey },
+        headers: { 'Content-Type': 'application/json' },
+        maxBodyLength: Infinity,
+        timeout: 180000,
+      },
+    );
+
+    const parsed = parseJsonObject(extractGeminiOutputText(response.data));
+    if (!parsed) {
+      const err = new Error('AI không trả được kết quả nhận diện tiếng sáo hợp lệ');
+      err.statusCode = 502;
+      throw err;
+    }
+
+    return normalizeAudioDetection(parsed);
+  } catch (error) {
+    if (error.statusCode) throw error;
+    const err = new Error(getErrorMessage(error));
+    err.statusCode = error.response?.status || 502;
+    throw err;
+  }
+};
+
+const createNonFluteResult = (detection, provider) => ({
+  file_info: {
+    transcript: '',
+    model: config.ai.geminiAnalysisModel,
+    provider,
+    audio_detection: detection,
+  },
+  summary: {
+    score: 0,
+    label: 'Không nhận diện được tiếng sáo',
+    summary:
+      detection.dominant_sound === 'speech'
+        ? 'Bản ghi chủ yếu là giọng nói nên không được chấm như bài thổi sáo.'
+        : 'Bản ghi chưa có đủ bằng chứng âm sắc và cao độ để xác nhận là tiếng sáo.',
+    issues: detection.evidence,
+    recommendations: [
+      'Ghi lại ở nơi yên tĩnh và thổi nốt sáo rõ trong vài giây.',
+      'Không nói trong lúc ghi; đặt micro cách sáo vừa phải để tránh tiếng gió quá lớn.',
+    ],
+  },
+});
+
+const analyzeWithOpenAI = async ({ file, detection, message, mode, fast }) => {
   assertProviderKey('openai');
 
   const transcriptionForm = new FormData();
@@ -97,7 +241,6 @@ const analyzeWithOpenAI = async ({ file, message, mode, fast }) => {
   );
   transcriptionForm.append('model', config.ai.openaiTranscriptionModel);
   transcriptionForm.append('response_format', 'json');
-  if (message) transcriptionForm.append('prompt', message);
 
   try {
     const transcriptionResponse = await axios.post(
@@ -119,6 +262,7 @@ const analyzeWithOpenAI = async ({ file, message, mode, fast }) => {
         model: config.ai.openaiAnalysisModel,
         input: createAnalysisPrompt({
           transcript,
+          detection,
           message,
           mode,
           provider: 'openai',
@@ -168,12 +312,13 @@ const analyzeWithOpenAI = async ({ file, message, mode, fast }) => {
   }
 };
 
-const analyzeWithGemini = async ({ file, message, mode, fast }) => {
+const analyzeWithGemini = async ({ file, detection, message, mode, fast }) => {
   assertProviderKey('gemini');
 
   try {
     const prompt = createAnalysisPrompt({
       transcript: '',
+      detection,
       message,
       mode,
       provider: 'gemini',
@@ -248,9 +393,16 @@ exports.analyzePracticeMedia = async ({
   mode,
   fast = true,
 }) => {
-  if (provider === 'openai') {
-    return analyzeWithOpenAI({ file, message, mode, fast });
+  const detection = await detectFluteWithGemini(file);
+  if (!detection.is_flute) {
+    return createNonFluteResult(detection, provider);
   }
 
-  return analyzeWithGemini({ file, message, mode, fast });
+  if (provider === 'openai') {
+    return analyzeWithOpenAI({ file, detection, message, mode, fast });
+  }
+
+  return analyzeWithGemini({ file, detection, message, mode, fast });
 };
+
+exports.normalizeAudioDetection = normalizeAudioDetection;

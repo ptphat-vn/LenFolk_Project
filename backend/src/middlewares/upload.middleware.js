@@ -61,7 +61,7 @@ const performanceMaterialStorage = new CloudinaryStorage({
       return {
         folder: 'lenfolk/performance-images',
         resource_type: 'image',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
       };
     }
     return {
