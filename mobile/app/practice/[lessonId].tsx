@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
+import * as FileSystem from "expo-file-system/legacy";
 
 import SafeScreen from "@/components/SafeScreen";
 import { lessons as allLessons } from "@/constants/lessons";
@@ -67,6 +68,27 @@ import type {
   ReferencePracticeTrack,
   ReferenceTrackId,
 } from "@/components/practice/lesson-practice/types";
+
+const RECORDINGS_DIRECTORY = `${FileSystem.documentDirectory}practice-recordings`;
+
+const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
+  if (!FileSystem.documentDirectory) {
+    throw new Error("Thiết bị không cung cấp thư mục lưu bản ghi.");
+  }
+
+  await FileSystem.makeDirectoryAsync(RECORDINGS_DIRECTORY, {
+    intermediates: true,
+  });
+  const destinationUri = `${RECORDINGS_DIRECTORY}/${fileName}`;
+  await FileSystem.copyAsync({ from: sourceUri, to: destinationUri });
+
+  const info = await FileSystem.getInfoAsync(destinationUri);
+  if (!info.exists || typeof info.size !== "number" || info.size <= 0) {
+    throw new Error("Bản ghi vừa lưu bị rỗng hoặc không thể đọc lại.");
+  }
+
+  return destinationUri;
+};
 
 export default function NotePracticeScreen() {
   const router = useRouter();
@@ -326,7 +348,6 @@ export default function NotePracticeScreen() {
     if (!pendingPlaybackUri || pendingPlaybackUri !== playingUri) return;
     if (!playbackStatus.isLoaded || playbackStatus.isBuffering) return;
 
-    playbackPlayer.seekTo(0).catch(() => undefined);
     playbackPlayer.play();
     setPendingPlaybackUri(undefined);
   }, [
@@ -517,19 +538,30 @@ export default function NotePracticeScreen() {
       await recorder.stop();
       if (recorder.uri) {
         const createdAt = Date.now();
+        const fileName = isMouthPlacementLesson
+          ? `flute-sound-${createdAt}.m4a`
+          : `note-${targetNote}-${createdAt}.m4a`;
+        const stableUri = await persistRecordedAudio(recorder.uri, fileName);
         const recordedFile: RecordedAudioFile = {
-          uri: recorder.uri,
-          name: isMouthPlacementLesson
-            ? `flute-sound-${createdAt}.m4a`
-            : `note-${targetNote}-${createdAt}.m4a`,
+          uri: stableUri,
+          name: fileName,
           note: targetNote,
           noteLabel: isMouthPlacementLesson ? "Âm sáo" : targetNoteLabel,
           durationSeconds: Math.max(durationSeconds, 1),
           createdAt,
         };
 
+        await Promise.all(
+          recordedFiles
+            .filter((file) => file.uri !== stableUri)
+            .map((file) =>
+              FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(
+                () => undefined,
+              ),
+            ),
+        );
         setRecordedFiles([recordedFile]);
-        setRecordingUri(recorder.uri);
+        setRecordingUri(stableUri);
       }
     } catch (error) {
       console.warn("Failed to stop audio recording", error);

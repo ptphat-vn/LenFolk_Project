@@ -44,7 +44,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [keptImageUrls, setKeptImageUrls] = useState<string[]>(
-    initialData?.imageUrls ?? (initialData?.thumbnail ? [initialData.thumbnail] : []),
+    initialData?.imageUrls ?? [],
   );
 
   const {
@@ -238,13 +238,13 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
 
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-700">
-            Hình ảnh tiết mục
+            Ảnh sheet nhạc
           </label>
           {keptImageUrls.length > 0 && (
             <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
               {keptImageUrls.map((url) => (
                 <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200">
-                  <img src={url} alt="Ảnh tiết mục" className="h-full w-full object-cover" />
+                  <img src={url} alt="Trang sheet nhạc" className="h-full w-full object-contain bg-white" />
                   <button
                     type="button"
                     onClick={() => setKeptImageUrls((prev) => prev.filter((item) => item !== url))}
@@ -285,7 +285,7 @@ export const PerformanceForm = ({ initialData }: PerformanceFormProps) => {
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-blue-700"
           />
           <p className="text-[11px] text-gray-400">
-            Có thể chọn nhiều ảnh. Ảnh đầu tiên sẽ được dùng làm thumbnail nếu chưa nhập URL riêng.
+            Chọn nhiều ảnh theo đúng thứ tự các trang sheet. Các ảnh này không được dùng làm thumbnail.
           </p>
         </div>
         {/* Video URL */}

@@ -129,7 +129,7 @@ export default function CompleteProfileScreen() {
         gender,
       });
 
-      router.replace("/profile/verify");
+      router.replace("/(tabs)");
     } catch (error: any) {
       Alert.alert(
         "Không thể lưu hồ sơ",

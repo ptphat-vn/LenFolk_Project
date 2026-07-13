@@ -74,7 +74,7 @@ export function PerformanceFormModal({
         title: performance.title,
         description: performance.description ?? '',
         thumbnail: performance.thumbnail ?? '',
-        imageUrls: performance.imageUrls ?? (performance.thumbnail ? [performance.thumbnail] : []),
+        imageUrls: performance.imageUrls ?? [],
         images: [],
         videoUrl: performance.videoUrl ?? '',
         genre: performance.genre ?? '',
@@ -288,12 +288,12 @@ export function PerformanceFormModal({
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label>Hình ảnh tiết mục</Label>
+              <Label>Ảnh sheet nhạc</Label>
               {(form.imageUrls?.length ?? 0) > 0 && (
                 <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
                   {form.imageUrls!.map((url) => (
                     <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200">
-                      <img src={url} alt="Ảnh tiết mục" className="h-full w-full object-cover" />
+                      <img src={url} alt="Trang sheet nhạc" className="h-full w-full bg-white object-contain" />
                       <button
                         type="button"
                         onClick={() => set('imageUrls', (form.imageUrls ?? []).filter((u) => u !== url))}
@@ -335,7 +335,7 @@ export function PerformanceFormModal({
                 }}
               />
               <p className="text-[11px] text-gray-500">
-                Có thể chọn nhiều ảnh. Ảnh đầu tiên sẽ được dùng làm thumbnail nếu chưa nhập URL riêng.
+                Chọn nhiều ảnh theo đúng thứ tự các trang sheet. Ảnh sheet được lưu riêng, không thay thế thumbnail.
               </p>
               {renderFieldError('images')}
             </div>

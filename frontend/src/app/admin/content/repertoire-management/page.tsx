@@ -45,6 +45,12 @@ const STATUS_COLORS: Record<PerformanceStatus, string> = {
   archived: 'bg-red-100 text-red-600',
 };
 
+const getApiErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== 'object' || !('response' in error)) return null;
+  const response = (error as { response?: { data?: { message?: unknown } } }).response;
+  return typeof response?.data?.message === 'string' ? response.data.message : null;
+};
+
 export default function RepertoireManagementPage() {
   const [performances, setPerformances] = useState<Performance[]>([]);
   const [search, setSearch] = useState('');
@@ -140,8 +146,8 @@ export default function RepertoireManagementPage() {
       }
       setFormOpen(false);
       fetchPerformances();
-    } catch {
-      toast.error('Lỗi khi lưu tiết mục');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error) || 'Lỗi khi lưu tiết mục');
     } finally {
       setIsSaving(false);
     }
@@ -152,8 +158,8 @@ export default function RepertoireManagementPage() {
       header: 'Tiết mục',
       render: (perf) => (
         <div className="flex items-center gap-3">
-          {(perf.imageUrls?.[0] || perf.thumbnail) ? (
-            <Image src={(perf.imageUrls?.[0] || perf.thumbnail)!} alt={perf.title} width={48} height={32} className="w-12 h-8 object-cover rounded shadow-sm" />
+          {perf.thumbnail ? (
+            <Image src={perf.thumbnail} alt={perf.title} width={48} height={32} className="w-12 h-8 object-cover rounded shadow-sm" />
           ) : (
             <div className="w-12 h-8 bg-gray-100 flex items-center justify-center rounded">
               <PlayCircle className="w-4 h-4 text-gray-400" />

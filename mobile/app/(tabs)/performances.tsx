@@ -128,16 +128,16 @@ export default function PerformancesScreen() {
                       title: item.title,
                       price: String(item.price || 0),
                       currency: item.currency,
-                      thumbnail: item.imageUrls?.[0] || item.thumbnail || "",
+                      thumbnail: item.thumbnail || "",
                       isFree: item.isFree ? "true" : "false",
                     },
                   } as unknown as Href)
                 }
                 className="mb-4 overflow-hidden rounded-[26px] bg-[#E2E8D3] border border-white/25"
               >
-                {(item.imageUrls?.[0] || item.thumbnail) ? (
+                {item.thumbnail ? (
                   <Image
-                    source={{ uri: item.imageUrls?.[0] || item.thumbnail! }}
+                    source={{ uri: item.thumbnail }}
                     style={{ width: "100%", height: 150 }}
                     resizeMode="cover"
                   />
