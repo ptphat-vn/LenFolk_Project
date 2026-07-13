@@ -48,7 +48,7 @@ export default function CreatePerformanceScreen() {
     if (status !== "granted") {
       Alert.alert(
         "Quyền truy cập",
-        "Bạn cần cấp quyền truy cập thư viện ảnh để thêm hình tác phẩm.",
+        "Bạn cần cấp quyền truy cập thư viện ảnh để thêm ảnh sheet nhạc.",
       );
       return;
     }
@@ -191,7 +191,7 @@ export default function CreatePerformanceScreen() {
 
               <View className="rounded-[28px] bg-white p-5 border border-gray-100">
                 <Text className="mb-2 text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
-                  Media
+                  Media và sheet nhạc
                 </Text>
                 <TextInput
                   value={thumbnail}
@@ -209,8 +209,8 @@ export default function CreatePerformanceScreen() {
                   <Ionicons name="images-outline" size={18} color="#687451" />
                   <Text className="text-sm font-bold text-[#687451]">
                     {selectedImages.length > 0
-                      ? `Đã chọn ${selectedImages.length} ảnh`
-                      : "Chọn nhiều ảnh"}
+                      ? `Đã chọn ${selectedImages.length} trang sheet`
+                      : "Chọn ảnh sheet nhạc"}
                   </Text>
                 </TouchableOpacity>
                 {selectedImages.length > 0 && (
@@ -237,6 +237,9 @@ export default function CreatePerformanceScreen() {
                     ))}
                   </View>
                 )}
+                <Text className="mb-3 text-xs leading-5 text-gray-500">
+                  Ảnh được lưu theo thứ tự trang sheet và không dùng làm thumbnail.
+                </Text>
                 <TextInput
                   value={videoUrl}
                   onChangeText={setVideoUrl}

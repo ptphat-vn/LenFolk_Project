@@ -13,6 +13,5 @@ export const isProfileComplete = (user?: User | null) =>
 export const getOnboardingRoute = (user?: User | null): Href | null => {
   if (!user) return null;
   if (!isProfileComplete(user)) return "/(auth)/profile" as Href;
-  if (!user.isVerified) return "/profile/verify" as Href;
   return null;
 };

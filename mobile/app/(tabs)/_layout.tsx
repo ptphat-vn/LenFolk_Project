@@ -14,19 +14,26 @@ import { SwipeableTabShell } from "@/components/swipeable-tab-shell";
 function CustomTabBar({ state, descriptors, navigation }: any) {
   const [itemWidth, setItemWidth] = React.useState(0);
   const indicatorX = useSharedValue(0);
+  const visibleRoutes = state.routes.filter(
+    (route: any) => route.name !== "performances",
+  );
+  const activeRouteKey = state.routes[state.index]?.key;
+  const activeVisibleIndex = visibleRoutes.findIndex(
+    (route: any) => route.key === activeRouteKey,
+  );
 
   React.useEffect(() => {
-    if (itemWidth === 0) {
+    if (itemWidth === 0 || activeVisibleIndex < 0) {
       return;
     }
 
-    indicatorX.value = withSpring(state.index * itemWidth, {
+    indicatorX.value = withSpring(activeVisibleIndex * itemWidth, {
       damping: 22,
       stiffness: 220,
       mass: 0.7,
       overshootClamping: false,
     });
-  }, [indicatorX, itemWidth, state.index]);
+  }, [activeVisibleIndex, indicatorX, itemWidth]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: indicatorX.value }],
@@ -37,7 +44,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       onLayout={(event) => {
         setItemWidth(
           (event.nativeEvent.layout.width - styles.tabContainer.paddingHorizontal * 2) /
-            state.routes.length,
+            visibleRoutes.length,
         );
       }}
       style={[
@@ -49,7 +56,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         },
       ]}
     >
-      {itemWidth > 0 && (
+      {itemWidth > 0 && activeVisibleIndex >= 0 && (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -62,7 +69,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         </Animated.View>
       )}
 
-      {state.routes.map((route: any, index: number) => {
+      {visibleRoutes.map((route: any) => {
+        const index = state.routes.findIndex((item: any) => item.key === route.key);
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
 
@@ -95,8 +103,6 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           iconName = isFocused ? "home" : "home-outline";
         } else if (route.name === "courses") {
           iconName = isFocused ? "book" : "book-outline";
-        } else if (route.name === "performances") {
-          iconName = isFocused ? "albums" : "albums-outline";
         } else if (route.name === "practice") {
           iconName = isFocused ? "musical-notes" : "musical-notes-outline";
         } else if (route.name === "leaderboard") {
@@ -153,7 +159,10 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ title: "Trang chủ" }} />
         <Tabs.Screen name="courses" options={{ title: "Bài học" }} />
-        <Tabs.Screen name="performances" options={{ title: "Tác phẩm" }} />
+        <Tabs.Screen
+          name="performances"
+          options={{ title: "Tác phẩm", href: null }}
+        />
         <Tabs.Screen name="practice" options={{ title: "Luyện tập" }} />
         <Tabs.Screen name="leaderboard" options={{ title: "Bảng xếp hạng" }} />
         <Tabs.Screen name="profile" options={{ title: "Cá nhân" }} />

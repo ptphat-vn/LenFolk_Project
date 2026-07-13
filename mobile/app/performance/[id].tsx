@@ -102,7 +102,7 @@ export default function PerformanceDetailScreen() {
     title: params.title || "Tác phẩm",
     description: null,
     thumbnail: params.thumbnail || null,
-    imageUrls: params.thumbnail ? [params.thumbnail] : [],
+    imageUrls: [],
     videoUrl: null,
     documents: [],
     isFree: params.isFree === "true" || fallbackPrice <= 0,
@@ -120,7 +120,7 @@ export default function PerformanceDetailScreen() {
     updatedAt: "",
   };
   const hasAccess = performance.isFree || isOwned || !!detail;
-  const performanceImage = detail?.imageUrls?.[0] || performance.thumbnail;
+  const performanceImage = performance.thumbnail;
   const youtubeVideoId = React.useMemo(
     () => getYoutubeVideoId(detail?.videoUrl),
     [detail?.videoUrl],
@@ -295,6 +295,29 @@ export default function PerformanceDetailScreen() {
             <Text className="mt-2 text-sm leading-6 text-[#55594F]">
               Sau khi thanh toán, bạn sẽ xem được video và tài liệu đính kèm của tác phẩm này.
             </Text>
+          </View>
+        ) : null}
+
+        {hasAccess && detail?.imageUrls?.length ? (
+          <View className="gap-4 rounded-[28px] bg-white p-6">
+            <View>
+              <Text className="text-lg font-bold text-[#10120C]">Sheet nhạc</Text>
+              <Text className="mt-1 text-xs text-[#777B70]">
+                {detail.imageUrls.length} trang theo thứ tự luyện tập
+              </Text>
+            </View>
+            {detail.imageUrls.map((url, index) => (
+              <View
+                key={`${url}-${index}`}
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white"
+              >
+                <Image
+                  source={{ uri: url }}
+                  style={{ width: "100%", aspectRatio: 0.72 }}
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
           </View>
         ) : null}
 
