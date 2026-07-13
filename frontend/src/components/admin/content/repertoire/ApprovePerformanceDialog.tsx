@@ -186,9 +186,9 @@ export function ApprovePerformanceDialog({
         <div className="space-y-4">
           {/* Thumbnail + Title */}
           <div className="flex gap-3 items-start">
-            {(performance.imageUrls?.[0] || performance.thumbnail) ? (
+            {performance.thumbnail ? (
               <Image
-                src={(performance.imageUrls?.[0] || performance.thumbnail)!}
+                src={performance.thumbnail}
                 alt={performance.title}
                 width={72}
                 height={48}

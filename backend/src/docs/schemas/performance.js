@@ -19,7 +19,7 @@ module.exports = {
       title: { type: 'string', example: 'Độc tấu sáo trúc' },
       description: { type: 'string', nullable: true },
       thumbnail: { type: 'string', nullable: true },
-      imageUrls: { type: 'array', items: { type: 'string' } },
+      imageUrls: { type: 'array', items: { type: 'string' }, description: 'Ảnh các trang sheet nhạc theo thứ tự, không phải thumbnail' },
       videoUrl: { type: 'string', nullable: true },
       documents: { type: 'array', items: { $ref: '#/components/schemas/PerformanceDocument' } },
       isFree: { type: 'boolean', example: false },
