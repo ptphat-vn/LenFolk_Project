@@ -24,6 +24,7 @@ import { performanceSchema, zodFieldErrors } from '@/schema/form.schema';
 type PerformanceFormField =
   | 'title'
   | 'thumbnail'
+  | 'imageUrl'
   | 'existingImageUrls'
   | 'imageUrls'
   | 'videoUrl'
@@ -45,6 +46,7 @@ const EMPTY_FORM: CreatePerformanceInput = {
   title: '',
   description: '',
   thumbnail: '',
+  imageUrl: '',
   existingImageUrls: [],
   imageUrls: [],
   videoUrl: '',
@@ -74,6 +76,7 @@ export function PerformanceFormModal({
         title: performance.title,
         description: performance.description ?? '',
         thumbnail: performance.thumbnail ?? '',
+        imageUrl: '',
         existingImageUrls: performance.imageUrls ?? [],
         imageUrls: [],
         videoUrl: performance.videoUrl ?? '',
@@ -136,6 +139,9 @@ export function PerformanceFormModal({
     }
 
     const payload: CreatePerformanceInput = parsed.data;
+    if ((payload.imageUrls?.length ?? 0) > 0) {
+      delete payload.imageUrl;
+    }
     if (payload.isFree) {
       delete payload.price;
     }
@@ -337,7 +343,23 @@ export function PerformanceFormModal({
               <p className="text-[11px] text-gray-500">
                 Tải hình trực tiếp từ thiết bị; có thể chọn nhiều ảnh theo đúng thứ tự các trang sheet.
               </p>
+              <div className="flex items-center gap-3 text-[11px] text-gray-400">
+                <span className="h-px flex-1 bg-gray-200" />
+                hoặc dùng URL
+                <span className="h-px flex-1 bg-gray-200" />
+              </div>
+              <Input
+                type="url"
+                value={form.imageUrl ?? ''}
+                disabled={(form.imageUrls?.length ?? 0) > 0}
+                onChange={(e) => set('imageUrl', e.target.value)}
+                placeholder="https://.../sheet-nhac.jpg"
+              />
+              <p className="text-[11px] text-gray-500">
+                Nếu đã chọn file từ thiết bị thì URL sẽ được bỏ qua.
+              </p>
               {renderFieldError('imageUrls')}
+              {renderFieldError('imageUrl')}
             </div>
 
             <div className="col-span-2 space-y-1.5">

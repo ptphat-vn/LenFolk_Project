@@ -136,6 +136,7 @@ const basePerformanceSchema = z.object({
     .max(200, 'Tên tiết mục tối đa 200 ký tự'),
   description: optionalString,
   thumbnail: optionalUrl,
+  imageUrl: optionalUrl,
   imageUrls: z.array(fileSchema).optional(),
   existingImageUrls: z.array(z.string()).optional(),
   videoUrl: optionalUrl,
