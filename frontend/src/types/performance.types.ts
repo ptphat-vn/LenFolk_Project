@@ -39,8 +39,8 @@ export interface CreatePerformanceInput {
   title: string;
   description?: string;
   thumbnail?: string;
-  imageUrls?: string[];
-  images?: File[];
+  imageUrls?: File[];
+  existingImageUrls?: string[];
   videoUrl?: string;
   documents?: File[];
   isFree?: boolean;

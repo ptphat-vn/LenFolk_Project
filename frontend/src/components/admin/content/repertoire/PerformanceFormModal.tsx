@@ -24,8 +24,8 @@ import { performanceSchema, zodFieldErrors } from '@/schema/form.schema';
 type PerformanceFormField =
   | 'title'
   | 'thumbnail'
+  | 'existingImageUrls'
   | 'imageUrls'
-  | 'images'
   | 'videoUrl'
   | 'genre'
   | 'duration'
@@ -45,8 +45,8 @@ const EMPTY_FORM: CreatePerformanceInput = {
   title: '',
   description: '',
   thumbnail: '',
+  existingImageUrls: [],
   imageUrls: [],
-  images: [],
   videoUrl: '',
   genre: '',
   isFree: true,
@@ -74,8 +74,8 @@ export function PerformanceFormModal({
         title: performance.title,
         description: performance.description ?? '',
         thumbnail: performance.thumbnail ?? '',
-        imageUrls: performance.imageUrls ?? [],
-        images: [],
+        existingImageUrls: performance.imageUrls ?? [],
+        imageUrls: [],
         videoUrl: performance.videoUrl ?? '',
         genre: performance.genre ?? '',
         status: performance.status,
@@ -289,14 +289,14 @@ export function PerformanceFormModal({
 
             <div className="col-span-2 space-y-2">
               <Label>Ảnh sheet nhạc</Label>
-              {(form.imageUrls?.length ?? 0) > 0 && (
+              {(form.existingImageUrls?.length ?? 0) > 0 && (
                 <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-                  {form.imageUrls!.map((url) => (
+                  {form.existingImageUrls!.map((url) => (
                     <div key={url} className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200">
                       <img src={url} alt="Trang sheet nhạc" className="h-full w-full bg-white object-contain" />
                       <button
                         type="button"
-                        onClick={() => set('imageUrls', (form.imageUrls ?? []).filter((u) => u !== url))}
+                        onClick={() => set('existingImageUrls', (form.existingImageUrls ?? []).filter((u) => u !== url))}
                         className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100"
                       >
                         <X className="h-3 w-3" />
@@ -306,15 +306,15 @@ export function PerformanceFormModal({
                 </div>
               )}
 
-              {(form.images?.length ?? 0) > 0 && (
+              {(form.imageUrls?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {form.images!.map((file, i) => (
+                  {form.imageUrls!.map((file, i) => (
                     <span key={`new-${i}`} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] text-[#2d6a4f]">
                       <ImageIcon className="h-3 w-3" />
                       <span className="max-w-32 truncate">{file.name}</span>
                       <button
                         type="button"
-                        onClick={() => set('images', (form.images ?? []).filter((_, idx) => idx !== i))}
+                        onClick={() => set('imageUrls', (form.imageUrls ?? []).filter((_, idx) => idx !== i))}
                         className="text-[#2d6a4f]/70 hover:text-[#2d6a4f]"
                       >
                         <X className="h-3 w-3" />
@@ -330,14 +330,14 @@ export function PerformanceFormModal({
                 accept="image/*"
                 onChange={(e) => {
                   const files = Array.from(e.target.files || []);
-                  if (files.length) set('images', [...(form.images ?? []), ...files]);
+                  if (files.length) set('imageUrls', [...(form.imageUrls ?? []), ...files]);
                   e.target.value = '';
                 }}
               />
               <p className="text-[11px] text-gray-500">
-                Chọn nhiều ảnh theo đúng thứ tự các trang sheet. Ảnh sheet được lưu riêng, không thay thế thumbnail.
+                Tải hình trực tiếp từ thiết bị; có thể chọn nhiều ảnh theo đúng thứ tự các trang sheet.
               </p>
-              {renderFieldError('images')}
+              {renderFieldError('imageUrls')}
             </div>
 
             <div className="col-span-2 space-y-1.5">
