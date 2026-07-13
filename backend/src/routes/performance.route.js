@@ -29,6 +29,7 @@ router
     upload.performanceDocuments.fields([
       { name: 'documents', maxCount: 10 },
       { name: 'images', maxCount: 10 },
+      { name: 'imageUrls', maxCount: 10 },
     ]),
     validate(createPerformanceSchema),
     performanceController.createOne,
@@ -46,6 +47,7 @@ router
     upload.performanceDocuments.fields([
       { name: 'documents', maxCount: 10 },
       { name: 'images', maxCount: 10 },
+      { name: 'imageUrls', maxCount: 10 },
     ]),
     validate(updatePerformanceSchema),
     performanceController.updateOne,
