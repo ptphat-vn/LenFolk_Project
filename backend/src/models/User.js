@@ -26,8 +26,23 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: true,
+      // Bắt buộc với tài khoản đăng ký bằng email/mật khẩu (provider = 'local').
+      // Tài khoản đăng nhập bằng Google không có mật khẩu.
+      required: function () {
+        return this.provider === 'local';
+      },
       select: false,
+    },
+    // Nhà cung cấp đăng nhập: 'local' (email/mật khẩu) hoặc 'google'
+    provider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    // ID tài khoản Google (sub trong idToken) — dùng để liên kết tài khoản Google
+    googleId: {
+      type: String,
+      default: null,
     },
     avatar: {
       type: String,
@@ -98,6 +113,7 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ role: 1 });
 userSchema.index({ deletedAt: 1 });
+userSchema.index({ googleId: 1 }, { sparse: true });
 
 // Soft-delete: tự động lọc các user đã bị xóa khỏi mọi query find
 userSchema.pre(/^find/, function () {

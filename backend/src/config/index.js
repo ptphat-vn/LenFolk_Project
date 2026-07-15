@@ -42,6 +42,11 @@ const envSchema = z.object({
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
   CLIENT_URL: z.string().default('http://localhost:3000'),
+  // ── Google OAuth (đăng nhập bằng Google) ─────────────────────────────────
+  // Client ID lấy từ Google Cloud Console → Credentials → OAuth 2.0 Client IDs
+  GOOGLE_IOS_CLIENT_ID: z.string().default(''),
+  GOOGLE_WEB_CLIENT_ID: z.string().default(''),
+  GOOGLE_ANDROID_CLIENT_ID: z.string().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -93,6 +98,15 @@ module.exports = {
     openaiAnalysisModel: env.OPENAI_ANALYSIS_MODEL,
     geminiApiKey: env.GEMINI_API_KEY,
     geminiAnalysisModel: env.GEMINI_ANALYSIS_MODEL,
+  },
+  google: {
+    iosClientId: env.GOOGLE_IOS_CLIENT_ID,
+    webClientId: env.GOOGLE_WEB_CLIENT_ID,
+    androidClientId: env.GOOGLE_ANDROID_CLIENT_ID,
+    // Danh sách audience hợp lệ để xác thực idToken (bỏ giá trị rỗng)
+    get audiences() {
+      return [this.iosClientId, this.webClientId, this.androidClientId].filter(Boolean);
+    },
   },
   appName: env.APP_NAME,
   clientUrl: env.CLIENT_URL,
