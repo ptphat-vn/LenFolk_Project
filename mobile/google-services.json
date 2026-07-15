@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "19709473033",
+    "project_id": "tanminhngo-e26f7",
+    "storage_bucket": "tanminhngo-e26f7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:19709473033:android:033d2bdb95309107d0e3d8",
+        "android_client_info": {
+          "package_name": "com.lenfolk.lenfolkapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWXt0N73kVSOatjsq9097REwWsskSduO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
