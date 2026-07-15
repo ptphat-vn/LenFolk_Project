@@ -39,6 +39,12 @@ const loginSchema = z.object({
   }),
 });
 
+const googleLoginSchema = z.object({
+  body: z.object({
+    idToken: z.string({ required_error: 'idToken is required' }).min(1, 'idToken is required'),
+  }),
+});
+
 const refreshTokenSchema = z.object({
   body: z.object({
     refreshToken: z.string({ required_error: 'Refresh token is required' }),
@@ -80,6 +86,9 @@ router.post('/register-instructor', validate(registerInstructorSchema), authCont
 
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), authController.login);
+
+// POST /api/auth/google — đăng nhập/đăng ký bằng Google idToken
+router.post('/google', validate(googleLoginSchema), authController.googleLogin);
 
 // POST /api/auth/refresh-token
 router.post('/refresh-token', validate(refreshTokenSchema), authController.refreshToken);

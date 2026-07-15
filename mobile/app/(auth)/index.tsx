@@ -1,10 +1,17 @@
 import { AnimatedBlock } from '@/components/AnimatedPage';
 import SlideToConfirm from '@/components/SlideToConfirm';
+import { getOnboardingRoute } from '@/constants/onboarding';
+import {
+  isGoogleCancelled,
+  useGoogleLogin,
+} from '@/hooks/auth/use-google-login';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Image,
@@ -27,16 +34,29 @@ const { width } = Dimensions.get('window');
 export default function OnboardingScreen() {
   const router = useRouter();
   const [slide, setSlide] = useState(0);
+  const googleLoginMutation = useGoogleLogin();
   const mascotY = useSharedValue(28);
+
+  const handleGoogleLogin = () => {
+    googleLoginMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        router.replace(getOnboardingRoute(data.user) || '/(tabs)');
+      },
+      onError: (error) => {
+        if (isGoogleCancelled(error)) return; // người dùng tự huỷ, không báo lỗi
+        Alert.alert(
+          'Đăng nhập Google thất bại',
+          getApiErrorMessage(error, 'Không thể đăng nhập bằng Google. Vui lòng thử lại.'),
+        );
+      },
+    });
+  };
   const mascotScale = useSharedValue(0.9);
   const mascotOpacity = useSharedValue(0);
 
   const mascotStyle = useAnimatedStyle(() => ({
     opacity: mascotOpacity.value,
-    transform: [
-      { translateY: mascotY.value },
-      { scale: mascotScale.value },
-    ],
+    transform: [{ translateY: mascotY.value }, { scale: mascotScale.value }],
   }));
 
   useEffect(() => {
@@ -343,56 +363,35 @@ export default function OnboardingScreen() {
             </Text>
 
             {/* Social Buttons Stack */}
-            <View className="gap-4 mb-6">
+            <View className="gap-4 mb-6 ">
               {/* Google Button */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() =>
-                  Alert.alert(
-                    'Google',
-                    'Đăng nhập bằng Google sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.',
-                  )
-                }
-                className="w-full bg-white py-4 px-6 rounded-2xl flex-row justify-center items-center border border-gray-100 shadow-sm"
+                disabled={googleLoginMutation.isPending}
+                onPress={handleGoogleLogin}
+                className="w-full bg-white py-4 px-6 rounded-[35px] flex-row justify-center items-center border border-gray-200 shadow-sm"
               >
-                <Image
-                  source={require('../../assets/images/Google.png')}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    marginRight: 12,
-                    resizeMode: 'contain',
-                  }}
-                />
-                <Text className="text-charcoal text-base font-semibold">
-                  Tiếp tục với Google
-                </Text>
+                {googleLoginMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#8E9E6E" />
+                ) : (
+                  <>
+                    <Image
+                      source={require('../../assets/images/logo_google.png')}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        marginRight: 12,
+                        resizeMode: 'contain',
+                      }}
+                    />
+                    <Text className="text-charcoal text-base font-semibold">
+                      Tiếp tục với Google
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
 
               {/* Apple Button */}
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() =>
-                  Alert.alert(
-                    'Apple',
-                    'Đăng nhập bằng Apple sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.',
-                  )
-                }
-                className="w-full bg-white py-4 px-6 rounded-2xl flex-row justify-center items-center border border-gray-100 shadow-sm"
-              >
-                <Image
-                  source={require('../../assets/images/Apple.png')}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    marginRight: 12,
-                    resizeMode: 'contain',
-                  }}
-                />
-                <Text className="text-charcoal text-base font-semibold">
-                  Tiếp tục với Apple
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Separator Or */}
