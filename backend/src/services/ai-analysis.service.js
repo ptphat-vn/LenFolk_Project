@@ -232,7 +232,7 @@ const detectFluteWithGemini = async (file) => {
 
   try {
     const response = await axios.post(
-      `${GEMINI_BASE_URL}/models/${config.ai.geminiAnalysisModel}:generateContent`,
+      `${GEMINI_BASE_URL}/models/${config.ai.geminiDetectionModel}:generateContent`,
       {
         contents: [
           {
