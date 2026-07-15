@@ -27,7 +27,7 @@ export const News = () => {
               <Play size={32} className="ml-2" />
             </div>
           </div>
-          <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-white z-10 relative">
+          <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center bg-white z-10 relative">
             <span className="text-[#8e9e6e] font-medium mb-4 tracking-wider uppercase text-sm">Sự kiện nổi bật • 24 Thg 5, 2026</span>
             <h3 className="text-3xl font-bold mb-4 leading-tight group-hover:text-[#8e9e6e] transition-colors cursor-pointer" onClick={() => setIsDetailOpen(true)}>Thiên Âm — Dự án âm nhạc kết hợp công nghệ AI và sáo trúc cổ truyền</h3>
             <p className="text-gray-600 mb-8 leading-relaxed line-clamp-3">Sự kiện ra mắt dự án âm nhạc kết hợp độc đáo giữa âm thanh sáo trúc truyền thống và công nghệ trí tuệ nhân tạo, mở ra kỷ nguyên mới cho nghệ thuật dân tộc.</p>
