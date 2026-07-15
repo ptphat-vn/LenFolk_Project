@@ -82,6 +82,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
                   name={isFocused ? meta.iconActive : meta.icon}
                   size={28}
                   color="#FFFFFF"
+                  style={styles.fabIcon}
                 />
               </View>
               <Text
@@ -214,6 +215,17 @@ const styles = StyleSheet.create({
   },
   fabActive: {
     backgroundColor: '#7C8B5E', // đậm hơn 1 chút khi đang ở tab này
+  },
+
+  fabIcon: {
+    width: 28,
+    height: 28,
+    lineHeight: 28,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    // Glyph musical-notes hơi lệch phải → bù sang trái cho cân mắt.
+    transform: [{ translateX: -1.5 }],
   },
   label: {
     fontSize: 10,

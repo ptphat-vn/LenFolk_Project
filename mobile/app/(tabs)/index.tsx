@@ -15,6 +15,12 @@ import { useGetStreaks } from '@/hooks/streak/use-get-streaks';
 import { useUpdateStreak } from '@/hooks/streak/use-update-streak';
 import { useScrollToTopOnFocus } from '@/hooks/use-scroll-to-top-on-focus';
 import { useAuthStore } from '@/store/authStore';
+import {
+  isStreakMilestone,
+  StreakCelebrationModal,
+  StreakDetailModal,
+} from '@/components/streak/streak-modals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -23,6 +29,7 @@ import LottieView from 'lottie-react-native';
 import React from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   ScrollView,
   Text,
@@ -111,6 +118,12 @@ export default function HomeScreen() {
     accessibleLessons[0] ??
     orderedLessons[0];
   const currentStreak = streaks?.[0]?.currentStreak ?? 0;
+  const longestStreak = streaks?.[0]?.longestStreak ?? 0;
+  const totalActiveDays = streaks?.[0]?.totalActiveDays ?? 0;
+  const [celebrationStreak, setCelebrationStreak] = React.useState<
+    number | null
+  >(null);
+  const [showStreakDetail, setShowStreakDetail] = React.useState(false);
   const todayLessons = visibleLessons.slice(0, 2);
   // Chỉ những bài có luyện tập mới được dùng cho ôn tập / luyện tự do.
   const practiceableLessons = React.useMemo(
@@ -123,7 +136,11 @@ export default function HomeScreen() {
       ),
     [canOpenLesson, orderedLessons],
   );
-  const reviewLessons = practiceableLessons.slice(0, 4);
+  const reviewLessons = practiceableLessons.slice(0, 6);
+  // Hiển thị 3 mục ôn tập trên màn hình, phần còn lại cuộn ngang.
+  // Container cha có px-6 (24px mỗi bên) và khoảng cách 12px giữa các mục.
+  const reviewItemWidth =
+    (Dimensions.get('window').width - 48 - 24) / 3;
   const freePracticeLesson =
     practiceableLessons.find((lesson) => lesson._id === continueLesson?._id) ??
     practiceableLessons[0];
@@ -190,6 +207,33 @@ export default function HomeScreen() {
     updateStreak,
     user?._id,
   ]);
+
+  // Chúc mừng khi đạt mốc chuỗi (5, 10, 20, 30, ...) — chỉ hiện 1 lần / mốc.
+  React.useEffect(() => {
+    if (!user?._id || !streaksLoaded) return;
+    if (!isStreakMilestone(currentStreak)) return;
+
+    const key = `celebratedStreak:${user._id}`;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(key);
+        if (cancelled) return;
+        const lastCelebrated = stored ? Number(stored) : 0;
+        if (currentStreak !== lastCelebrated) {
+          setCelebrationStreak(currentStreak);
+          await AsyncStorage.setItem(key, String(currentStreak));
+        }
+      } catch {
+        // Bỏ qua lỗi đọc/ghi lưu trữ cục bộ.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStreak, streaksLoaded, user?._id]);
 
   const openUpgrade = (title?: string) => {
     Alert.alert('Cần mở gói Technique', getUpgradeMessage(title), [
@@ -398,8 +442,12 @@ export default function HomeScreen() {
             delay={140}
             className="flex-row justify-between gap-4 mb-6"
           >
-            {/* Study streak points */}
-            <View className="flex-1 bg-[#F3F4F6]/50 rounded-3xl p-4 flex-row items-center">
+            {/* Study streak points — chạm để xem chi tiết chuỗi học */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setShowStreakDetail(true)}
+              className="flex-1 bg-[#F3F4F6]/50 rounded-3xl p-4 flex-row items-center"
+            >
               <View className="w-10 h-10 justify-center items-center mr-3">
                 <LottieView
                   source={require('../../assets/images/flame.json')}
@@ -420,7 +468,7 @@ export default function HomeScreen() {
                   Chuỗi học
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Goals status */}
             <View className="flex-1 bg-[#8E9E6E]/10 rounded-3xl p-4 flex-row items-center justify-between">
@@ -559,9 +607,17 @@ export default function HomeScreen() {
               Ôn tập hôm nay
             </Text>
 
-            <View className="flex-row justify-between gap-3">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12 }}
+            >
               {reviewLessons.map((lesson, index) => (
-                <View key={lesson._id} className="items-center flex-1">
+                <View
+                  key={lesson._id}
+                  className="items-center"
+                  style={{ width: reviewItemWidth }}
+                >
                   <TouchableOpacity
                     onPress={() => openPractice(lesson._id)}
                     className="w-14 h-14 rounded-full bg-[#8E9E6E]/15 border border-[#8E9E6E]/20 justify-center items-center mb-2"
@@ -589,7 +645,7 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               ))}
-            </View>
+            </ScrollView>
           </AnimatedBlock>
 
           {/* Bài học hôm nay Section */}
@@ -745,6 +801,19 @@ export default function HomeScreen() {
           </AnimatedBlock>
         </AnimatedBlock>
       </ScrollView>
+
+      <StreakCelebrationModal
+        visible={celebrationStreak !== null}
+        streak={celebrationStreak ?? currentStreak}
+        onClose={() => setCelebrationStreak(null)}
+      />
+      <StreakDetailModal
+        visible={showStreakDetail}
+        currentStreak={currentStreak}
+        longestStreak={longestStreak}
+        totalActiveDays={totalActiveDays}
+        onClose={() => setShowStreakDetail(false)}
+      />
     </SafeScreen>
   );
 }

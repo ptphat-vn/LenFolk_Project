@@ -231,10 +231,13 @@ export default function CoursesScreen() {
                 key={cat}
                 activeOpacity={0.85}
                 onPress={() => setActiveFilter(cat)}
-                className="py-3.5 items-center justify-center flex-1 z-10"
+                className="py-3.5 px-1 items-center justify-center flex-1 z-10"
               >
                 <Text
-                  className={`text-[16px] font-bold ${
+                  allowFontScaling={false}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  className={`text-[16px] font-bold text-center ${
                     isSelected ? "text-[#10120C]" : "text-charcoal"
                   }`}
                   style={{ fontFamily: "BeVietnamPro-Medium" }}
