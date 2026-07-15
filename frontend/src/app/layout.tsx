@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${roboto.variable} ${lora.variable} ${beVietnamPro.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-(--font-roboto)">
+      <body className="min-h-full flex flex-col font-(--font-roboto)" suppressHydrationWarning>
         <ScrollToTop />
         {children}
         <Toaster position="top-right" richColors theme="light" />

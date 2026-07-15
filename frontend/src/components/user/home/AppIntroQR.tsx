@@ -1,8 +1,12 @@
 'use client';
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { Sparkles, BookOpen } from 'lucide-react';
 
 export const AppIntroQR = () => {
+  const [isAppModalOpen, setIsAppModalOpen] = useState(false);
+
   return (
     <section className="py-12 bg-white relative overflow-hidden flex flex-col items-center">
       <div className="container mx-auto px-6 max-w-[1200px] relative z-10">
@@ -29,18 +33,21 @@ export const AppIntroQR = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <button className="flex items-center justify-center bg-gradient-to-r from-[#9eb07a] to-[#d4dcba] text-white px-8 py-4 rounded-full font-medium hover:opacity-90 transition-opacity shadow-lg shadow-[#9eb07a]/20">
+                <button 
+                  onClick={() => setIsAppModalOpen(true)}
+                  className="flex items-center justify-center bg-gradient-to-r from-[#9eb07a] to-[#d4dcba] text-white px-8 py-4 rounded-full font-medium hover:opacity-90 transition-opacity shadow-lg shadow-[#9eb07a]/20"
+                >
                   <span className="text-base font-semibold">Tải App Store</span>
                 </button>
-                <button className="flex items-center justify-center bg-white text-black px-8 py-4 rounded-full font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                <Link href="/news" className="flex items-center justify-center bg-white text-black px-8 py-4 rounded-full font-medium hover:bg-gray-50 transition-colors shadow-sm">
                   <span className="text-base font-semibold">Khám phá</span>
-                </button>
+                </Link>
               </div>
             </div>
 
             {/* Right Content - Phone Mockup */}
-            <div className="relative w-full h-[300px] md:h-full mt-8 md:mt-0">
-              <div className="absolute top-10 md:top-20 left-1/2 -translate-x-1/2 w-[280px] h-[550px] bg-white rounded-t-[48px] border-x-[12px] border-t-[12px] border-gray-900 shadow-2xl overflow-hidden rotate-[10deg] md:rotate-[15deg] transform-gpu">
+            <div className="relative w-full h-[450px] md:h-full mt-8 md:mt-0 overflow-hidden md:overflow-visible rounded-b-[40px] md:rounded-b-none">
+              <div className="absolute top-10 md:top-20 left-1/2 -translate-x-1/2 w-[280px] h-[550px] scale-[0.85] md:scale-100 origin-top bg-white rounded-t-[48px] border-x-[12px] border-t-[12px] border-gray-900 shadow-2xl overflow-hidden rotate-[10deg] md:rotate-[15deg] transform-gpu">
                 {/* Dynamic Island */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-7 bg-gray-900 rounded-b-3xl z-20"></div>
                 
@@ -81,7 +88,68 @@ export const AppIntroQR = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Free Content CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="mt-24 flex flex-col items-center text-center max-w-3xl mx-auto relative z-10"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#d6ddc6]/30 text-[#6b7b4d] text-sm font-semibold mb-6">
+            <Sparkles size={16} />
+            <span>Học thử hoàn toàn miễn phí</span>
+          </div>
+          
+          <h3 className="text-3xl md:text-4xl font-bold mb-6 text-gray-800 tracking-tight">
+            Khám phá nội dung gói Free
+          </h3>
+          
+          <p className="text-gray-500 text-lg md:text-xl mb-10 leading-relaxed font-light">
+            Trải nghiệm các bài học cơ bản, theo dõi tiến độ luyện tập và nhận đánh giá từ AI. Bắt đầu hành trình thổi sáo của bạn ngay hôm nay mà không tốn bất kỳ chi phí nào!
+          </p>
+          
+          <Link href="/courses" className="inline-flex items-center justify-center gap-3 px-10 py-4 bg-gray-900 text-white rounded-full font-medium text-lg hover:bg-black transition-all hover:-translate-y-1 shadow-lg group">
+            <span>Xem Khóa Học Miễn Phí</span>
+            <BookOpen size={20} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+        </motion.div>
       </div>
+
+      {/* App Download Modal */}
+      <AnimatePresence>
+        {isAppModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white rounded-3xl overflow-hidden shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col items-center p-6"
+            >
+              <button
+                onClick={() => setIsAppModalOpen(false)}
+                className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors z-10"
+                aria-label="Close modal"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <h3 className="text-2xl font-bold mb-4 text-center text-gray-800">Tải Lenfolk Beta</h3>
+              <div className="w-full relative aspect-[4/5] sm:aspect-square flex justify-center items-center">
+                <img
+                  src="/images/qr_app copy.png"
+                  alt="Lenfolk App QR Code"
+                  className="max-w-full max-h-full object-contain rounded-xl"
+                />
+              </div>
+              <p className="mt-4 text-center text-gray-600">Quét mã QR để tải ứng dụng trên điện thoại của bạn</p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };
