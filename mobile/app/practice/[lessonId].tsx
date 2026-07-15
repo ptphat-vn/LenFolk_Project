@@ -15,6 +15,8 @@ import {
   Alert,
   Animated,
   AppState,
+  Easing,
+  Image as RNImage,
   Modal,
   PanResponder,
   ScrollView,
@@ -70,6 +72,38 @@ import type {
 } from "@/components/practice/lesson-practice/types";
 
 const RECORDINGS_DIRECTORY = `${FileSystem.documentDirectory}practice-recordings`;
+
+// Tập theo vạch chạy (playhead) trong màn xem sheet phóng to.
+const GUIDE_BPM_OPTIONS = [60, 80, 100];
+// Bỏ qua khoá nhạc / số chỉ nhịp ở đầu mỗi khuông để vạch bám nốt sát hơn.
+const SHEET_NOTE_START_FRACTION = 0.08;
+const SHEET_NOTE_END_FRACTION = 0.98;
+const GUIDE_CARD_PADDING = 12;
+
+// Ước lượng số nốt trên mỗi khuông để tính thời lượng vạch chạy.
+const splitNoteLines = (noteSequence: string, lineCount: number): number[] => {
+  const clean = (noteSequence ?? "").trim();
+  const safeLineCount = Math.max(1, lineCount);
+
+  // Nếu noteSequence xuống dòng và khớp số khuông → mỗi dòng là 1 khuông.
+  if (clean.includes("\n")) {
+    const perLine = clean
+      .split("\n")
+      .map((line) => line.trim().split(/[\s,]+/).filter(Boolean).length);
+    if (perLine.length === safeLineCount) {
+      return perLine.map((count) => Math.max(1, count));
+    }
+  }
+
+  // Ngược lại: chia đều tổng số nốt cho số khuông.
+  const totalNotes = clean.split(/[\s,]+/).filter(Boolean).length || safeLineCount;
+  const base = Math.max(1, Math.round(totalNotes / safeLineCount));
+  return Array.from({ length: safeLineCount }, (_, index) =>
+    index === safeLineCount - 1
+      ? Math.max(1, totalNotes - base * (safeLineCount - 1))
+      : base,
+  );
+};
 
 const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
   if (!FileSystem.documentDirectory) {
@@ -211,6 +245,16 @@ export default function NotePracticeScreen() {
   const playbackStartedAtRef = useRef(0);
   const referenceStartedAtRef = useRef(0);
 
+  // --- Tập theo vạch chạy (playhead) ---
+  const [guideBpm, setGuideBpm] = useState(80);
+  const [isGuideActive, setIsGuideActive] = useState(false);
+  const [guideCountdown, setGuideCountdown] = useState<number | null>(null);
+  const [guideLineIndex, setGuideLineIndex] = useState(0);
+  const guidePlayhead = useRef(new Animated.Value(0)).current;
+  const guideScrollRef = useRef<ScrollView | null>(null);
+  const guideTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const guideListenerRef = useRef<string | null>(null);
+
   const practiceTitle = getPracticeTitle(practiceFlags);
   const {
     title: recordingTargetTitle,
@@ -235,16 +279,37 @@ export default function NotePracticeScreen() {
     ? referenceSheetCardWidth - 24
     : referenceSheetCardWidth;
   const referenceSheetCardHeight = isCompactReferenceSheetLesson ? 56 : 88;
-  const referenceSheetViewerWidth = isCompactReferenceSheetLesson
-    ? Math.max(windowWidth - 36, 360)
-    : Math.max(windowWidth - 36, 980);
-  const referenceSheetViewerHeight = Math.max(
-    isCompactReferenceSheetLesson ? 74 : 96,
-    Math.min(
-      isCompactReferenceSheetLesson ? 96 : 180,
-      (windowHeight - 170) / selectedReferenceTrack.sheets.length,
+  // Tỉ lệ khung hình thật của từng khuông nhạc để phóng to không bị méo/viền thừa.
+  const sheetAspectRatios = useMemo(
+    () =>
+      selectedReferenceTrack.sheets.map((sheet) => {
+        const source = RNImage.resolveAssetSource(sheet);
+        return source?.width && source?.height
+          ? source.width / source.height
+          : 5;
+      }),
+    [selectedReferenceTrack],
+  );
+  // Khuông cao hơn hẳn để nốt to, dễ đọc; phần dư theo chiều ngang sẽ cuộn được.
+  const referenceSheetViewerHeight = Math.min(
+    isCompactReferenceSheetLesson ? 170 : 220,
+    Math.max(
+      isCompactReferenceSheetLesson ? 120 : 150,
+      (windowHeight - 260) / selectedReferenceTrack.sheets.length,
     ),
   );
+  // Số nốt ước lượng trên mỗi khuông để tính thời lượng vạch chạy theo BPM.
+  const guideNotesPerLine = useMemo(
+    () =>
+      splitNoteLines(
+        selectedReferenceTrack.noteSequence,
+        selectedReferenceTrack.sheets.length,
+      ),
+    [selectedReferenceTrack],
+  );
+  // Chiều rộng thực (px) của khuông đang chạy để đặt vạch và tự cuộn.
+  const guideLineWidth =
+    referenceSheetViewerHeight * (sheetAspectRatios[guideLineIndex] ?? 5);
 
   useEffect(() => {
     if (freshUser) {
@@ -574,6 +639,168 @@ export default function NotePracticeScreen() {
       recorderOperationRef.current = false;
     }
   };
+
+  const clearGuideTimers = useCallback(() => {
+    guideTimersRef.current.forEach((timer) => clearTimeout(timer));
+    guideTimersRef.current = [];
+  }, []);
+
+  const removeGuideListener = useCallback(() => {
+    if (guideListenerRef.current) {
+      guidePlayhead.removeListener(guideListenerRef.current);
+      guideListenerRef.current = null;
+    }
+  }, [guidePlayhead]);
+
+  const resetGuide = useCallback(() => {
+    clearGuideTimers();
+    removeGuideListener();
+    guidePlayhead.stopAnimation();
+    guidePlayhead.setValue(0);
+    setIsGuideActive(false);
+    setGuideCountdown(null);
+    setGuideLineIndex(0);
+  }, [clearGuideTimers, removeGuideListener, guidePlayhead]);
+
+  // Hết bài: dừng thu, đóng viewer để hiện nút phân tích ở màn chính.
+  const finishGuide = useCallback(async () => {
+    resetGuide();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => undefined,
+    );
+    if (recorderState.isRecording) {
+      await stopRecording();
+    }
+    closePracticeImageViewer();
+  }, [
+    resetGuide,
+    recorderState.isRecording,
+    stopRecording,
+    closePracticeImageViewer,
+  ]);
+
+  const finishGuideRef = useRef(finishGuide);
+  useEffect(() => {
+    finishGuideRef.current = finishGuide;
+  }, [finishGuide]);
+
+  // Dừng giữa chừng.
+  const stopGuide = useCallback(async () => {
+    resetGuide();
+    if (recorderState.isRecording) {
+      await stopRecording();
+    }
+  }, [resetGuide, recorderState.isRecording, stopRecording]);
+
+  // Bắt đầu: đếm ngược 3-2-1 (theo BPM) rồi tự thu âm + chạy vạch.
+  const startGuide = useCallback(() => {
+    if (isGuideActive || guideCountdown !== null || recorderState.isRecording) {
+      return;
+    }
+    clearGuideTimers();
+    removeGuideListener();
+    guidePlayhead.setValue(0);
+    setGuideLineIndex(0);
+    setGuideCountdown(3);
+    Haptics.selectionAsync().catch(() => undefined);
+
+    const beatMs = (60 / guideBpm) * 1000;
+    [2, 1].forEach((value, index) => {
+      const timer = setTimeout(
+        () => {
+          setGuideCountdown(value);
+          Haptics.selectionAsync().catch(() => undefined);
+        },
+        beatMs * (index + 1),
+      );
+      guideTimersRef.current.push(timer);
+    });
+    const startTimer = setTimeout(() => {
+      setGuideCountdown(null);
+      setIsGuideActive(true);
+      startRecording().catch(() => undefined);
+    }, beatMs * 3);
+    guideTimersRef.current.push(startTimer);
+  }, [
+    isGuideActive,
+    guideCountdown,
+    recorderState.isRecording,
+    clearGuideTimers,
+    removeGuideListener,
+    guidePlayhead,
+    guideBpm,
+    startRecording,
+  ]);
+
+  // Chạy vạch cho khuông hiện tại + tự cuộn ngang để vạch luôn trong tầm nhìn.
+  useEffect(() => {
+    if (!isGuideActive || guideCountdown !== null) return;
+    const lineCount = selectedReferenceTrack.sheets.length;
+    if (guideLineIndex >= lineCount) return;
+
+    const beatSec = 60 / guideBpm;
+    const notes = guideNotesPerLine[guideLineIndex] ?? 8;
+    const durationMs = Math.max(1200, notes * beatSec * 1000);
+
+    const startX = GUIDE_CARD_PADDING + guideLineWidth * SHEET_NOTE_START_FRACTION;
+    const endX = GUIDE_CARD_PADDING + guideLineWidth * SHEET_NOTE_END_FRACTION;
+
+    removeGuideListener();
+    guidePlayhead.setValue(0);
+    guideListenerRef.current = guidePlayhead.addListener(({ value }) => {
+      const x = startX + (endX - startX) * value;
+      guideScrollRef.current?.scrollTo({
+        x: Math.max(0, x - windowWidth / 2),
+        animated: false,
+      });
+    });
+
+    const animation = Animated.timing(guidePlayhead, {
+      toValue: 1,
+      duration: durationMs,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    animation.start(({ finished }) => {
+      if (!finished) return;
+      if (guideLineIndex + 1 < lineCount) {
+        setGuideLineIndex((index) => index + 1);
+      } else {
+        finishGuideRef.current?.();
+      }
+    });
+
+    return () => {
+      animation.stop();
+      removeGuideListener();
+    };
+  }, [
+    isGuideActive,
+    guideCountdown,
+    guideLineIndex,
+    guideBpm,
+    guideNotesPerLine,
+    guideLineWidth,
+    selectedReferenceTrack,
+    guidePlayhead,
+    removeGuideListener,
+    windowWidth,
+  ]);
+
+  // Đóng viewer khi đang tập → huỷ vạch + dừng thu.
+  useEffect(() => {
+    if (isReferenceSheetViewerVisible) return;
+    if (isGuideActive || guideCountdown !== null) {
+      resetGuide();
+      if (recorderState.isRecording) {
+        stopRecording();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReferenceSheetViewerVisible]);
+
+  // Dọn timer/listener khi unmount.
+  useEffect(() => resetGuide, [resetGuide]);
 
   const selectNote = (pitch: string) => {
     if (recorderState.isRecording || analysis.isPending) return;
@@ -911,20 +1138,34 @@ export default function NotePracticeScreen() {
             </View>
           </View>
 
-          <View className="items-center">
-            <Text selectable className="text-xs font-bold uppercase tracking-[2px] text-white/60">
+          <View className="w-full items-center px-2">
+            <Text
+              selectable
+              allowFontScaling={false}
+              className="text-[11px] font-bold uppercase tracking-[3px] text-white/60"
+            >
               {recordingTargetTitle}
             </Text>
             <Text
               selectable
-              className={`mt-2 font-bold text-white ${
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              maxFontSizeMultiplier={1.2}
+              className={`mt-2 text-center font-bold text-white ${
                 isMouthPlacementLesson ? "text-3xl" : "text-4xl"
               }`}
-              style={{ fontFamily: "BeVietnamPro-Medium" }}
+              style={{
+                fontFamily: "BeVietnamPro-Medium",
+                letterSpacing: 0.3,
+              }}
             >
               {recordingTargetLabel}
             </Text>
-            <Text className="mt-1 text-xs font-bold text-white/55">
+            <Text
+              numberOfLines={2}
+              maxFontSizeMultiplier={1.2}
+              className="mt-1.5 text-center text-xs font-bold leading-5 text-white/60"
+            >
               {recordingTargetDetail}
             </Text>
           </View>
@@ -969,8 +1210,8 @@ export default function NotePracticeScreen() {
         )}
 
         <View className="items-center rounded-[30px] bg-white px-7 pb-7 pt-6">
-          <View className="mb-5 w-full flex-row items-center justify-between">
-            <View>
+          <View className="mb-5 w-full flex-row items-center justify-between gap-3">
+            <View className="min-w-0 flex-1">
               <Text className="text-xs font-bold uppercase tracking-wider text-[#8E9E6E]">
                 Thu âm
               </Text>
@@ -980,6 +1221,8 @@ export default function NotePracticeScreen() {
             </View>
             <Text
               selectable
+              allowFontScaling={false}
+              numberOfLines={1}
               className="text-2xl font-bold text-[#10120C]"
               style={{ fontVariant: ["tabular-nums"] }}
             >
@@ -1307,9 +1550,10 @@ export default function NotePracticeScreen() {
         ]}
         onRequestClose={closePracticeImageViewer}
       >
-        <View className="flex-1 bg-black">
-          <View className="absolute left-5 right-5 top-12 z-10 flex-row items-center justify-between">
-            <View className="rounded-full bg-white/15 px-4 py-2">
+        <View className="flex-1 bg-[#0B0B0C]">
+          <View className="absolute left-5 right-5 top-14 z-10 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2 rounded-full bg-white/12 px-4 py-2">
+              <Ionicons name="musical-notes" size={15} color="white" />
               <Text className="text-sm font-bold text-white">
                 {selectedReferenceTrack.title}
               </Text>
@@ -1317,52 +1561,248 @@ export default function NotePracticeScreen() {
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={closePracticeImageViewer}
-              className="h-11 w-11 items-center justify-center rounded-full bg-white/15"
+              className="h-11 w-11 items-center justify-center rounded-full bg-white/12"
             >
-              <Ionicons name="close" size={24} color="white" />
+              <Ionicons name="close" size={22} color="white" />
             </TouchableOpacity>
           </View>
 
           <Animated.View
             className="flex-1"
             style={{ transform: [{ translateY: imageViewerTranslateY }] }}
-            {...imageViewerPanResponder.panHandlers}
+            {...(isGuideActive || guideCountdown !== null
+              ? {}
+              : imageViewerPanResponder.panHandlers)}
           >
-            <ScrollView
-              className="flex-1"
-              contentContainerStyle={{
-                minHeight: "100%",
-                justifyContent: "center",
-                paddingHorizontal: 18,
-                paddingVertical: 96,
-                gap: 18,
-              }}
-            >
-              {selectedReferenceTrack.sheets.map((sheet, sheetIndex) => (
+            {isGuideActive || guideCountdown !== null ? (
+              // --- Chế độ tập theo vạch chạy: 1 khuông lớn + vạch + đếm ngược ---
+              <View
+                className="flex-1 items-center justify-center px-4"
+                style={{ paddingTop: 96, paddingBottom: 150 }}
+              >
+                <Text className="mb-4 text-sm font-semibold text-white/70">
+                  Khuông{" "}
+                  {Math.min(
+                    guideLineIndex + 1,
+                    selectedReferenceTrack.sheets.length,
+                  )}
+                  /{selectedReferenceTrack.sheets.length}
+                </Text>
                 <ScrollView
-                  key={`${selectedReferenceTrack.id}-viewer-sheet-${sheetIndex}`}
+                  ref={guideScrollRef}
                   horizontal
+                  scrollEnabled={!isGuideActive}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{
+                    minWidth: "100%",
                     alignItems: "center",
                     justifyContent: "center",
-                    minWidth: referenceSheetViewerWidth,
                   }}
                 >
-                  <View className="items-center justify-center overflow-hidden rounded-[10px] bg-white">
-                    <Image
-                      source={sheet}
-                      contentFit={isBasicTuneLesson ? "fill" : "contain"}
+                  <View
+                    className="overflow-hidden rounded-2xl bg-white"
+                    style={{
+                      padding: GUIDE_CARD_PADDING,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: 0.35,
+                      shadowRadius: 16,
+                      elevation: 6,
+                    }}
+                  >
+                    <View
                       style={{
                         height: referenceSheetViewerHeight,
-                        width: referenceSheetViewerWidth,
+                        width: guideLineWidth,
                       }}
-                    />
+                    >
+                      <Image
+                        source={selectedReferenceTrack.sheets[guideLineIndex]}
+                        contentFit="contain"
+                        style={{ height: "100%", width: "100%" }}
+                      />
+                      <Animated.View
+                        pointerEvents="none"
+                        style={{
+                          position: "absolute",
+                          top: -8,
+                          bottom: -8,
+                          width: 3,
+                          borderRadius: 2,
+                          backgroundColor: "#D96C5F",
+                          transform: [
+                            {
+                              translateX: guidePlayhead.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [
+                                  guideLineWidth * SHEET_NOTE_START_FRACTION,
+                                  guideLineWidth * SHEET_NOTE_END_FRACTION,
+                                ],
+                              }),
+                            },
+                          ],
+                        }}
+                      />
+                    </View>
                   </View>
                 </ScrollView>
-              ))}
-            </ScrollView>
+
+                {guideCountdown !== null && (
+                  <View
+                    className="absolute inset-0 items-center justify-center"
+                    style={{ backgroundColor: "rgba(11,11,12,0.55)" }}
+                  >
+                    <Text
+                      className="font-bold text-white"
+                      style={{ fontSize: 96 }}
+                    >
+                      {guideCountdown}
+                    </Text>
+                    <Text className="mt-2 text-sm text-white/70">
+                      Chuẩn bị thổi…
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              // --- Chế độ xem: cuộn dọc qua các khuông, cuộn ngang từng khuông ---
+              <ScrollView
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  minHeight: "100%",
+                  justifyContent: "center",
+                  paddingHorizontal: 16,
+                  paddingTop: 112,
+                  paddingBottom: 168,
+                  gap: 16,
+                }}
+              >
+                {selectedReferenceTrack.sheets.map((sheet, sheetIndex) => (
+                  <View
+                    key={`${selectedReferenceTrack.id}-viewer-sheet-${sheetIndex}`}
+                    className="gap-2"
+                  >
+                    <Text className="px-1.5 text-[11px] font-semibold uppercase tracking-[1.5px] text-white/40">
+                      Khuông {sheetIndex + 1}
+                    </Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{
+                        minWidth: "100%",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <View
+                        className="overflow-hidden rounded-2xl bg-white p-3"
+                        style={{
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 8 },
+                          shadowOpacity: 0.35,
+                          shadowRadius: 16,
+                          elevation: 6,
+                        }}
+                      >
+                        <Image
+                          source={sheet}
+                          contentFit="contain"
+                          style={{
+                            height: referenceSheetViewerHeight,
+                            width:
+                              referenceSheetViewerHeight *
+                              sheetAspectRatios[sheetIndex],
+                          }}
+                        />
+                      </View>
+                    </ScrollView>
+                  </View>
+                ))}
+
+                <View className="mt-3 flex-row items-center justify-center gap-1.5">
+                  <Ionicons
+                    name="swap-horizontal"
+                    size={14}
+                    color="rgba(255,255,255,0.4)"
+                  />
+                  <Text className="text-xs text-white/40">
+                    Vuốt ngang để xem hết · vuốt xuống để đóng
+                  </Text>
+                </View>
+              </ScrollView>
+            )}
           </Animated.View>
+
+          {/* --- Thanh điều khiển tập theo vạch --- */}
+          <View
+            className="absolute inset-x-0 bottom-0 px-5 pb-9 pt-4"
+            style={{ backgroundColor: "rgba(11,11,12,0.9)" }}
+          >
+            {isGuideActive || guideCountdown !== null ? (
+              <View className="flex-row items-center justify-between gap-4">
+                <View className="min-w-0 flex-1 flex-row items-center gap-2">
+                  <View className="h-3 w-3 rounded-full bg-[#D96C5F]" />
+                  <Text
+                    numberOfLines={1}
+                    className="text-sm font-bold text-white"
+                  >
+                    {guideCountdown !== null
+                      ? `Bắt đầu sau ${guideCountdown}…`
+                      : `Đang thu · 00:${String(durationSeconds).padStart(2, "0")}`}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={stopGuide}
+                  className="flex-row items-center gap-2 rounded-full bg-white px-6 py-3"
+                >
+                  <Ionicons name="stop" size={18} color="#10120C" />
+                  <Text className="font-bold text-[#10120C]">Dừng</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View className="gap-3">
+                <View className="flex-row items-center justify-center gap-2">
+                  <Text className="text-xs font-semibold text-white/50">
+                    Nhịp độ
+                  </Text>
+                  {GUIDE_BPM_OPTIONS.map((bpm) => {
+                    const isSelected = guideBpm === bpm;
+                    return (
+                      <TouchableOpacity
+                        key={bpm}
+                        activeOpacity={0.85}
+                        onPress={() => setGuideBpm(bpm)}
+                        className={`rounded-full px-4 py-2 ${
+                          isSelected ? "bg-white" : "bg-white/12"
+                        }`}
+                      >
+                        <Text
+                          className={`text-xs font-bold ${
+                            isSelected ? "text-[#10120C]" : "text-white/80"
+                          }`}
+                        >
+                          {bpm}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  <Text className="text-xs text-white/40">BPM</Text>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={startGuide}
+                  className="flex-row items-center justify-center gap-2 rounded-full bg-[#8E9E6E] py-4"
+                >
+                  <Ionicons name="play" size={20} color="white" />
+                  <Text className="font-bold text-white">
+                    Thổi theo vạch (tự thu âm)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </Modal>
     </SafeScreen>

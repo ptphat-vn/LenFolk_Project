@@ -1,50 +1,60 @@
-import React from "react";
-import { Alert, ScrollView } from "react-native";
-import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useVideoPlayer } from "expo-video";
-import { PLAYER_STATES, type YoutubeIframeRef } from "react-native-youtube-iframe";
+import { Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useVideoPlayer } from 'expo-video';
+import React from 'react';
+import { Alert, ScrollView } from 'react-native';
+import {
+  PLAYER_STATES,
+  type YoutubeIframeRef,
+} from 'react-native-youtube-iframe';
 
-import SafeScreen from "@/components/SafeScreen";
-import { canAccessLesson, getUpgradeMessage } from "@/constants/course-access";
-import { useGetCourses } from "@/hooks/course/use-get-courses";
-import { useCurrentSubscription } from "@/hooks/enrollment/use-current-subscription";
-import { useGetDetailLesson } from "@/hooks/lesson/use-get-detail-lesson";
-import { useGetLessons } from "@/hooks/lesson/use-get-lessons";
-import { useCreateProgress } from "@/hooks/progress/use-create-progress";
-import { useGetProgressList } from "@/hooks/progress/use-get-progress-list";
-import { useUpdateProgress } from "@/hooks/progress/use-update-progress";
+import SafeScreen from '@/components/SafeScreen';
+import { canAccessLesson, getUpgradeMessage } from '@/constants/course-access';
+import { useGetCourses } from '@/hooks/course/use-get-courses';
+import { useCurrentSubscription } from '@/hooks/enrollment/use-current-subscription';
+import { useGetDetailLesson } from '@/hooks/lesson/use-get-detail-lesson';
+import { useGetLessons } from '@/hooks/lesson/use-get-lessons';
+import { useGetPracticeSessions } from '@/hooks/practice-session/use-get-practice-sessions';
+import { useCreateProgress } from '@/hooks/progress/use-create-progress';
+import { useGetProgressList } from '@/hooks/progress/use-get-progress-list';
+import { useUpdateProgress } from '@/hooks/progress/use-update-progress';
 
-import { buildLessonDetail } from "@/components/lesson-detail/build-lesson-detail";
-import { LessonCompletionActions } from "@/components/lesson-detail/LessonCompletionActions";
-import { LessonHeader } from "@/components/lesson-detail/LessonHeader";
-import { LessonPracticeSection } from "@/components/lesson-detail/LessonPracticeSection";
+import { buildLessonDetail } from '@/components/lesson-detail/build-lesson-detail';
+import { LessonCompletionActions } from '@/components/lesson-detail/LessonCompletionActions';
+import { LessonHeader } from '@/components/lesson-detail/LessonHeader';
+import { LessonPracticeSection } from '@/components/lesson-detail/LessonPracticeSection';
 import {
   LessonLoadingState,
   LessonLockedState,
   LessonNotFoundState,
   LessonPrerequisiteLockedState,
-} from "@/components/lesson-detail/LessonStates";
-import { LessonSummaryCard } from "@/components/lesson-detail/LessonSummaryCard";
-import { LessonTheoryCard } from "@/components/lesson-detail/LessonTheoryCard";
-import { LessonVideoPlayer } from "@/components/lesson-detail/LessonVideoPlayer";
-import { getYoutubeVideoId } from "@/components/lesson-detail/youtube";
+} from '@/components/lesson-detail/LessonStates';
+import { LessonSummaryCard } from '@/components/lesson-detail/LessonSummaryCard';
+import { LessonTheoryCard } from '@/components/lesson-detail/LessonTheoryCard';
+import { LessonVideoPlayer } from '@/components/lesson-detail/LessonVideoPlayer';
+import { getYoutubeVideoId } from '@/components/lesson-detail/youtube';
+
+const REQUIRED_WATCH_PERCENT = 80;
 
 export default function LessonDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { data: dbLesson, isLoading: lessonLoading } = useGetDetailLesson(id || "");
+  const { data: dbLesson, isLoading: lessonLoading } = useGetDetailLesson(
+    id || '',
+  );
   const { data: courses, isLoading: coursesLoading } = useGetCourses();
   const { data: allLessonsData } = useGetLessons();
-  const { data: progressList, isLoading: progressLoading } = useGetProgressList();
-  const {
-    hasPremiumAccess,
-    isLoading: subscriptionLoading,
-  } = useCurrentSubscription();
+  const { data: progressList, isLoading: progressLoading } =
+    useGetProgressList();
+  const { data: practiceSessions } = useGetPracticeSessions();
+  const { hasPremiumAccess, isLoading: subscriptionLoading } =
+    useCurrentSubscription();
   const createProgress = useCreateProgress();
   const updateProgress = useUpdateProgress();
   const youtubePlayerRef = React.useRef<YoutubeIframeRef | null>(null);
-  const videoProgressIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const videoProgressIntervalRef = React.useRef<ReturnType<
+    typeof setInterval
+  > | null>(null);
   const lastSavedVideoProgressRef = React.useRef(0);
   const isSavingVideoProgressRef = React.useRef(false);
 
@@ -71,7 +81,7 @@ export default function LessonDetailScreen() {
     [previousLesson?._id, progressList],
   );
   const isPrerequisiteLocked =
-    Boolean(previousLesson) && previousProgress?.status !== "completed";
+    Boolean(previousLesson) && previousProgress?.status !== 'completed';
 
   const lesson = React.useMemo(
     () => buildLessonDetail({ dbLesson, id, lessonCourse }),
@@ -84,66 +94,127 @@ export default function LessonDetailScreen() {
     );
     return currentIndex >= 0 ? orderedDbLessons[currentIndex + 1] : undefined;
   }, [orderedDbLessons, dbLesson]);
+  const nextLessonCourse = React.useMemo(
+    () => courses?.find((course) => course._id === nextLesson?.courseId),
+    [courses, nextLesson?.courseId],
+  );
+  const isNextLessonLocked =
+    Boolean(nextLesson && courses) &&
+    !canAccessLesson(nextLesson, nextLessonCourse, hasPremiumAccess);
   const currentProgress = React.useMemo(
     () => progressList?.find((item) => item.lessonId === dbLesson?._id),
     [progressList, dbLesson],
   );
-  const isCompleted = currentProgress?.status === "completed";
-  const isMarkingComplete = updateProgress.isPending || createProgress.isPending;
+  const isCompleted = currentProgress?.status === 'completed';
+  const isMarkingComplete =
+    updateProgress.isPending || createProgress.isPending;
+
+  const videoWatchedPercent = Math.max(
+    currentProgress?.completionPercent ?? 0,
+    lastSavedVideoProgressRef.current,
+  );
+  const hasVideo = Boolean(lesson?.videoUrl);
+  const hasWatchedEnoughVideo =
+    !hasVideo || videoWatchedPercent >= REQUIRED_WATCH_PERCENT;
+  const hasCompletedPractice = React.useMemo(
+    () =>
+      Boolean(
+        dbLesson &&
+        practiceSessions?.some((session) => session.lessonId === dbLesson._id),
+      ),
+    [dbLesson, practiceSessions],
+  );
+  const practiceRequirementMet = !lesson?.hasPractice || hasCompletedPractice;
+  const canMarkComplete =
+    isCompleted || (hasWatchedEnoughVideo && practiceRequirementMet);
+  const incompleteReason = isCompleted
+    ? undefined
+    : !hasWatchedEnoughVideo
+      ? `Hãy xem ít nhất ${REQUIRED_WATCH_PERCENT}% video bài học trước khi đánh dấu hoàn thành (bạn đã xem ${videoWatchedPercent}%).`
+      : !practiceRequirementMet
+        ? 'Hãy hoàn thành phần luyện tập cùng AI của bài học này trước khi đánh dấu hoàn thành.'
+        : undefined;
 
   const goToLessons = () => {
-    router.replace("/(tabs)/courses");
+    router.replace('/(tabs)/courses');
   };
 
   const goToSubscription = () => {
-    router.push("/profile/subscription");
+    router.push('/profile/subscription');
   };
 
   const goToPreviousLesson = () => {
     if (!previousLesson) return;
     router.replace({
-      pathname: "/lesson/[id]",
+      pathname: '/lesson/[id]',
       params: { id: previousLesson._id },
     } as unknown as Href);
   };
 
   const goToNextLesson = () => {
     if (!nextLesson) return;
+
+    if (isNextLessonLocked) {
+      Alert.alert(
+        'Cần mở khóa gói Technique',
+        getUpgradeMessage(nextLesson.title),
+        [
+          { text: 'Hủy', style: 'cancel', onPress: goToLessons },
+          { text: 'Đồng ý', onPress: goToSubscription },
+        ],
+      );
+      return;
+    }
+
     router.replace({
-      pathname: "/lesson/[id]",
+      pathname: '/lesson/[id]',
       params: { id: nextLesson._id },
     } as unknown as Href);
   };
 
   const goToPractice = () => {
     if (!lesson) return;
-    router.push(
-      {
-        pathname: "/practice/[lessonId]",
-        params: {
-          lessonId: String(lesson.id),
-          lessonNumber: lesson.lessonNumber ? String(lesson.lessonNumber) : undefined,
-          note: lesson.targetNote,
-        },
-      } as unknown as Href,
-    );
+    router.push({
+      pathname: '/practice/[lessonId]',
+      params: {
+        lessonId: String(lesson.id),
+        lessonNumber: lesson.lessonNumber
+          ? String(lesson.lessonNumber)
+          : undefined,
+        note: lesson.targetNote,
+      },
+    } as unknown as Href);
   };
 
   const markAsCompleted = () => {
-    if (!dbLesson || isCompleted || updateProgress.isPending || createProgress.isPending) {
+    if (
+      !dbLesson ||
+      isCompleted ||
+      updateProgress.isPending ||
+      createProgress.isPending
+    ) {
+      return;
+    }
+
+    if (!canMarkComplete) {
+      Alert.alert(
+        'Chưa thể hoàn thành',
+        incompleteReason ??
+          'Bạn cần xem hết video và hoàn thành phần luyện tập trước.',
+      );
       return;
     }
 
     const lastAccessedAt = new Date().toISOString();
     const onSuccess = () => {
-      Alert.alert("Đã hoàn thành", "Bài học đã được đánh dấu hoàn thành.");
+      Alert.alert('Đã hoàn thành', 'Bài học đã được đánh dấu hoàn thành.');
     };
 
     if (currentProgress) {
       updateProgress.mutate(
         {
           id: currentProgress._id,
-          status: "completed",
+          status: 'completed',
           completionPercent: 100,
           lastAccessedAt,
         },
@@ -154,7 +225,7 @@ export default function LessonDetailScreen() {
         {
           courseId: dbLesson.courseId,
           lessonId: dbLesson._id,
-          status: "completed",
+          status: 'completed',
           completionPercent: 100,
           lastAccessedAt,
         },
@@ -179,12 +250,10 @@ export default function LessonDetailScreen() {
     }
   }, []);
 
-  const saveYoutubeProgress = React.useCallback(
-    async (force = false) => {
+  const persistWatchProgress = React.useCallback(
+    async (currentTime: number, duration: number, force = false) => {
       if (
         !dbLesson ||
-        !youtubeVideoId ||
-        !youtubePlayerRef.current ||
         isCompleted ||
         isLessonLocked ||
         isPrerequisiteLocked ||
@@ -194,16 +263,11 @@ export default function LessonDetailScreen() {
         return;
       }
 
+      if (!duration || duration <= 0 || currentTime < 0) return;
+
       isSavingVideoProgressRef.current = true;
 
       try {
-        const [duration, currentTime] = await Promise.all([
-          youtubePlayerRef.current.getDuration(),
-          youtubePlayerRef.current.getCurrentTime(),
-        ]);
-
-        if (!duration || duration <= 0 || currentTime < 0) return;
-
         const watchedSeconds = Math.floor(currentTime);
         const completionPercent = Math.min(
           99,
@@ -218,7 +282,7 @@ export default function LessonDetailScreen() {
         if (completionPercent <= previousPercent && !force) return;
 
         const payload = {
-          status: "in_progress" as const,
+          status: 'in_progress' as const,
           watchedSeconds,
           completionPercent: Math.max(completionPercent, previousPercent),
           lastAccessedAt: new Date().toISOString(),
@@ -251,8 +315,21 @@ export default function LessonDetailScreen() {
       isPrerequisiteLocked,
       progressLoading,
       updateProgress,
-      youtubeVideoId,
     ],
+  );
+
+  const saveYoutubeProgress = React.useCallback(
+    async (force = false) => {
+      if (!youtubeVideoId || !youtubePlayerRef.current) return;
+
+      const [duration, currentTime] = await Promise.all([
+        youtubePlayerRef.current.getDuration(),
+        youtubePlayerRef.current.getCurrentTime(),
+      ]);
+
+      await persistWatchProgress(currentTime, duration, force);
+    },
+    [persistWatchProgress, youtubeVideoId],
   );
 
   const startVideoProgressTracking = React.useCallback(() => {
@@ -279,7 +356,11 @@ export default function LessonDetailScreen() {
         saveYoutubeProgress(true).catch(() => undefined);
       }
     },
-    [saveYoutubeProgress, startVideoProgressTracking, stopVideoProgressTracking],
+    [
+      saveYoutubeProgress,
+      startVideoProgressTracking,
+      stopVideoProgressTracking,
+    ],
   );
 
   React.useEffect(() => stopVideoProgressTracking, [stopVideoProgressTracking]);
@@ -293,6 +374,28 @@ export default function LessonDetailScreen() {
       player.replaceAsync(lesson.videoUrl);
     }
   }, [lesson?.videoUrl, youtubeVideoId, player]);
+
+  React.useEffect(() => {
+    if (!lesson?.videoUrl || youtubeVideoId) return;
+    if (isCompleted || isLessonLocked || isPrerequisiteLocked) return;
+
+    const interval = setInterval(() => {
+      if (!player.playing) return;
+      persistWatchProgress(player.currentTime, player.duration).catch(
+        () => undefined,
+      );
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [
+    isCompleted,
+    isLessonLocked,
+    isPrerequisiteLocked,
+    lesson?.videoUrl,
+    persistWatchProgress,
+    player,
+    youtubeVideoId,
+  ]);
 
   if (lessonLoading || coursesLoading || subscriptionLoading) {
     return <LessonLoadingState />;
@@ -323,7 +426,7 @@ export default function LessonDetailScreen() {
   }
 
   return (
-    <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
+    <SafeScreen style={{ backgroundColor: '#FDF8EA' }}>
       <Stack.Screen options={{ title: lesson.title, headerShown: false }} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
@@ -342,6 +445,8 @@ export default function LessonDetailScreen() {
         <LessonTheoryCard theory={lesson.theory} />
         <LessonPracticeSection lesson={lesson} onPracticePress={goToPractice} />
         <LessonCompletionActions
+          canComplete={canMarkComplete}
+          incompleteReason={incompleteReason}
           isCompleted={isCompleted}
           isMarkingComplete={isMarkingComplete}
           nextLesson={nextLesson}
