@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "LenFolk",
-    "slug": "lenfolk",
+    "slug": "lenfolk-app",
     "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/splash-icon.png",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.lenfolk.lenfolkapp",
@@ -60,6 +62,23 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.159674287558-pq6gqfbm7ff1io44ro67epbosddtqr45"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "extraPods": [
+              {
+                "name": "GoogleUtilities",
+                "modular_headers": true
+              },
+              {
+                "name": "RecaptchaInterop",
+                "modular_headers": true
+              }
+            ]
+          }
         }
       ]
     ],
