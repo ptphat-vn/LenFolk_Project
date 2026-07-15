@@ -17,6 +17,20 @@ module.exports = {
       password: { type: 'string', example: 'MatKhau@123' },
     },
   },
+  GoogleLoginInput: {
+    type: 'object',
+    required: ['idToken'],
+    properties: {
+      idToken: {
+        type: 'string',
+        description:
+          'idToken (JWT) lấy từ Google Sign-In ở phía client (mobile/web). ' +
+          'Server xác minh với Google, tự động đăng nhập nếu email đã tồn tại ' +
+          'hoặc tạo tài khoản mới (đã xác thực sẵn) nếu chưa có.',
+        example: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...',
+      },
+    },
+  },
   RefreshTokenInput: {
     type: 'object',
     required: ['refreshToken'],
@@ -111,6 +125,12 @@ module.exports = {
         enum: ['user', 'instructor', 'admin'],
         example: 'user',
         description: 'user mặc định khi đăng ký; instructor/admin do admin gán',
+      },
+      provider: {
+        type: 'string',
+        enum: ['local', 'google'],
+        example: 'local',
+        description: 'Nhà cung cấp đăng nhập: local (email/mật khẩu) hoặc google',
       },
       isActive: { type: 'boolean', example: true },
       isVerified: { type: 'boolean', example: false },
