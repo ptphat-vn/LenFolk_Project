@@ -1,31 +1,64 @@
-import React, { useState } from "react";
-import { Alert, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from "react-native";
-import { Href, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { getApiErrorMessage } from "@/lib/api-error";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { useRegister } from "@/hooks/auth/use-register";
-import { AnimatedBlock } from "@/components/AnimatedPage";
-import SlideToConfirm from "@/components/SlideToConfirm";
-import { getOnboardingRoute } from "@/constants/onboarding";
-
+import { AnimatedBlock } from '@/components/AnimatedPage';
+import SlideToConfirm from '@/components/SlideToConfirm';
+import { getOnboardingRoute } from '@/constants/onboarding';
+import {
+  isGoogleCancelled,
+  useGoogleLogin,
+} from '@/hooks/auth/use-google-login';
+import { useRegister } from '@/hooks/auth/use-register';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { Href, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 export default function SignupScreen() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(true);
   const registerMutation = useRegister();
+  const googleLoginMutation = useGoogleLogin();
+
+  const handleGoogleLogin = () => {
+    googleLoginMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        router.replace(getOnboardingRoute(data.user) || '/(tabs)');
+      },
+      onError: (error) => {
+        if (isGoogleCancelled(error)) return; // người dùng tự huỷ, không báo lỗi
+        Alert.alert(
+          'Đăng nhập Google thất bại',
+          getApiErrorMessage(error, 'Không thể đăng nhập bằng Google. Vui lòng thử lại.'),
+        );
+      },
+    });
+  };
 
   const handleRegister = () => {
     if (!name || !email || !password) {
-      Alert.alert("Thiếu thông tin", "Vui lòng nhập họ tên, email và mật khẩu.");
+      Alert.alert(
+        'Thiếu thông tin',
+        'Vui lòng nhập họ tên, email và mật khẩu.',
+      );
       return;
     }
 
     if (!agreeTerms) {
-      Alert.alert("Điều khoản", "Bạn cần đồng ý với Điều khoản & Điều kiện.");
+      Alert.alert('Điều khoản', 'Bạn cần đồng ý với Điều khoản & Điều kiện.');
       return;
     }
 
@@ -33,26 +66,26 @@ export default function SignupScreen() {
       { name, email, password },
       {
         onSuccess: (data) => {
-          router.replace(getOnboardingRoute(data.user) || "/(tabs)");
+          router.replace(getOnboardingRoute(data.user) || '/(tabs)');
         },
         onError: (error) => {
           Alert.alert(
-            "Đăng ký thất bại",
-            getApiErrorMessage(error, "Không thể đăng ký. Vui lòng thử lại.")
+            'Đăng ký thất bại',
+            getApiErrorMessage(error, 'Không thể đăng ký. Vui lòng thử lại.'),
           );
         },
-      }
+      },
     );
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-[#FDF8EA]" // Cream/yellow soft top background
     >
-      <ScrollView 
+      <ScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }}
         showsVerticalScrollIndicator={false}
       >
         <StatusBar style="dark" />
@@ -61,12 +94,15 @@ export default function SignupScreen() {
         <View className="h-32" />
 
         {/* White container rising from the bottom */}
-        <AnimatedBlock variant="panel" className="bg-white rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl">
+        <AnimatedBlock
+          variant="panel"
+          className="bg-white rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl"
+        >
           {/* Header titles */}
           <AnimatedBlock variant="header">
-            <Text 
+            <Text
               className="text-4xl font-extrabold text-primary mb-3"
-              style={{ fontFamily: "BeVietnamPro-Medium" }}
+              style={{ fontFamily: 'BeVietnamPro-Medium' }}
             >
               Bắt đầu!!!
             </Text>
@@ -78,7 +114,7 @@ export default function SignupScreen() {
           {/* Input Fields */}
           <AnimatedBlock variant="card" delay={100} className="gap-5 mb-6">
             {/* Name Input */}
-            <View className="w-full flex-row items-center bg-white border border-primary rounded-2xl px-4 py-4 shadow-sm">
+            <View className="w-full flex-row items-center bg-white border border-primary rounded-[35px] px-4 py-3 shadow-sm">
               <Feather name="user" size={20} color="#8E9E6E" />
               <TextInput
                 className="flex-1 text-charcoal text-base ml-3"
@@ -90,7 +126,7 @@ export default function SignupScreen() {
             </View>
 
             {/* Email Input */}
-            <View className="w-full flex-row items-center bg-white border border-primary rounded-2xl px-4 py-4 shadow-sm">
+            <View className="w-full flex-row items-center bg-white border border-primary rounded-[35px] px-4 py-3 shadow-sm">
               <Feather name="mail" size={20} color="#8E9E6E" />
               <TextInput
                 className="flex-1 text-charcoal text-base ml-3"
@@ -104,7 +140,7 @@ export default function SignupScreen() {
             </View>
 
             {/* Password Input */}
-            <View className="w-full flex-row items-center bg-white border border-primary rounded-2xl px-4 py-4 shadow-sm">
+            <View className="w-full flex-row items-center bg-white border border-primary rounded-[35px] px-4 py-3 shadow-sm">
               <Feather name="lock" size={20} color="#8E9E6E" />
               <TextInput
                 className="flex-1 text-charcoal text-base ml-3"
@@ -115,28 +151,36 @@ export default function SignupScreen() {
                 onChangeText={setPassword}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#8E9E6E" />
+                <Feather
+                  name={showPassword ? 'eye' : 'eye-off'}
+                  size={20}
+                  color="#8E9E6E"
+                />
               </TouchableOpacity>
             </View>
           </AnimatedBlock>
 
           {/* Terms Agreement Checkbox Row */}
           <AnimatedBlock variant="chip" delay={170}>
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={0.8}
               className="flex-row items-center mb-8 px-1"
               onPress={() => setAgreeTerms(!agreeTerms)}
             >
-            <View className={`w-6 h-6 rounded-full border items-center justify-center ${
-              agreeTerms 
-                ? "bg-primary border-primary" 
-                : "border-primary/50 bg-white"
-            }`}>
-              {agreeTerms && <Ionicons name="checkmark" size={14} color="white" />}
-            </View>
-            <Text className="text-sm text-charcoal/80 ml-3 font-semibold">
-              Đồng ý với Điều khoản & Điều kiện
-            </Text>
+              <View
+                className={`w-6 h-6 rounded-full border items-center justify-center ${
+                  agreeTerms
+                    ? 'bg-primary border-primary'
+                    : 'border-primary/50 bg-white'
+                }`}
+              >
+                {agreeTerms && (
+                  <Ionicons name="checkmark" size={14} color="white" />
+                )}
+              </View>
+              <Text className="text-sm text-charcoal/80 ml-3 font-semibold">
+                Đồng ý với Điều khoản & Điều kiện
+              </Text>
             </TouchableOpacity>
           </AnimatedBlock>
 
@@ -160,35 +204,30 @@ export default function SignupScreen() {
             {/* Google Button */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => Alert.alert("Google", "Đăng ký bằng Google sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.")}
+              disabled={googleLoginMutation.isPending}
+              onPress={handleGoogleLogin}
               className="w-16 h-16 rounded-full bg-white justify-center items-center border border-gray-100 shadow-md"
             >
-              <Image 
-                source={require("../../assets/images/Google.png")} 
-                style={{ width: 26, height: 26, resizeMode: "contain" }} 
-              />
+              {googleLoginMutation.isPending ? (
+                <ActivityIndicator size="small" color="#8E9E6E" />
+              ) : (
+                <Image
+                  source={require('../../assets/images/logo_google.png')}
+                  style={{ width: 26, height: 26, resizeMode: 'contain' }}
+                />
+              )}
             </TouchableOpacity>
 
             {/* Apple Button */}
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => Alert.alert("Apple", "Đăng ký bằng Apple sẽ sớm ra mắt. Vui lòng dùng email và mật khẩu.")}
-              className="w-16 h-16 rounded-full bg-white justify-center items-center border border-gray-100 shadow-md"
-            >
-              <Image 
-                source={require("../../assets/images/Apple.png")} 
-                style={{ width: 26, height: 26, resizeMode: "contain" }} 
-              />
-            </TouchableOpacity>
           </View>
 
           {/* Footer Link */}
           <View className="flex-row justify-center">
             <Text className="text-sm text-charcoal/60">Đã có tài khoản? </Text>
-            <TouchableOpacity onPress={() => router.push("/login")}>
-              <Text 
+            <TouchableOpacity onPress={() => router.push('/login')}>
+              <Text
                 className="text-sm font-extrabold text-sky-500"
-                style={{ fontFamily: "BeVietnamPro-Medium" }}
+                style={{ fontFamily: 'BeVietnamPro-Medium' }}
               >
                 Đăng nhập
               </Text>
@@ -197,7 +236,7 @@ export default function SignupScreen() {
 
           <TouchableOpacity
             className="items-center mt-5"
-            onPress={() => router.push("/register-instructor" as Href)}
+            onPress={() => router.push('/register-instructor' as Href)}
           >
             <Text className="text-sm font-bold text-primary">
               Đăng ký trở thành giảng viên
@@ -208,5 +247,3 @@ export default function SignupScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-

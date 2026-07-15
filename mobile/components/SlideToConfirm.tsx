@@ -62,7 +62,12 @@ export default function SlideToConfirm({
         runOnJS(handleConfirm)();
       }
       // Luôn trả nút về đầu: thành công → màn chuyển trang; lỗi/thiếu input → kéo lại được.
-      x.value = withSpring(0, { damping: 18, stiffness: 180 });
+      // overshootClamping: chặn lò xo vọt qua mốc 0 (translateX âm) khi thả nhanh → nút không bay ngược ra ngoài.
+      x.value = withSpring(0, {
+        damping: 18,
+        stiffness: 180,
+        overshootClamping: true,
+      });
     });
 
   const thumbStyle = useAnimatedStyle(() => ({
