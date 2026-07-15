@@ -15,8 +15,12 @@ const sendJson = (ws, payload) => {
   }
 };
 
-const closeWithError = (ws, message, code = 1008) => {
-  sendJson(ws, { type: 'error', message });
+const closeWithError = (ws, message, code = 1008, errorCode) => {
+  sendJson(ws, {
+    type: 'error',
+    message,
+    ...(errorCode ? { code: errorCode } : {}),
+  });
   ws.close(code, message.slice(0, 120));
 };
 
@@ -228,7 +232,15 @@ const initAiAnalysisWebSocket = (server) => {
 
         closeWithError(ws, 'Message type không hợp lệ');
       } catch (error) {
-        closeWithError(ws, error.message || 'Không thể xử lý WebSocket message', 1011);
+        // Lỗi nghiệp vụ (vd: không phải tiếng sáo) dùng close code 1008 và
+        // kèm error.code để client phân biệt với lỗi hệ thống (1011).
+        const isOperational = Boolean(error.code || error.isOperational);
+        closeWithError(
+          ws,
+          error.message || 'Không thể xử lý WebSocket message',
+          isOperational ? 1008 : 1011,
+          error.code,
+        );
       }
     });
   });
