@@ -360,35 +360,45 @@ exports.googleLogin = async (req, res, next) => {
     // Tìm user theo email (kể cả tài khoản local đã có) để liên kết.
     let user = await User.findOne({ email: normalizedEmail });
 
-    if (user) {
-      // Liên kết googleId cho tài khoản hiện có nếu chưa có
-      let dirty = false;
-      if (!user.googleId) {
-        user.googleId = googleId;
-        dirty = true;
+    // Chưa có tài khoản → tạo mới bằng Google.
+    if (!user) {
+      try {
+        user = await User.create({
+          name: name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          provider: 'google',
+          googleId,
+          avatar: picture || null,
+          isVerified: true,
+        });
+      } catch (createErr) {
+        // Race condition: một request song song vừa tạo user cùng email
+        // (findOne trả null nhưng create bị unique index chặn). Query lại để dùng.
+        if (createErr.code === 11000) {
+          user = await User.findOne({ email: normalizedEmail });
+        }
+        if (!user) throw createErr;
       }
-      if (!user.avatar && picture) {
-        user.avatar = picture;
-        dirty = true;
-      }
-      // Email Google đã được Google xác thực → coi như đã verify
-      if (!user.isVerified) {
-        user.isVerified = true;
-        dirty = true;
-      }
-      if (dirty) {
-        await user.save({ validateBeforeSave: false });
-      }
-    } else {
-      // Tạo tài khoản mới bằng Google
-      user = await User.create({
-        name: name || normalizedEmail.split('@')[0],
-        email: normalizedEmail,
-        provider: 'google',
-        googleId,
-        avatar: picture || null,
-        isVerified: true,
-      });
+    }
+
+    // Đồng bộ thông tin Google cho tài khoản (liên kết googleId cho tài khoản
+    // local đã có, bổ sung avatar, đánh dấu đã xác thực). Chỉ lưu khi có thay đổi.
+    let dirty = false;
+    if (!user.googleId) {
+      user.googleId = googleId;
+      dirty = true;
+    }
+    if (!user.avatar && picture) {
+      user.avatar = picture;
+      dirty = true;
+    }
+    // Email Google đã được Google xác thực → coi như đã verify
+    if (!user.isVerified) {
+      user.isVerified = true;
+      dirty = true;
+    }
+    if (dirty) {
+      await user.save({ validateBeforeSave: false });
     }
 
     if (!user.isActive) {
