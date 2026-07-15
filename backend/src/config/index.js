@@ -37,8 +37,9 @@ const envSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default('gpt-4o-mini-transcribe'),
   OPENAI_ANALYSIS_MODEL: z.string().default('gpt-4o-mini'),
   GEMINI_API_KEY: z.string().default(''),
-  // Model nhận diện tiếng sáo (gác cổng) — chỉ phân loại, dùng bản lite rẻ hơn.
-  GEMINI_DETECTION_MODEL: z.string().default('gemini-flash-lite-latest'),
+  // Model nhận diện tiếng sáo (gác cổng, chỉ nhánh OpenAI dùng riêng). Dùng flash
+  // (không phải lite) vì lite yếu ở phân loại audio → dễ cho non-flute lọt qua.
+  GEMINI_DETECTION_MODEL: z.string().default('gemini-flash-latest'),
   // Model chấm điểm — cần chất lượng nhận xét cao hơn.
   GEMINI_ANALYSIS_MODEL: z.string().default('gemini-flash-latest'),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
