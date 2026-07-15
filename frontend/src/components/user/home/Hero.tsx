@@ -29,7 +29,7 @@ export const Hero = () => {
       {/* Hollow Glowing Ring Background */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div
-          className="absolute top-[35%] left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-[15px] w-[3000px] h-[3000px] blur-[80px]"
+          className="absolute top-[35%] left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-[15px] w-[1200px] h-[1200px] blur-[40px] md:w-[3000px] md:h-[3000px] md:blur-[80px]"
           style={{
             background: 'conic-gradient(from 0deg at 50% 50%, #d6ddc6 0deg, #f4e0ac 90deg, #d6ddc6 180deg, #8e9e6e 270deg, #d6ddc6 360deg)',
             WebkitMaskImage: 'radial-gradient(circle, transparent 400px, black 480px, black 520px, transparent 600px)',
@@ -62,7 +62,7 @@ export const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="mb-8 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/60 backdrop-blur-md border border-gray-200 shadow-sm shadow-sage-dark/10"
+          className="relative z-20 mb-8 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/60 backdrop-blur-md border border-gray-200 shadow-sm shadow-sage-dark/10"
         >
           <Sparkles size={20} className="text-sage-dark" />
           <span className="text-base font-medium tracking-wide">AI Flute Tutor</span>
@@ -73,12 +73,12 @@ export const Hero = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.5, ease: [0.4, 0, 0.2, 1] }}
-          className="relative w-full max-w-5xl mx-auto flex justify-center items-end -mt-8"
+          className="relative w-full max-w-5xl mx-auto flex justify-center items-end mt-2 md:-mt-8"
         >
           <img
             src="/images/3phones_header.png"
             alt="Lenfolk App mockup"
-            className="h-auto object-contain drop-shadow-2xl z-10 -translate-y-[60px] w-[95%] sm:w-[85%] md:w-[calc(100%-180px)]"
+            className="h-auto object-contain drop-shadow-2xl z-10 -translate-y-[20px] md:-translate-y-[60px] w-[95%] sm:w-[85%] md:w-[calc(100%-180px)]"
             style={{
               WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 70%)',
               maskImage: 'linear-gradient(to bottom, black 50%, transparent 80%)'

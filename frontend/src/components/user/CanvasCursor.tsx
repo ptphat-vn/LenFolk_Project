@@ -49,7 +49,16 @@ export const FairyDustCursor: React.FC<FairyDustCursorProps> = ({
   });
   const [mounted, setMounted] = useState(false);
 
+  const [isFinePointer, setIsFinePointer] = useState(false);
+
   useLayoutEffect(() => {
+    const pointerQuery = window.matchMedia(
+      '(hover: hover) and (pointer: fine)',
+    );
+    const applyPointer = () => setIsFinePointer(pointerQuery.matches);
+    applyPointer();
+    pointerQuery.addEventListener('change', applyPointer);
+
     const updateCanvasSize = () => {
       const newWidth = element ? element.clientWidth : window.innerWidth;
       const newHeight = element ? element.clientHeight : window.innerHeight;
@@ -62,11 +71,13 @@ export const FairyDustCursor: React.FC<FairyDustCursorProps> = ({
     window.addEventListener('resize', updateCanvasSize);
 
     return () => {
+      pointerQuery.removeEventListener('change', applyPointer);
       window.removeEventListener('resize', updateCanvasSize);
     };
   }, [element]);
 
   useEffect(() => {
+    if (!isFinePointer) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -119,7 +130,7 @@ export const FairyDustCursor: React.FC<FairyDustCursorProps> = ({
         particle.lifeSpan *= fadeSpeed;
         particle.scale = Math.max(
           particle.lifeSpan / particle.initialLifeSpan,
-          0
+          0,
         );
 
         // Draw particle
@@ -133,7 +144,7 @@ export const FairyDustCursor: React.FC<FairyDustCursorProps> = ({
 
       // Remove dead particles
       particlesRef.current = particlesRef.current.filter(
-        (particle) => particle.lifeSpan > 0.1
+        (particle) => particle.lifeSpan > 0.1,
       );
     };
 
@@ -151,43 +162,28 @@ export const FairyDustCursor: React.FC<FairyDustCursorProps> = ({
 
       const distance = Math.hypot(
         cursorRef.current.x - lastPosRef.current.x,
-        cursorRef.current.y - lastPosRef.current.y
+        cursorRef.current.y - lastPosRef.current.y,
       );
 
       if (distance > 2) {
         for (let i = 0; i < particleCount; i++) {
           particlesRef.current.push(
-            createParticle(cursorRef.current.x, cursorRef.current.y)
+            createParticle(cursorRef.current.x, cursorRef.current.y),
           );
         }
         lastPosRef.current = { ...cursorRef.current };
       }
     };
 
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      const rect = element ? targetElement.getBoundingClientRect() : undefined;
-      const x = element ? touch.clientX - rect!.left : touch.clientX;
-      const y = element ? touch.clientY - rect!.top : touch.clientY;
-
-      for (let i = 0; i < particleCount; i++) {
-        particlesRef.current.push(createParticle(x, y));
-      }
-    };
-
     targetElement.addEventListener('mousemove', handleMouseMove);
-    targetElement.addEventListener('touchmove', handleTouchMove, {
-      passive: false,
-    });
     animate();
 
     return () => {
       targetElement.removeEventListener('mousemove', handleMouseMove);
-      targetElement.removeEventListener('touchmove', handleTouchMove);
       cancelAnimationFrame(animationFrameId);
     };
   }, [
+    isFinePointer,
     colors,
     element,
     characterSet,
@@ -199,7 +195,7 @@ export const FairyDustCursor: React.FC<FairyDustCursorProps> = ({
     canvasSize,
   ]);
 
-  if (!mounted) return null;
+  if (!mounted || !isFinePointer) return null;
 
   return (
     <canvas
