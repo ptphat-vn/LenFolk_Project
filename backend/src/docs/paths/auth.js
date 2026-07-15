@@ -41,25 +41,6 @@ module.exports = {
       },
     },
   },
-  '/auth/google': {
-    post: {
-      tags: ['Auth'],
-      summary: 'Đăng nhập / đăng ký bằng Google',
-      description:
-        'Client gửi `idToken` lấy từ Google Sign-In. Server xác minh token với Google rồi:\n' +
-        '- Nếu email **đã tồn tại** → liên kết `googleId` (nếu chưa có) và đăng nhập.\n' +
-        '- Nếu email **chưa tồn tại** → tự tạo tài khoản mới (`provider=google`, `isVerified=true`, lấy avatar từ Google) rồi đăng nhập.\n\n' +
-        'Trả về access/refresh token giống các endpoint đăng nhập khác. ' +
-        'Giảng viên chưa được duyệt (pending/rejected) hoặc tài khoản bị khóa sẽ bị chặn với mã 403.',
-      requestBody: jsonBody('GoogleLoginInput'),
-      responses: {
-        200: authOk,
-        401: err('Google idToken không hợp lệ / hết hạn / email chưa xác thực'),
-        403: err('Tài khoản bị khóa / giảng viên đang chờ duyệt / bị từ chối'),
-        500: err('Đăng nhập Google chưa được cấu hình trên máy chủ'),
-      },
-    },
-  },
   '/auth/refresh-token': {
     post: {
       tags: ['Auth'],
