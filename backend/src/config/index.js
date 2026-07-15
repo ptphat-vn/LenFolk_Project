@@ -37,7 +37,7 @@ const envSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default('gpt-4o-mini-transcribe'),
   OPENAI_ANALYSIS_MODEL: z.string().default('gpt-4o-mini'),
   GEMINI_API_KEY: z.string().default(''),
-  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-1.5-flash'),
+  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-2.5-flash'),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
