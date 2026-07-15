@@ -15,13 +15,26 @@ const sendJson = (ws, payload) => {
   }
 };
 
+// Close reason của WebSocket giới hạn 123 BYTE (không phải ký tự). Ký tự tiếng
+// Việt là đa byte (UTF-8) nên phải cắt theo byte và không cắt giữa 1 ký tự, nếu
+// không ws.close ném RangeError làm sập process. Message đầy đủ đã đi trong JSON
+// payload ở trên rồi, reason chỉ là phần phụ.
+const truncateUtf8 = (str, maxBytes) => {
+  const buf = Buffer.from(String(str), 'utf8');
+  if (buf.length <= maxBytes) return buf.toString('utf8');
+  let end = maxBytes;
+  // Lùi lại nếu đang ở giữa một chuỗi byte nối tiếp (10xxxxxx).
+  while (end > 0 && (buf[end] & 0xc0) === 0x80) end -= 1;
+  return buf.toString('utf8', 0, end);
+};
+
 const closeWithError = (ws, message, code = 1008, errorCode) => {
   sendJson(ws, {
     type: 'error',
     message,
     ...(errorCode ? { code: errorCode } : {}),
   });
-  ws.close(code, message.slice(0, 120));
+  ws.close(code, truncateUtf8(message, 120));
 };
 
 const getTokenFromRequest = (request) => {
