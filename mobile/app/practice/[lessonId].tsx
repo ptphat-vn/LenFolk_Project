@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
   AudioModule,
+  AudioQuality,
   RecordingPresets,
   setAudioModeAsync,
   useAudioPlayer,
@@ -70,6 +71,26 @@ import type {
   ReferencePracticeTrack,
   ReferenceTrackId,
 } from "@/components/practice/lesson-practice/types";
+
+// Preset ghi âm tối ưu cho phân tích sáo: mono, 22.05kHz, 64kbps AAC (giữ .m4a).
+// Nhỏ hơn ~1/2 so với HIGH_QUALITY (stereo/44.1kHz/128kbps) → upload nhanh hơn và
+// AI xử lý audio nhanh hơn, vẫn đủ âm sắc + cao độ cho nhận diện và chấm điểm.
+// KHÔNG dùng RecordingPresets.LOW_QUALITY vì trên Android nó rơi về AMR-NB (codec
+// thoại băng hẹp 8kHz, .3gp) làm hỏng âm sắc sáo.
+const FLUTE_ANALYSIS_RECORDING = {
+  ...RecordingPresets.HIGH_QUALITY,
+  sampleRate: 22050,
+  numberOfChannels: 1,
+  bitRate: 64000,
+  ios: {
+    ...RecordingPresets.HIGH_QUALITY.ios,
+    audioQuality: AudioQuality.MEDIUM,
+  },
+  web: {
+    ...RecordingPresets.HIGH_QUALITY.web,
+    bitsPerSecond: 64000,
+  },
+};
 
 const RECORDINGS_DIRECTORY = `${FileSystem.documentDirectory}practice-recordings`;
 
@@ -204,7 +225,7 @@ export default function NotePracticeScreen() {
     note || lesson?.targetNote || mockLesson?.targetNote || "C4",
   );
   const targetNoteLabel = getNoteLabel(targetNote);
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(FLUTE_ANALYSIS_RECORDING);
   const recorderState = useAudioRecorderState(recorder);
   const playbackPlayer = useAudioPlayer(undefined, { updateInterval: 250 });
   const playbackStatus = useAudioPlayerStatus(playbackPlayer);
