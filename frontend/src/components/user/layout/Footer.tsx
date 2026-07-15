@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Mail } from 'lucide-react';
 import Link from 'next/link';
 
 export const Footer = () => {
@@ -63,23 +63,22 @@ export const Footer = () => {
           {/* Column 5: Downloads */}
           <div className="lg:col-span-1">
             <h4 className="font-medium text-black mb-6">Tải ứng dụng</h4>
-            <div className="flex flex-col gap-3">
-              <button className="flex items-center justify-center gap-3 px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors w-full sm:w-auto">
+            <div className="inline-flex flex-col gap-3 w-full sm:w-auto">
+              <button className="flex items-center justify-center gap-3 px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors w-full sm:w-[160px] h-[48px]">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" /></svg>
                 <span className="text-xs text-left leading-tight">Download on the<br /><span className="text-sm font-bold">App Store</span></span>
               </button>
-              <button className="flex items-center justify-center gap-3 px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors w-full sm:w-auto">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 22.065V1.935a.5.5 0 0 1 .773-.418l15.652 10.065a.5.5 0 0 1 0 .836L3.773 22.483A.5.5 0 0 1 3 22.065z" /></svg>
-                <span className="text-xs text-left leading-tight">Get it on<br /><span className="text-sm font-bold">Google Play</span></span>
-              </button>
+              <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center w-full sm:w-[160px] aspect-square">
+                <img src="/images/qr_app copy.png" alt="QR Code" className="w-full h-full object-contain rounded-lg" />
+              </div>
             </div>
           </div>
 
         </div>
 
         {/* Bottom Row */}
-        <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex gap-4">
+        <div className="border-t border-gray-100 pt-8 flex flex-col md:grid md:grid-cols-2 lg:grid-cols-6 gap-6 lg:gap-8 items-center md:items-start lg:items-center">
+          <div className="flex gap-4 lg:col-span-2 w-full justify-center md:justify-start">
             <a href="https://www.facebook.com/profile.php?id=61590024181109" target="_blank" rel="noopener noreferrer" className="w-9 h-9 rounded-full bg-gray-500 flex items-center justify-center text-white hover:bg-gray-700 transition-colors">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4v-8.5z" /></svg>
             </a>
@@ -88,7 +87,14 @@ export const Footer = () => {
             </a>
           </div>
 
-          <div className="text-gray-400 text-sm">
+          <div className="text-gray-400 text-base lg:col-span-2 text-center md:text-left w-full">
+            <a href="mailto:crony1705@gmail.com" className="hover:text-gray-600 transition-colors flex items-center justify-center md:justify-start gap-2">
+              <Mail size={24} />
+              <span>crony1705@gmail.com</span>
+            </a>
+          </div>
+
+          <div className="text-gray-400 text-base md:col-span-2 lg:col-span-2 text-center lg:text-right w-full mt-4 md:mt-0">
             © 2026 LENFOLK. All Rights Reserved.
           </div>
         </div>
