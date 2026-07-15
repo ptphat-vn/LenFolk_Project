@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { Instructors } from './Instructors';
 
 export const Mission = () => {
   return (
@@ -18,13 +19,13 @@ export const Mission = () => {
           whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 1.2, ease: "easeOut" }}
-          className="absolute top-1/2 -translate-y-1/2 -right-10 w-[300px] md:w-[500px] lg:w-[650px] aspect-square pointer-events-none z-0 -translate-x-[50px]"
+          className="absolute top-1/2 -translate-y-1/2 -right-10 w-[200px] sm:w-[300px] md:w-[500px] lg:w-[650px] aspect-square pointer-events-none z-0 -translate-x-4 md:-translate-x-[50px] opacity-20 md:opacity-100"
         >
           <Image
             src="/images/VietNam.png"
             alt="Sáo Trúc"
             fill
-            sizes="(max-width: 768px) 300px, (max-width: 1024px) 500px, 650px"
+            sizes="(max-width: 768px) 200px, (max-width: 1024px) 500px, 650px"
             className="object-contain drop-shadow-2xl"
           />
         </motion.div>
@@ -36,11 +37,11 @@ export const Mission = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-2xl md:text-3xl lg:text-5xl font-medium leading-[1.2] tracking-tight mb-8 uppercase ml-4 md:ml-20 lg:ml-20"
+            className="text-2xl md:text-3xl lg:text-5xl font-medium leading-[1.3] md:leading-[1.2] tracking-tight mb-8 uppercase ml-0 md:ml-20 lg:ml-20 text-center md:text-left"
           >
             VƯỢT MỌI RÀO CẢN ĐỊA LÝ <br className="hidden md:block" />
             ĐƯA <span className="text-[#DCD74C] inline-block -translate-y-1 lg:-translate-y-2">→</span> TINH HOA SÁO TRÚC <br className="hidden md:block" />
-            &emsp;&emsp;&emsp;&emsp;ĐẾN GẦN THẾ HỆ TRẺ VIỆT
+            <span className="hidden md:inline-block w-32"></span>ĐẾN GẦN THẾ HỆ TRẺ VIỆT
           </motion.h1>
         </div>
 
@@ -48,7 +49,7 @@ export const Mission = () => {
         <div className="absolute -bottom-10 -left-10 md:-bottom-20 md:-left-20 w-[200px] h-[200px] md:w-[300px] md:h-[300px] bg-[#DCD74C]/10 rounded-full blur-[60px] pointer-events-none z-0"></div>
 
         {/* 7 Fixed Bars */}
-        <div className="absolute bottom-20 left-20 md:bottom-10 md:left-25 flex items-center gap-1.5 md:gap-2 z-10">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 md:translate-x-0 md:bottom-10 md:left-25 flex items-center gap-1.5 md:gap-2 z-10">
           {[
             { color: '#D7E2CD', height: 'h-8 md:h-6' },
             { color: '#D7E2CD', height: 'h-10 md:h-10' },
@@ -85,9 +86,9 @@ export const Mission = () => {
             </div>
 
             <div className="md:col-span-9 lg:col-span-8 lg:translate-x-[250px]">
-              <p className="text-3xl md:text-4xl lg:text-5xl font-be-vietnam-pro leading-[1.1] tracking-[-0.02em]">
+              <p className="text-3xl md:text-4xl lg:text-5xl font-be-vietnam-pro leading-[1.2] md:leading-[1.1] tracking-[-0.02em] text-left">
                 <span className="text-black">
-                  &emsp;&emsp;Đồng hành cùng thế hệ trẻ<br />LENFOLK{' '}
+                  <span className="hidden md:inline-block w-16"></span>Đồng hành cùng thế hệ trẻ<br />LENFOLK{' '}
                 </span>
                 <span className="text-black/40">
                   ứng dụng AI dạy <br />sáo trúc mang tính đột phá.
@@ -98,6 +99,8 @@ export const Mission = () => {
           </div>
         </div>
       </section>
+
+      <Instructors />
 
       {/* Z-Pattern Content */}
       <section className="py-12 md:py-20 relative mt-0">
