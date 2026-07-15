@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const InstructorProfile = require('../models/InstructorProfile');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const config = require('../config');
 const { generateOtp, hashOtp, otpExpiry, OTP_TTL_MINUTES } = require('../utils/otp');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email.service');
@@ -9,6 +10,22 @@ const signToken = (id, email, role, expiresIn) => {
   return jwt.sign({ id, email, role }, config.jwt.secret, {
     expiresIn,
   });
+};
+
+// Client dùng để xác minh idToken của Google. Chấp nhận idToken phát hành cho
+// bất kỳ client ID nào của app (iOS / Android / Web).
+const googleClient = new OAuth2Client();
+
+// Sinh cặp access/refresh token, lưu refreshToken + lastLoginAt vào user rồi trả về.
+const issueAuthTokens = async (user) => {
+  const accessToken = signToken(user._id, user.email, user.role, config.jwt.accessExpiresIn);
+  const refreshToken = signToken(user._id, user.email, user.role, config.jwt.refreshExpiresIn);
+
+  user.lastLoginAt = new Date();
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  return { accessToken, refreshToken };
 };
 
 // Sinh OTP mới, lưu (đã hash) vào user và gửi email xác thực. Trả về mã thô để (tùy chọn) log khi dev.
@@ -291,6 +308,118 @@ exports.login = async (req, res, next) => {
       success: true,
       data: {
         message: 'Đăng nhập thành công',
+        accessToken,
+        refreshToken,
+        user,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/google  { idToken }
+ * Đăng nhập / đăng ký bằng Google.
+ * - Client (mobile/web) lấy idToken từ Google Sign-In rồi gửi lên đây.
+ * - Server xác minh idToken với Google, lấy email + thông tin hồ sơ.
+ * - Nếu email đã tồn tại → liên kết googleId (nếu chưa có) và đăng nhập.
+ * - Nếu chưa tồn tại → tạo tài khoản mới (provider='google', đã xác thực sẵn).
+ */
+exports.googleLogin = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!config.google.audiences.length) {
+      return res.status(500).json({
+        success: false,
+        message: 'Đăng nhập Google chưa được cấu hình trên máy chủ',
+      });
+    }
+
+    // Xác minh idToken với Google. Ném lỗi nếu token sai/hết hạn/audience không khớp.
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: config.google.audiences,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyErr) {
+      return res.status(401).json({ success: false, message: 'Google idToken không hợp lệ hoặc đã hết hạn' });
+    }
+
+    const { sub: googleId, email, email_verified: emailVerified, name, picture } = payload;
+
+    if (!email || emailVerified === false) {
+      return res.status(401).json({ success: false, message: 'Email Google chưa được xác thực' });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Tìm user theo email (kể cả tài khoản local đã có) để liên kết.
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (user) {
+      // Liên kết googleId cho tài khoản hiện có nếu chưa có
+      let dirty = false;
+      if (!user.googleId) {
+        user.googleId = googleId;
+        dirty = true;
+      }
+      if (!user.avatar && picture) {
+        user.avatar = picture;
+        dirty = true;
+      }
+      // Email Google đã được Google xác thực → coi như đã verify
+      if (!user.isVerified) {
+        user.isVerified = true;
+        dirty = true;
+      }
+      if (dirty) {
+        await user.save({ validateBeforeSave: false });
+      }
+    } else {
+      // Tạo tài khoản mới bằng Google
+      user = await User.create({
+        name: name || normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        provider: 'google',
+        googleId,
+        avatar: picture || null,
+        isVerified: true,
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Tài khoản đã bị khóa' });
+    }
+
+    // Giảng viên phải được admin duyệt mới đăng nhập được (giống flow login thường)
+    if (user.role === 'instructor') {
+      const profile = await InstructorProfile.findOne({ userId: user._id }).select('status rejectReason');
+      if (profile && profile.status === 'pending') {
+        return res.status(403).json({
+          success: false,
+          message: 'Đơn đăng ký giảng viên đang chờ admin duyệt. Vui lòng thử lại sau khi được duyệt.',
+        });
+      }
+      if (profile && profile.status === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          message: profile.rejectReason
+            ? `Đơn đăng ký giảng viên đã bị từ chối. Lý do: ${profile.rejectReason}`
+            : 'Đơn đăng ký giảng viên đã bị từ chối.',
+        });
+      }
+    }
+
+    const { accessToken, refreshToken } = await issueAuthTokens(user);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: 'Đăng nhập Google thành công',
         accessToken,
         refreshToken,
         user,

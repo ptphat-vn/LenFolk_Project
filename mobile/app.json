@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "LenFolk App",
-    "slug": "lenfolk-app",
+    "name": "LenFolk",
+    "slug": "lenfolk",
     "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "lenfolk-app",
+    "scheme": "lenfolk",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
@@ -55,7 +55,13 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-asset",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.159674287558-pq6gqfbm7ff1io44ro67epbosddtqr45"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
