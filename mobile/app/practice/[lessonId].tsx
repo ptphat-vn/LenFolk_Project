@@ -351,6 +351,12 @@ export default function NotePracticeScreen() {
     [analysis.data],
   );
 
+  // Backend trả code NON_FLUTE_AUDIO khi bản ghi không phải tiếng sáo
+  // (giọng nói, tạp âm, im lặng...) để hiển thị thông báo phù hợp thay vì lỗi hệ thống.
+  const isNonFluteError =
+    (analysis.error as (Error & { code?: string }) | null)?.code ===
+    "NON_FLUTE_AUDIO";
+
   useEffect(() => {
     if (analysis.isSuccess) {
       setIsResultModalVisible(true);
@@ -1368,11 +1374,23 @@ export default function NotePracticeScreen() {
 
         {analysis.isError && (
           <View className="gap-2 rounded-[24px] border border-[#F0C7C2] bg-[#FFF2F0] p-5">
-            <Text selectable className="font-bold text-[#A84236]">
-              Không thể phân tích bản ghi
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Ionicons
+                name={isNonFluteError ? "musical-note-outline" : "cloud-offline-outline"}
+                size={18}
+                color="#A84236"
+              />
+              <Text selectable className="font-bold text-[#A84236]">
+                {isNonFluteError
+                  ? "Bản ghi chưa phải tiếng sáo"
+                  : "Không thể phân tích bản ghi"}
+              </Text>
+            </View>
             <Text selectable className="text-sm leading-5 text-[#7C4B46]">
-              {analysis.error?.message || "Vui lòng kiểm tra kết nối và thử lại."}
+              {analysis.error?.message ||
+                (isNonFluteError
+                  ? "Hãy ghi lại ở nơi yên tĩnh và chỉ thổi sáo, không nói chuyện."
+                  : "Vui lòng kiểm tra kết nối và thử lại.")}
             </Text>
             {__DEV__ && (
               <Text selectable className="text-[10px] text-red-500 font-mono mt-1">
