@@ -2,7 +2,7 @@
   "expo": {
     "name": "LenFolk",
     "slug": "lenfolk-app",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "lenfolk",
