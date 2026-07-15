@@ -111,6 +111,7 @@ export const analyzePracticeMedia = async ({
         const payload = JSON.parse(String(event.data)) as {
           type?: string;
           message?: string;
+          code?: string;
           percent?: number;
           data?: AnalysisResult;
         };
@@ -149,7 +150,11 @@ export const analyzePracticeMedia = async ({
         }
 
         if (payload.type === "error") {
-          settleReject(new Error(payload.message || "AI phân tích thất bại."));
+          const error = new Error(payload.message || "AI phân tích thất bại.");
+          if (payload.code) {
+            (error as Error & { code?: string }).code = payload.code;
+          }
+          settleReject(error);
         }
       } catch (error) {
         settleReject(
