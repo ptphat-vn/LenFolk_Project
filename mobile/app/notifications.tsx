@@ -55,9 +55,10 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48, gap: 12 }}
+        contentContainerStyle={{ padding: 24, paddingBottom: 48, gap: 12, width: "100%", maxWidth: 700, alignSelf: "center" }}
         className="rounded-t-[30px] bg-white"
       >
         {isLoading ? (

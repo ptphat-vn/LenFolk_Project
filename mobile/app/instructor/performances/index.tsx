@@ -52,7 +52,17 @@ export default function InstructorPerformancesScreen() {
     <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
       <StatusBar style="dark" />
       <Stack.Screen options={{ headerShown: false, title: "Tác phẩm của tôi" }} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 24, paddingBottom: 48 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{
+          padding: 24,
+          paddingBottom: 48,
+          width: "100%",
+          maxWidth: 700,
+          alignSelf: "center",
+        }}
+      >
         <View className="flex-row items-center justify-between mb-6">
           <TouchableOpacity
             activeOpacity={0.8}

@@ -51,10 +51,11 @@ export default function TermsScreen() {
       </AnimatedBlock>
 
       {/* --- SCROLL CONTENT --- */}
+      {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
       <ScrollView
         className="flex-1 px-6"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 30 }}
+        contentContainerStyle={{ paddingBottom: 30, width: "100%", maxWidth: 700, alignSelf: "center" }}
       >
         {/* Large Cream Card containing terms */}
         <AnimatedBlock variant="card" delay={80} className="bg-[#FFF9E6] rounded-[40px] px-6 py-10 shadow-sm mb-8">

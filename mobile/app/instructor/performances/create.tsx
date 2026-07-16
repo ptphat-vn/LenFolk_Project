@@ -139,7 +139,14 @@ export default function CreatePerformanceScreen() {
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
+          // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+          contentContainerStyle={{
+            padding: 24,
+            paddingBottom: 48,
+            width: "100%",
+            maxWidth: 480,
+            alignSelf: "center",
+          }}
         >
           <View className="flex-row items-center justify-between mb-6">
             <TouchableOpacity
