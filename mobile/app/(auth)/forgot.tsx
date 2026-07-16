@@ -36,8 +36,11 @@ export default function ForgotChoiceScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white pt-14 px-6 pb-12 justify-between">
+    <View className="flex-1 bg-white pt-14 px-6 pb-12">
       <StatusBar style="dark" />
+
+      {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
+      <View className="flex-1 w-full max-w-[480px] self-center justify-between">
 
       {/* Header Area */}
       <AnimatedBlock variant="panel">
@@ -142,6 +145,7 @@ export default function ForgotChoiceScreen() {
           </View>
         </TouchableOpacity>
       </AnimatedBlock>
+      </View>
     </View>
   );
 }

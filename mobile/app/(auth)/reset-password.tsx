@@ -53,10 +53,13 @@ export default function ResetPasswordScreen() {
     >
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: "space-between" }}
+        contentContainerStyle={{ flexGrow: 1, padding: 24 }}
         showsVerticalScrollIndicator={false}
       >
         <StatusBar style="dark" />
+
+        {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
+        <View className="flex-1 w-full max-w-[480px] self-center justify-between">
 
         {/* Top Header Section */}
         <AnimatedBlock variant="panel">
@@ -145,6 +148,7 @@ export default function ResetPasswordScreen() {
             </View>
           </TouchableOpacity>
         </AnimatedBlock>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

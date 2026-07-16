@@ -11,6 +11,7 @@
       "icon": "./assets/images/icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.lenfolk.lenfolkapp",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -58,6 +59,7 @@
       "expo-secure-store",
       "expo-asset",
       "expo-notifications",
+      "expo-apple-authentication",
       [
         "@react-native-google-signin/google-signin",
         {

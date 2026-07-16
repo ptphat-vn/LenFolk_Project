@@ -1,6 +1,10 @@
 import { AnimatedBlock } from '@/components/AnimatedPage';
 import SlideToConfirm from '@/components/SlideToConfirm';
 import {
+  isAppleCancelled,
+  useAppleLogin,
+} from '@/hooks/auth/use-apple-login';
+import {
   isGoogleCancelled,
   useGoogleLogin,
 } from '@/hooks/auth/use-google-login';
@@ -85,6 +89,20 @@ export default function LoginScreen() {
   const [rememberMe, setRememberMe] = useState(false);
   const loginMutation = useLogin();
   const googleLoginMutation = useGoogleLogin();
+  const appleLoginMutation = useAppleLogin();
+
+  const handleAppleLogin = () => {
+    appleLoginMutation.mutate(undefined, {
+      onSuccess: () => router.replace('/(tabs)'),
+      onError: (error) => {
+        if (isAppleCancelled(error)) return; // người dùng tự huỷ, không báo lỗi
+        Alert.alert(
+          'Đăng nhập Apple thất bại',
+          getApiErrorMessage(error, 'Không thể đăng nhập bằng Apple. Vui lòng thử lại.'),
+        );
+      },
+    });
+  };
 
   const handleGoogleLogin = () => {
     googleLoginMutation.mutate(undefined, {
@@ -214,7 +232,8 @@ export default function LoginScreen() {
           className="bg-accent rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl flex-1 justify-between"
           style={{ minHeight: 500 }}
         >
-          <View>
+          {/* Giới hạn bề rộng form trên màn hình lớn (iPad) */}
+          <View className="w-full max-w-[480px] self-center">
             {/* Title & Subtitle */}
             <Text
               className="text-2xl font-bold text-primary text-center mb-2"
@@ -349,10 +368,36 @@ export default function LoginScreen() {
                 </>
               )}
             </TouchableOpacity>
+
+            {/* Apple Sign-in — bắt buộc trên iOS khi có đăng nhập bên thứ ba (Guideline 4.8) */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                disabled={appleLoginMutation.isPending}
+                onPress={handleAppleLogin}
+                className="w-full bg-black py-5 rounded-[35px] flex-row justify-center items-center shadow-sm mb-6"
+              >
+                {appleLoginMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="logo-apple"
+                      size={22}
+                      color="#FFFFFF"
+                      style={{ marginRight: 10, marginTop: -2 }}
+                    />
+                    <Text className="text-white text-base font-semibold">
+                      Tiếp tục với Apple
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Footer Navigation Link */}
-          <View className="flex-row justify-center">
+          <View className="w-full max-w-[480px] self-center flex-row justify-center">
             <Text className="text-sm text-charcoal/60">
               Chưa có tài khoản?{' '}
             </Text>
