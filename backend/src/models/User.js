@@ -33,14 +33,19 @@ const userSchema = new mongoose.Schema(
       },
       select: false,
     },
-    // Nhà cung cấp đăng nhập: 'local' (email/mật khẩu) hoặc 'google'
+    // Nhà cung cấp đăng nhập: 'local' (email/mật khẩu), 'google' hoặc 'apple'
     provider: {
       type: String,
-      enum: ['local', 'google'],
+      enum: ['local', 'google', 'apple'],
       default: 'local',
     },
     // ID tài khoản Google (sub trong idToken) — dùng để liên kết tài khoản Google
     googleId: {
+      type: String,
+      default: null,
+    },
+    // ID tài khoản Apple (sub trong identityToken) — dùng để liên kết tài khoản Apple
+    appleId: {
       type: String,
       default: null,
     },
@@ -114,6 +119,7 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ role: 1 });
 userSchema.index({ deletedAt: 1 });
 userSchema.index({ googleId: 1 }, { sparse: true });
+userSchema.index({ appleId: 1 }, { sparse: true });
 
 // Soft-delete: tự động lọc các user đã bị xóa khỏi mọi query find
 userSchema.pre(/^find/, function () {

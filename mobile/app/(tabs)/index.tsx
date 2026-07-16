@@ -139,8 +139,9 @@ export default function HomeScreen() {
   const reviewLessons = practiceableLessons.slice(0, 6);
   // Hiển thị 3 mục ôn tập trên màn hình, phần còn lại cuộn ngang.
   // Container cha có px-6 (24px mỗi bên) và khoảng cách 12px giữa các mục.
+  // Trên iPad, giới hạn bề rộng dùng để tính kích thước mục ôn tập trên màn hình lớn
   const reviewItemWidth =
-    (Dimensions.get('window').width - 48 - 24) / 3;
+    (Math.min(Dimensions.get('window').width, 700) - 48 - 24) / 3;
   const freePracticeLesson =
     practiceableLessons.find((lesson) => lesson._id === continueLesson?._id) ??
     practiceableLessons[0];
@@ -356,6 +357,10 @@ export default function HomeScreen() {
         contentContainerStyle={{
           backgroundColor: '#FDF8EA',
           paddingBottom: 120,
+          // Giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+          width: '100%',
+          maxWidth: 700,
+          alignSelf: 'center',
         }}
       >
         <StatusBar style="dark" />

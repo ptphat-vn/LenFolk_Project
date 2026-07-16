@@ -148,7 +148,8 @@ export default function CoursesScreen() {
         ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        // Giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{ paddingBottom: 110, width: "100%", maxWidth: 700, alignSelf: "center" }}
       >
         {/* --- TOP CONTAINER (CREAM HEADER) --- */}
         <AnimatedBlock variant="header" className="bg-[#FDF8EA] pt-2 pb-5 px-6">

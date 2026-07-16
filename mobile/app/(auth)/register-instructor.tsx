@@ -109,7 +109,7 @@ export default function RegisterInstructorScreen() {
       >
         <AnimatedBlock
           variant="header"
-          className="flex-row items-center px-6 pt-14 pb-6 "
+          className="flex-row items-center px-6 pt-14 pb-6 w-full max-w-[520px] self-center"
         >
           <TouchableOpacity
             className="w-10 h-10 rounded-full bg-white items-center justify-center mr-4"
@@ -129,8 +129,10 @@ export default function RegisterInstructorScreen() {
 
         <AnimatedBlock
           variant="panel"
-          className="bg-white rounded-t-[36px] px-6 pt-8 pb-10 gap-5"
+          className="bg-white rounded-t-[36px] px-6 pt-8 pb-10"
         >
+          {/* Giới hạn bề rộng form trên màn hình lớn (iPad) */}
+          <View className="w-full max-w-[520px] self-center gap-5">
           <FormField
             icon="user"
             placeholder="Họ và tên *"
@@ -233,6 +235,7 @@ export default function RegisterInstructorScreen() {
                 : "Gửi hồ sơ đăng ký"}
             </Text>
           </TouchableOpacity>
+          </View>
         </AnimatedBlock>
       </ScrollView>
     </KeyboardAvoidingView>

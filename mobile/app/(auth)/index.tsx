@@ -2,6 +2,10 @@ import { AnimatedBlock } from '@/components/AnimatedPage';
 import SlideToConfirm from '@/components/SlideToConfirm';
 import { getOnboardingRoute } from '@/constants/onboarding';
 import {
+  isAppleCancelled,
+  useAppleLogin,
+} from '@/hooks/auth/use-apple-login';
+import {
   isGoogleCancelled,
   useGoogleLogin,
 } from '@/hooks/auth/use-google-login';
@@ -15,6 +19,7 @@ import {
   Alert,
   Dimensions,
   Image,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -29,13 +34,31 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const { width } = Dimensions.get('window');
+// Trên iPad, giới hạn bề rộng dùng để tính kích thước minh hoạ/mascot
+// để hình không phóng to quá mức trên màn hình lớn.
+const width = Math.min(Dimensions.get('window').width, 480);
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const [slide, setSlide] = useState(0);
   const googleLoginMutation = useGoogleLogin();
+  const appleLoginMutation = useAppleLogin();
   const mascotY = useSharedValue(28);
+
+  const handleAppleLogin = () => {
+    appleLoginMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        router.replace(getOnboardingRoute(data.user) || '/(tabs)');
+      },
+      onError: (error) => {
+        if (isAppleCancelled(error)) return; // người dùng tự huỷ, không báo lỗi
+        Alert.alert(
+          'Đăng nhập Apple thất bại',
+          getApiErrorMessage(error, 'Không thể đăng nhập bằng Apple. Vui lòng thử lại.'),
+        );
+      },
+    });
+  };
 
   const handleGoogleLogin = () => {
     googleLoginMutation.mutate(undefined, {
@@ -354,6 +377,8 @@ export default function OnboardingScreen() {
             className="bg-white rounded-t-[40px] px-8 pt-10 pb-12 shadow-2xl"
             style={{ minHeight: '55%' }}
           >
+            {/* Giới hạn bề rộng form trên màn hình lớn (iPad) */}
+            <View className="w-full max-w-[480px] self-center">
             {/* Title */}
             <Text
               className="text-3xl font-bold text-primary text-center mb-8"
@@ -391,7 +416,31 @@ export default function OnboardingScreen() {
                 )}
               </TouchableOpacity>
 
-              {/* Apple Button */}
+              {/* Apple Button — bắt buộc trên iOS khi có đăng nhập bên thứ ba (Guideline 4.8) */}
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  disabled={appleLoginMutation.isPending}
+                  onPress={handleAppleLogin}
+                  className="w-full bg-black py-4 px-6 rounded-[35px] flex-row justify-center items-center shadow-sm"
+                >
+                  {appleLoginMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="logo-apple"
+                        size={24}
+                        color="#FFFFFF"
+                        style={{ marginRight: 12, marginTop: -2 }}
+                      />
+                      <Text className="text-white text-base font-semibold">
+                        Tiếp tục với Apple
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Separator Or */}
@@ -422,6 +471,7 @@ export default function OnboardingScreen() {
                   ĐĂNG KÝ
                 </Text>
               </TouchableOpacity>
+            </View>
             </View>
           </AnimatedBlock>
         </AnimatedBlock>

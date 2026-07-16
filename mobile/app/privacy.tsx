@@ -61,10 +61,11 @@ export default function PrivacyScreen() {
         </Text>
       </AnimatedBlock>
 
+      {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40, width: "100%", maxWidth: 700, alignSelf: "center" }}
       >
         <AnimatedBlock
           variant="card"

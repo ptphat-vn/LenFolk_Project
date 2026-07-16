@@ -150,7 +150,15 @@ export default function CompleteProfileScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 24, paddingBottom: 44, gap: 22 }}
+          // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+          contentContainerStyle={{
+            padding: 24,
+            paddingBottom: 44,
+            gap: 22,
+            width: '100%',
+            maxWidth: 520,
+            alignSelf: 'center',
+          }}
         >
           <View className="flex-row items-center justify-between">
             <View className="h-11 w-11 items-center justify-center rounded-full bg-white">

@@ -431,7 +431,15 @@ export default function LessonDetailScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48, gap: 20 }}
+        // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{
+          padding: 24,
+          paddingBottom: 48,
+          gap: 20,
+          width: '100%',
+          maxWidth: 700,
+          alignSelf: 'center',
+        }}
       >
         <LessonHeader lesson={lesson} onBack={goToLessons} />
         <LessonVideoPlayer

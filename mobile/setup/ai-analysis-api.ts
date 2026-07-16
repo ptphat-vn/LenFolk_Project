@@ -49,6 +49,28 @@ const readBase64Chunk = (uri: string, position: number, length: number) =>
     length,
   });
 
+// Web: bản ghi là blob: URL, expo-file-system không đọc được — dùng fetch + FileReader.
+const isBlobUri = (uri: string) => uri.startsWith("blob:");
+
+const fetchWebBlob = async (uri: string) => {
+  const blob = await (await fetch(uri)).blob();
+  if (!blob.size) {
+    throw new Error("File phân tích rỗng hoặc không đọc được dung lượng.");
+  }
+  return blob;
+};
+
+const blobToBase64 = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      resolve(result.slice(result.indexOf(",") + 1));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Không đọc được file ghi âm."));
+    reader.readAsDataURL(blob);
+  });
+
 export const analyzePracticeMedia = async ({
   file,
   message,
@@ -58,10 +80,13 @@ export const analyzePracticeMedia = async ({
   mode,
   onUploadProgress,
 }: BackendAnalysisPayload): Promise<AnalysisResult> => {
+  const webBlob = isBlobUri(file.uri) ? await fetchWebBlob(file.uri) : null;
   const [url, totalSize] = await Promise.all([
     getWebSocketUrl(),
-    getFileSize(file.uri),
+    webBlob ? Promise.resolve(webBlob.size) : getFileSize(file.uri),
   ]);
+  // Web ghi âm ra webm/ogg chứ không phải m4a — báo đúng mime cho backend.
+  const mimeType = webBlob?.type || file.type;
 
   return new Promise<AnalysisResult>((resolve, reject) => {
     const ws = new WebSocket(url);
@@ -87,7 +112,9 @@ export const analyzePracticeMedia = async ({
         let position = 0;
         while (position < totalSize) {
           const length = Math.min(CHUNK_SIZE, totalSize - position);
-          const data = await readBase64Chunk(file.uri, position, length);
+          const data = webBlob
+            ? await blobToBase64(webBlob.slice(position, position + length))
+            : await readBase64Chunk(file.uri, position, length);
           sendJson({
             type: "chunk",
             index: Math.floor(position / CHUNK_SIZE),
@@ -121,7 +148,7 @@ export const analyzePracticeMedia = async ({
             type: "start",
             mode,
             fileName: file.name,
-            mimeType: file.type,
+            mimeType,
             totalSize,
             message,
             maxDurationSec,

@@ -147,7 +147,8 @@ export default function PracticeTabScreen() {
         ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        // Giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{ paddingBottom: 120, width: "100%", maxWidth: 700, alignSelf: "center" }}
       >
         <AnimatedBlock variant="header" className="px-6 pb-5 pt-2">
           <View className="flex-row items-center justify-between">
