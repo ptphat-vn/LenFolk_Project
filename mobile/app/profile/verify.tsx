@@ -149,9 +149,10 @@ export default function AccountVerificationScreen() {
           <View className="w-10 h-10" />
         </View>
 
+        {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40, width: "100%", maxWidth: 480, alignSelf: "center" }}
           className="flex-1 bg-white rounded-t-[30px] pt-8 shadow-inner"
         >
           {user?.isVerified ? (

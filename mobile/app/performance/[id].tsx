@@ -9,6 +9,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -62,6 +63,12 @@ export default function PerformanceDetailScreen() {
   }>();
   const [checkoutVisible, setCheckoutVisible] = React.useState(false);
   const [pollExpired, setPollExpired] = React.useState(false);
+  const { width: windowWidth } = useWindowDimensions();
+  // Giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+  const contentWidth = Math.min(windowWidth, 700);
+  // Video 16:9: tính chiều cao theo bề rộng đã giới hạn (trừ padding 24 mỗi bên)
+  const playerWidth = contentWidth - 48;
+  const playerHeight = Math.round((playerWidth * 9) / 16);
 
   const { data: enrollments } = useGetMyEnrollments();
   const ownedPerformanceIds = React.useMemo(() => {
@@ -214,7 +221,15 @@ export default function PerformanceDetailScreen() {
       <Stack.Screen options={{ title: performance.title, headerShown: false }} />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48, gap: 20 }}
+        // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{
+          padding: 24,
+          paddingBottom: 48,
+          gap: 20,
+          width: "100%",
+          maxWidth: 700,
+          alignSelf: "center",
+        }}
       >
         <View className="flex-row items-center justify-between gap-3">
           <TouchableOpacity
@@ -239,7 +254,12 @@ export default function PerformanceDetailScreen() {
 
         {youtubeVideoId && hasAccess ? (
           <View className="overflow-hidden rounded-[28px] bg-black w-full shadow-sm">
-            <YoutubePlayer height={210} play={false} videoId={youtubeVideoId} />
+            <YoutubePlayer
+              height={playerHeight}
+              width={playerWidth}
+              play={false}
+              videoId={youtubeVideoId}
+            />
           </View>
         ) : detail?.videoUrl && hasAccess ? (
           <View className="overflow-hidden rounded-[28px] bg-black aspect-[16/9] w-full shadow-sm">
@@ -377,7 +397,16 @@ export default function PerformanceDetailScreen() {
         onRequestClose={requestCancel}
       >
         <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
-          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 50 }}>
+          <ScrollView
+            // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+            contentContainerStyle={{
+              padding: 24,
+              paddingBottom: 50,
+              width: "100%",
+              maxWidth: 480,
+              alignSelf: "center",
+            }}
+          >
             <View className="flex-row justify-between items-center mb-6">
               <Text className="min-w-0 flex-1 pr-3 text-xl font-bold text-[#10120C]">
                 {isPaid ? "Thanh toán thành công" : "Thanh toán tác phẩm"}

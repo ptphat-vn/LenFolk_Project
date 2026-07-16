@@ -20,6 +20,7 @@ import {
   Image as RNImage,
   Modal,
   PanResponder,
+  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -126,9 +127,40 @@ const splitNoteLines = (noteSequence: string, lineCount: number): number[] => {
   );
 };
 
+// iOS: recorder.stop() có thể trả về TRƯỚC khi file .m4a được flush xong xuống
+// đĩa — copy ngay lập tức sẽ bắt được file 0 byte ("file ghi âm bị lỗi").
+// Chờ tới khi file tồn tại và có dung lượng > 0 rồi mới copy.
+const waitForRecordedFile = async (uri: string, timeoutMs = 2500) => {
+  const startedAt = Date.now();
+  for (;;) {
+    const info = await FileSystem.getInfoAsync(uri).catch(() => null);
+    if (info?.exists && typeof info.size === "number" && info.size > 0) {
+      return info;
+    }
+    if (Date.now() - startedAt >= timeoutMs) return info;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+};
+
 const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
+  // Web: recorder trả blob: URL, không có documentDirectory — dùng trực tiếp.
+  if (Platform.OS === "web" || sourceUri.startsWith("blob:")) {
+    return sourceUri;
+  }
+
   if (!FileSystem.documentDirectory) {
     throw new Error("Thiết bị không cung cấp thư mục lưu bản ghi.");
+  }
+
+  const sourceInfo = await waitForRecordedFile(sourceUri);
+  if (
+    !sourceInfo?.exists ||
+    typeof sourceInfo.size !== "number" ||
+    sourceInfo.size <= 0
+  ) {
+    throw new Error(
+      "Bản ghi chưa được lưu xuống máy (file rỗng). Hãy ghi âm lại, giữ nút ghi ít nhất 1-2 giây.",
+    );
   }
 
   await FileSystem.makeDirectoryAsync(RECORDINGS_DIRECTORY, {
@@ -139,7 +171,20 @@ const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
 
   const info = await FileSystem.getInfoAsync(destinationUri);
   if (!info.exists || typeof info.size !== "number" || info.size <= 0) {
-    throw new Error("Bản ghi vừa lưu bị rỗng hoặc không thể đọc lại.");
+    // Copy hụt (file nguồn đang được flush dở) — thử lại một lần.
+    await FileSystem.deleteAsync(destinationUri, { idempotent: true }).catch(
+      () => undefined,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await FileSystem.copyAsync({ from: sourceUri, to: destinationUri });
+    const retryInfo = await FileSystem.getInfoAsync(destinationUri);
+    if (
+      !retryInfo.exists ||
+      typeof retryInfo.size !== "number" ||
+      retryInfo.size <= 0
+    ) {
+      throw new Error("Bản ghi vừa lưu bị rỗng hoặc không thể đọc lại.");
+    }
   }
 
   return destinationUri;
@@ -293,8 +338,10 @@ export default function NotePracticeScreen() {
   const selectedReferenceTrackIsPlaying =
     playingReferenceTrackId === selectedReferenceTrack.id &&
     referenceStatus.playing;
+  // Trên iPad, nội dung bị giới hạn 700px nên bề rộng card sheet cũng clamp theo.
+  const contentWidth = Math.min(windowWidth, 700);
   const referenceSheetCardWidth = isCompactReferenceSheetLesson
-    ? Math.max(windowWidth - 132, 230)
+    ? Math.max(contentWidth - 132, 230)
     : 620;
   const referenceSheetCardImageWidth = isCompactReferenceSheetLesson
     ? referenceSheetCardWidth - 24
@@ -1056,7 +1103,15 @@ export default function NotePracticeScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: 24, paddingBottom: 48, gap: 20 }}
+        // maxWidth: giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{
+          padding: 24,
+          paddingBottom: 48,
+          gap: 20,
+          width: "100%",
+          maxWidth: 700,
+          alignSelf: "center",
+        }}
       >
         <View className="flex-row items-center justify-between">
           <TouchableOpacity

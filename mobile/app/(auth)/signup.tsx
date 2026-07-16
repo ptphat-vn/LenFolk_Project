@@ -2,6 +2,10 @@ import { AnimatedBlock } from '@/components/AnimatedPage';
 import SlideToConfirm from '@/components/SlideToConfirm';
 import { getOnboardingRoute } from '@/constants/onboarding';
 import {
+  isAppleCancelled,
+  useAppleLogin,
+} from '@/hooks/auth/use-apple-login';
+import {
   isGoogleCancelled,
   useGoogleLogin,
 } from '@/hooks/auth/use-google-login';
@@ -32,6 +36,22 @@ export default function SignupScreen() {
   const [agreeTerms, setAgreeTerms] = useState(true);
   const registerMutation = useRegister();
   const googleLoginMutation = useGoogleLogin();
+  const appleLoginMutation = useAppleLogin();
+
+  const handleAppleLogin = () => {
+    appleLoginMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        router.replace(getOnboardingRoute(data.user) || '/(tabs)');
+      },
+      onError: (error) => {
+        if (isAppleCancelled(error)) return; // người dùng tự huỷ, không báo lỗi
+        Alert.alert(
+          'Đăng nhập Apple thất bại',
+          getApiErrorMessage(error, 'Không thể đăng nhập bằng Apple. Vui lòng thử lại.'),
+        );
+      },
+    });
+  };
 
   const handleGoogleLogin = () => {
     googleLoginMutation.mutate(undefined, {
@@ -98,6 +118,8 @@ export default function SignupScreen() {
           variant="panel"
           className="bg-white rounded-t-[40px] px-6 pt-10 pb-12 shadow-2xl"
         >
+          {/* Giới hạn bề rộng form trên màn hình lớn (iPad) */}
+          <View className="w-full max-w-[480px] self-center">
           {/* Header titles */}
           <AnimatedBlock variant="header">
             <Text
@@ -218,7 +240,21 @@ export default function SignupScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Apple Button */}
+            {/* Apple Button — bắt buộc trên iOS khi có đăng nhập bên thứ ba (Guideline 4.8) */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                disabled={appleLoginMutation.isPending}
+                onPress={handleAppleLogin}
+                className="w-16 h-16 rounded-full bg-black justify-center items-center shadow-md"
+              >
+                {appleLoginMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="logo-apple" size={30} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Footer Link */}
@@ -242,6 +278,7 @@ export default function SignupScreen() {
               Đăng ký trở thành giảng viên
             </Text>
           </TouchableOpacity>
+          </View>
         </AnimatedBlock>
       </ScrollView>
     </KeyboardAvoidingView>

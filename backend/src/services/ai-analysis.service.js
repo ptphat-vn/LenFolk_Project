@@ -25,12 +25,28 @@ const extractGeminiOutputText = (response) => {
     .trim();
 };
 
+// Parse "khoan dung": chịu được markdown fence, text thừa quanh JSON, và không
+// bao giờ ném lỗi (JSON cụt do maxOutputTokens trả về null thay vì crash).
 const parseJsonObject = (text) => {
+  if (typeof text !== 'string' || !text.trim()) return null;
+
+  const cleaned = text
+    .replace(/^\s*```(?:json)?\s*/i, '')
+    .replace(/\s*```\s*$/, '')
+    .trim();
+
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(cleaned);
+    return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : null;
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      const parsed = JSON.parse(match[0]);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
   }
 };
 
@@ -394,8 +410,27 @@ const toStringList = (value, max) =>
 // `summary` là object LLM trả về (chỉ các trường summary). file_info do backend
 // lắp hoàn toàn. Điểm bị cap theo bằng chứng detection; label suy lại từ điểm
 // cuối để không lệch dải khi điểm bị cap xuống.
+// Chuỗi trông như JSON không được đưa thẳng cho người dùng — thử parse lấy
+// trường summary bên trong; nếu không được thì trả thông báo thân thiện.
+const sanitizeSummaryText = (value) => {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  if (!text.startsWith('{') && !text.startsWith('```')) return text;
+
+  const nested = parseJsonObject(text);
+  const nestedSummary = nested?.summary?.summary ?? nested?.summary;
+  if (typeof nestedSummary === 'string' && !nestedSummary.trim().startsWith('{')) {
+    return nestedSummary.trim();
+  }
+  return 'AI đã phân tích xong nhưng phần nhận xét chưa đọc được. Hãy thử phân tích lại.';
+};
+
 const normalizeAnalysisResult = (summary, detection, fileInfo = {}) => {
-  const rawScore = Number(summary?.score);
+  // Number(null) === 0 → điểm 0 giả. Chỉ nhận điểm khi LLM thật sự trả số.
+  const rawScore =
+    summary?.score == null || summary?.score === ''
+      ? NaN
+      : Number(summary.score);
   const evidenceCeiling = Math.round(
     100 * detection.flute_probability * (1 - detection.speech_probability),
   );
@@ -419,7 +454,7 @@ const normalizeAnalysisResult = (summary, detection, fileInfo = {}) => {
           : typeof summary?.label === 'string'
             ? summary.label
             : 'Đã phân tích',
-      summary: typeof summary?.summary === 'string' ? summary.summary : '',
+      summary: sanitizeSummaryText(summary?.summary),
       issues: toStringList(summary?.issues, 2),
       recommendations: toStringList(summary?.recommendations, 2),
     },
@@ -505,7 +540,9 @@ const analyzeWithOpenAI = async ({ file, detection, message, mode, fast }) => {
       {
         model: config.ai.openaiAnalysisModel,
         input: createAnalysisPrompt({ detection, message, mode, fast }),
-        max_output_tokens: fast ? 260 : 420,
+        // Model reasoning tính cả token suy nghĩ vào max_output_tokens — budget
+        // thấp làm JSON bị cắt cụt giữa chừng (hiện ra JSON thô trên app).
+        max_output_tokens: fast ? 900 : 1400,
         reasoning: { effort: 'low' },
         store: false,
         text: {
@@ -529,10 +566,18 @@ const analyzeWithOpenAI = async ({ file, detection, message, mode, fast }) => {
     const outputText = extractOpenAIOutputText(analysisResponse.data);
     const parsed = parseJsonObject(outputText);
 
+    if (!parsed) {
+      // Không đưa outputText thô cho người dùng (thường là JSON cụt) — chỉ log.
+      logger.warn(
+        `[ai-analysis][openai] unparseable output (${outputText.length} chars): ${outputText.slice(0, 200)}`,
+      );
+    }
+
     const summary = parsed || {
       score: null,
       label: 'Đã phân tích',
-      summary: outputText || 'OpenAI đã trả kết quả nhưng chưa đọc được JSON.',
+      summary:
+        'AI đã phân tích xong nhưng phần nhận xét chưa đọc được. Hãy thử phân tích lại.',
       issues: [],
       recommendations: [],
     };

@@ -55,7 +55,8 @@ export default function PerformancesScreen() {
         ref={scrollRef}
         className="flex-1"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        // Giới hạn bề rộng nội dung trên màn hình lớn (iPad)
+        contentContainerStyle={{ paddingBottom: 120, width: "100%", maxWidth: 700, alignSelf: "center" }}
       >
         <AnimatedBlock variant="header" className="bg-[#FDF8EA] pt-2 pb-5 px-6">
           <View className="flex-row justify-between items-center mb-6">

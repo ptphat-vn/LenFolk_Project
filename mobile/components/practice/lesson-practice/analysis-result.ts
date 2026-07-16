@@ -26,6 +26,32 @@ const shorten = (value: unknown, maxLength = 120) => {
   return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 };
 
+/**
+ * Không bao giờ hiển thị JSON thô cho người dùng: nếu chuỗi trông như JSON
+ * (backend cũ có thể trả nguyên văn output của LLM), thử parse lấy phần nhận
+ * xét bên trong; không được thì trả thông báo thân thiện.
+ */
+const sanitizeDescription = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  const text = value.trim();
+  if (!text.startsWith("{") && !text.startsWith("```")) return text;
+
+  const nested = parseObjectField(text.replace(/^```(json)?|```$/g, "").trim());
+  const nestedSummary =
+    (nested?.summary as Record<string, unknown> | string | undefined) ?? null;
+  const inner =
+    typeof nestedSummary === "string"
+      ? nestedSummary
+      : nestedSummary && typeof nestedSummary === "object"
+        ? nestedSummary.summary
+        : nested?.feedback;
+
+  if (typeof inner === "string" && !inner.trim().startsWith("{")) {
+    return inner.trim();
+  }
+  return "AI đã phân tích xong nhưng phần nhận xét chưa đọc được. Hãy thử phân tích lại.";
+};
+
 export const parseAnalysisData = (data: unknown) => {
   if (!data || typeof data !== "object") return null;
 
@@ -63,10 +89,15 @@ export const getCompactAnalysisResult = (
   }
 
   return {
-    score: typeof summary.score === "number" ? Math.round(summary.score) : null,
+    score:
+      typeof summary.score === "number" && Number.isFinite(summary.score)
+        ? Math.round(summary.score)
+        : null,
     label: typeof summary.label === "string" ? summary.label : "Đã phân tích",
     description: shorten(
-      summary.summary || summary.description || summary.feedback,
+      sanitizeDescription(
+        summary.summary || summary.description || summary.feedback,
+      ),
       130,
     ),
     issues: toStringList(summary.issues)

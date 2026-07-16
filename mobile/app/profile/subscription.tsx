@@ -252,7 +252,8 @@ export default function SubscriptionScreen() {
       <StatusBar style="dark" />
       <Stack.Screen options={{ title: "Đăng ký gói", headerShown: false }} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40, width: "100%", maxWidth: 480, alignSelf: "center" }}>
         {/* --- HEADER BACK ACTION --- */}
         <View className="px-6 pt-2 pb-4 flex-row items-center justify-between">
           <TouchableOpacity
@@ -428,7 +429,8 @@ export default function SubscriptionScreen() {
         onRequestClose={requestCancel}
       >
         <SafeScreen style={{ backgroundColor: "#FDF8EA" }}>
-          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 50 }}>
+          {/* Giới hạn bề rộng nội dung trên màn hình lớn (iPad) */}
+          <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 50, width: "100%", maxWidth: 480, alignSelf: "center" }}>
             {/* Modal Header */}
             <View className="flex-row justify-between items-center mb-6">
               <Text numberOfLines={2} className="min-w-0 flex-1 pr-3 text-xl font-bold text-[#10120C]" style={{ fontFamily: "BeVietnamPro-Medium" }}>
