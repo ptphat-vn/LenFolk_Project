@@ -45,6 +45,14 @@ const googleLoginSchema = z.object({
   }),
 });
 
+const appleLoginSchema = z.object({
+  body: z.object({
+    identityToken: z.string({ required_error: 'identityToken is required' }).min(1, 'identityToken is required'),
+    // Apple chỉ gửi tên ở lần đăng nhập đầu tiên — client kèm theo nếu có
+    fullName: z.string().optional(),
+  }),
+});
+
 const refreshTokenSchema = z.object({
   body: z.object({
     refreshToken: z.string({ required_error: 'Refresh token is required' }),
@@ -89,6 +97,9 @@ router.post('/login', validate(loginSchema), authController.login);
 
 // POST /api/auth/google — đăng nhập/đăng ký bằng Google idToken
 router.post('/google', validate(googleLoginSchema), authController.googleLogin);
+
+// POST /api/auth/apple — đăng nhập/đăng ký bằng Apple identityToken
+router.post('/apple', validate(appleLoginSchema), authController.appleLogin);
 
 // POST /api/auth/refresh-token
 router.post('/refresh-token', validate(refreshTokenSchema), authController.refreshToken);

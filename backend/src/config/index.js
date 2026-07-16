@@ -47,6 +47,7 @@ const envSchema = z.object({
   GOOGLE_IOS_CLIENT_ID: z.string().default(''),
   GOOGLE_WEB_CLIENT_ID: z.string().default(''),
   GOOGLE_ANDROID_CLIENT_ID: z.string().default(''),
+  APPLE_BUNDLE_ID: z.string().default('com.lenfolk.lenfolkapp'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -107,6 +108,10 @@ module.exports = {
     get audiences() {
       return [this.iosClientId, this.webClientId, this.androidClientId].filter(Boolean);
     },
+  },
+  apple: {
+    // Audience hợp lệ khi xác thực identityToken của Sign in with Apple
+    bundleId: env.APPLE_BUNDLE_ID,
   },
   appName: env.APP_NAME,
   clientUrl: env.CLIENT_URL,

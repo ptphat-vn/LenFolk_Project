@@ -2,6 +2,7 @@ const User = require('../models/User');
 const InstructorProfile = require('../models/InstructorProfile');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
+const appleSignin = require('apple-signin-auth');
 const config = require('../config');
 const { generateOtp, hashOtp, otpExpiry, OTP_TTL_MINUTES } = require('../utils/otp');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email.service');
@@ -420,6 +421,112 @@ exports.googleLogin = async (req, res, next) => {
       success: true,
       data: {
         message: 'Đăng nhập Google thành công',
+        accessToken,
+        refreshToken,
+        user,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/apple  { identityToken, fullName? }
+ * Đăng nhập / đăng ký bằng Apple (Sign in with Apple).
+ * - Client lấy identityToken từ expo-apple-authentication rồi gửi lên đây.
+ * - Server xác minh identityToken với Apple (JWKS), audience = bundle ID của app.
+ * - Apple chỉ gửi tên ở lần đăng nhập ĐẦU TIÊN → client kèm fullName nếu có.
+ * - Email có thể là private relay (@privaterelay.appleid.com) — vẫn dùng bình thường.
+ * - Tìm user theo appleId trước (email relay có thể bị ẩn ở các lần sau), rồi tới email.
+ */
+exports.appleLogin = async (req, res, next) => {
+  try {
+    const { identityToken, fullName } = req.body;
+
+    // Xác minh identityToken với Apple. Ném lỗi nếu token sai/hết hạn/audience không khớp.
+    let payload;
+    try {
+      payload = await appleSignin.verifyIdToken(identityToken, {
+        audience: config.apple.bundleId,
+      });
+    } catch (verifyErr) {
+      return res.status(401).json({ success: false, message: 'Apple identityToken không hợp lệ hoặc đã hết hạn' });
+    }
+
+    const appleId = payload.sub;
+    const email = payload.email ? payload.email.toLowerCase().trim() : null;
+    // Apple trả email_verified dạng boolean hoặc chuỗi "true"/"false"
+    const emailVerified = payload.email_verified === true || payload.email_verified === 'true';
+
+    // Tìm theo appleId trước — email có thể không được gửi lại ở lần đăng nhập sau
+    let user = await User.findOne({ appleId });
+
+    if (!user && email) {
+      user = await User.findOne({ email });
+    }
+
+    if (user) {
+      // Liên kết appleId cho tài khoản hiện có nếu chưa có
+      let dirty = false;
+      if (!user.appleId) {
+        user.appleId = appleId;
+        dirty = true;
+      }
+      // Email đã được Apple xác thực → coi như đã verify
+      if (!user.isVerified && emailVerified) {
+        user.isVerified = true;
+        dirty = true;
+      }
+      if (dirty) {
+        await user.save({ validateBeforeSave: false });
+      }
+    } else {
+      if (!email) {
+        // Không có appleId trong DB và Apple không gửi email → không thể tạo tài khoản
+        return res.status(401).json({
+          success: false,
+          message: 'Không nhận được email từ Apple. Vui lòng vào Cài đặt > Apple ID > Đăng nhập & Bảo mật, gỡ LenFolk khỏi danh sách app dùng Apple ID rồi thử lại.',
+        });
+      }
+      user = await User.create({
+        name: fullName || email.split('@')[0],
+        email,
+        provider: 'apple',
+        appleId,
+        isVerified: true,
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Tài khoản đã bị khóa' });
+    }
+
+    // Giảng viên phải được admin duyệt mới đăng nhập được (giống flow login thường)
+    if (user.role === 'instructor') {
+      const profile = await InstructorProfile.findOne({ userId: user._id }).select('status rejectReason');
+      if (profile && profile.status === 'pending') {
+        return res.status(403).json({
+          success: false,
+          message: 'Đơn đăng ký giảng viên đang chờ admin duyệt. Vui lòng thử lại sau khi được duyệt.',
+        });
+      }
+      if (profile && profile.status === 'rejected') {
+        return res.status(403).json({
+          success: false,
+          message: profile.rejectReason
+            ? `Đơn đăng ký giảng viên đã bị từ chối. Lý do: ${profile.rejectReason}`
+            : 'Đơn đăng ký giảng viên đã bị từ chối.',
+        });
+      }
+    }
+
+    const { accessToken, refreshToken } = await issueAuthTokens(user);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: 'Đăng nhập Apple thành công',
         accessToken,
         refreshToken,
         user,
