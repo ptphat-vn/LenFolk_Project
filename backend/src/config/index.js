@@ -2,16 +2,26 @@ const { z } = require('zod');
 require('dotenv').config();
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
   PORT: z.coerce.number().default(5000),
   MONGO_URI: z.string().min(1, { message: 'MONGO_URI is required' }),
-  JWT_SECRET: z.string().min(8, { message: 'JWT_SECRET must be at least 8 characters long' }),
+  JWT_SECRET: z
+    .string()
+    .min(8, { message: 'JWT_SECRET must be at least 8 characters long' }),
   JWT_EXPIRES_IN: z.string().default('7d'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('30m'),
-  CLOUDINARY_CLOUD_NAME: z.string().min(1, { message: 'CLOUDINARY_CLOUD_NAME is required' }),
-  CLOUDINARY_API_KEY: z.string().min(1, { message: 'CLOUDINARY_API_KEY is required' }),
-  CLOUDINARY_API_SECRET: z.string().min(1, { message: 'CLOUDINARY_API_SECRET is required' }),
+  CLOUDINARY_CLOUD_NAME: z
+    .string()
+    .min(1, { message: 'CLOUDINARY_CLOUD_NAME is required' }),
+  CLOUDINARY_API_KEY: z
+    .string()
+    .min(1, { message: 'CLOUDINARY_API_KEY is required' }),
+  CLOUDINARY_API_SECRET: z
+    .string()
+    .min(1, { message: 'CLOUDINARY_API_SECRET is required' }),
   // ── SePay ────────────────────────────────────────────────────────────────
   // API Key khai báo trong SePay Dashboard → Webhooks → Authorization (Api Key)
   SEPAY_WEBHOOK_API_KEY: z.string().default(''),
@@ -39,9 +49,9 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().default(''),
   // Model nhận diện tiếng sáo (gác cổng, chỉ nhánh OpenAI dùng riêng). Dùng flash
   // (không phải lite) vì lite yếu ở phân loại audio → dễ cho non-flute lọt qua.
-  GEMINI_DETECTION_MODEL: z.string().default('gemini-flash-latest'),
+  GEMINI_DETECTION_MODEL: z.string().default('gemini-flash-lite-latest'),
   // Model chấm điểm — cần chất lượng nhận xét cao hơn.
-  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-flash-latest'),
+  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-flash-lite-latest'),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
@@ -110,7 +120,9 @@ module.exports = {
     androidClientId: env.GOOGLE_ANDROID_CLIENT_ID,
     // Danh sách audience hợp lệ để xác thực idToken (bỏ giá trị rỗng)
     get audiences() {
-      return [this.iosClientId, this.webClientId, this.androidClientId].filter(Boolean);
+      return [this.iosClientId, this.webClientId, this.androidClientId].filter(
+        Boolean,
+      );
     },
   },
   appName: env.APP_NAME,
