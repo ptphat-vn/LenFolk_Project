@@ -37,7 +37,11 @@ const envSchema = z.object({
   OPENAI_TRANSCRIPTION_MODEL: z.string().default('gpt-4o-mini-transcribe'),
   OPENAI_ANALYSIS_MODEL: z.string().default('gpt-4o-mini'),
   GEMINI_API_KEY: z.string().default(''),
-  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-1.5-flash'),
+  // Model nhận diện tiếng sáo (gác cổng, chỉ nhánh OpenAI dùng riêng). Dùng flash
+  // (không phải lite) vì lite yếu ở phân loại audio → dễ cho non-flute lọt qua.
+  GEMINI_DETECTION_MODEL: z.string().default('gemini-flash-latest'),
+  // Model chấm điểm — cần chất lượng nhận xét cao hơn.
+  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-flash-latest'),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
@@ -98,6 +102,7 @@ module.exports = {
     openaiTranscriptionModel: env.OPENAI_TRANSCRIPTION_MODEL,
     openaiAnalysisModel: env.OPENAI_ANALYSIS_MODEL,
     geminiApiKey: env.GEMINI_API_KEY,
+    geminiDetectionModel: env.GEMINI_DETECTION_MODEL,
     geminiAnalysisModel: env.GEMINI_ANALYSIS_MODEL,
   },
   google: {

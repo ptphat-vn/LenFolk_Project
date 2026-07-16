@@ -4,6 +4,8 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import type { Lesson } from "@/types/lessons.type";
 
 type Props = {
+  canComplete: boolean;
+  incompleteReason?: string;
   isCompleted: boolean;
   isMarkingComplete: boolean;
   nextLesson?: Lesson;
@@ -12,12 +14,16 @@ type Props = {
 };
 
 export function LessonCompletionActions({
+  canComplete,
+  incompleteReason,
   isCompleted,
   isMarkingComplete,
   nextLesson,
   onMarkComplete,
   onNextLesson,
 }: Props) {
+  const isLocked = !isCompleted && !canComplete;
+
   return (
     <>
       <TouchableOpacity
@@ -25,14 +31,20 @@ export function LessonCompletionActions({
         disabled={isCompleted || isMarkingComplete}
         onPress={onMarkComplete}
         className={`flex-row items-center justify-center gap-3 rounded-[24px] px-6 py-5 ${
-          isCompleted ? "bg-[#E2E8D3]" : "bg-[#8E9E6E]"
+          isCompleted ? "bg-[#E2E8D3]" : isLocked ? "bg-[#C7CDBA]" : "bg-[#8E9E6E]"
         }`}
       >
         {isMarkingComplete ? (
           <ActivityIndicator color={isCompleted ? "#687451" : "white"} />
         ) : (
           <Ionicons
-            name={isCompleted ? "checkmark-circle" : "checkmark-circle-outline"}
+            name={
+              isCompleted
+                ? "checkmark-circle"
+                : isLocked
+                  ? "lock-closed"
+                  : "checkmark-circle-outline"
+            }
             size={22}
             color={isCompleted ? "#687451" : "white"}
           />
@@ -45,6 +57,15 @@ export function LessonCompletionActions({
           {isCompleted ? "Đã hoàn thành" : "Đánh dấu đã hoàn thành"}
         </Text>
       </TouchableOpacity>
+
+      {isLocked && incompleteReason && (
+        <View className="-mt-2 flex-row items-start gap-2 rounded-[18px] bg-[#F2F4EC] px-4 py-3">
+          <Ionicons name="information-circle" size={18} color="#8E9E6E" />
+          <Text className="min-w-0 flex-1 text-xs leading-5 text-[#5F6653]">
+            {incompleteReason}
+          </Text>
+        </View>
+      )}
 
       {nextLesson && (
         <TouchableOpacity
