@@ -94,6 +94,8 @@ const FLUTE_ANALYSIS_RECORDING = {
 };
 
 const RECORDINGS_DIRECTORY = `${FileSystem.documentDirectory}practice-recordings`;
+const MIN_RECORDING_DURATION_MS = 800;
+const MIN_RECORDING_FILE_BYTES = 2 * 1024;
 
 // Tập theo vạch chạy (playhead) trong màn xem sheet phóng to.
 const GUIDE_BPM_OPTIONS = [60, 80, 100];
@@ -127,18 +129,27 @@ const splitNoteLines = (noteSequence: string, lineCount: number): number[] => {
   );
 };
 
-// iOS: recorder.stop() có thể trả về TRƯỚC khi file .m4a được flush xong xuống
-// đĩa — copy ngay lập tức sẽ bắt được file 0 byte ("file ghi âm bị lỗi").
-// Chờ tới khi file tồn tại và có dung lượng > 0 rồi mới copy.
+// recorder.stop() có thể trả về trước khi file .m4a được flush xong xuống đĩa.
+// Chờ đến khi dung lượng đủ lớn và không còn thay đổi rồi mới dùng file đó.
 const waitForRecordedFile = async (uri: string, timeoutMs = 2500) => {
   const startedAt = Date.now();
+  let previousSize = -1;
+
   for (;;) {
     const info = await FileSystem.getInfoAsync(uri).catch(() => null);
-    if (info?.exists && typeof info.size === "number" && info.size > 0) {
+    const size =
+      info && info.exists && typeof info.size === "number" ? info.size : 0;
+    if (
+      info?.exists &&
+      size >= MIN_RECORDING_FILE_BYTES &&
+      size === previousSize
+    ) {
       return info;
     }
+
+    previousSize = size;
     if (Date.now() - startedAt >= timeoutMs) return info;
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 };
 
@@ -156,10 +167,10 @@ const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
   if (
     !sourceInfo?.exists ||
     typeof sourceInfo.size !== "number" ||
-    sourceInfo.size <= 0
+    sourceInfo.size < MIN_RECORDING_FILE_BYTES
   ) {
     throw new Error(
-      "Bản ghi chưa được lưu xuống máy (file rỗng). Hãy ghi âm lại, giữ nút ghi ít nhất 1-2 giây.",
+      "Bản ghi chưa hoàn tất hoặc quá ngắn. Hãy ghi âm rõ trong ít nhất 1 giây rồi thử lại.",
     );
   }
 
@@ -170,7 +181,11 @@ const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
   await FileSystem.copyAsync({ from: sourceUri, to: destinationUri });
 
   const info = await FileSystem.getInfoAsync(destinationUri);
-  if (!info.exists || typeof info.size !== "number" || info.size <= 0) {
+  if (
+    !info.exists ||
+    typeof info.size !== "number" ||
+    info.size < MIN_RECORDING_FILE_BYTES
+  ) {
     // Copy hụt (file nguồn đang được flush dở) — thử lại một lần.
     await FileSystem.deleteAsync(destinationUri, { idempotent: true }).catch(
       () => undefined,
@@ -181,7 +196,7 @@ const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
     if (
       !retryInfo.exists ||
       typeof retryInfo.size !== "number" ||
-      retryInfo.size <= 0
+      retryInfo.size < MIN_RECORDING_FILE_BYTES
     ) {
       throw new Error("Bản ghi vừa lưu bị rỗng hoặc không thể đọc lại.");
     }
@@ -308,6 +323,7 @@ export default function NotePracticeScreen() {
     useState(false);
   const imageViewerTranslateY = useRef(new Animated.Value(0)).current;
   const recorderOperationRef = useRef(false);
+  const recordingStartedAtRef = useRef<number | undefined>(undefined);
   const playbackStartedAtRef = useRef(0);
   const referenceStartedAtRef = useRef(0);
 
@@ -656,6 +672,7 @@ export default function NotePracticeScreen() {
       setRecordingUri(undefined);
       await prepareRecorderWithRetry();
       recorder.record();
+      recordingStartedAtRef.current = Date.now();
     } catch (error) {
       console.warn("Failed to start audio recording", error);
       await configurePlaybackSession().catch(() => undefined);
@@ -674,19 +691,28 @@ export default function NotePracticeScreen() {
     recorderOperationRef.current = true;
 
     try {
+      const durationBeforeStoppingMs = Math.max(
+        recorder.getStatus().durationMillis,
+        Date.now() - (recordingStartedAtRef.current ?? Date.now()),
+      );
+      if (durationBeforeStoppingMs < MIN_RECORDING_DURATION_MS) {
+        throw new Error("Bản ghi quá ngắn để tạo file âm thanh hợp lệ.");
+      }
+
       await recorder.stop();
-      if (recorder.uri) {
+      const sourceUri = recorder.uri ?? recorder.getStatus().url;
+      if (sourceUri) {
         const createdAt = Date.now();
         const fileName = isMouthPlacementLesson
           ? `flute-sound-${createdAt}.m4a`
           : `note-${targetNote}-${createdAt}.m4a`;
-        const stableUri = await persistRecordedAudio(recorder.uri, fileName);
+        const stableUri = await persistRecordedAudio(sourceUri, fileName);
         const recordedFile: RecordedAudioFile = {
           uri: stableUri,
           name: fileName,
           note: targetNote,
           noteLabel: isMouthPlacementLesson ? "Âm sáo" : targetNoteLabel,
-          durationSeconds: Math.max(durationSeconds, 1),
+          durationSeconds: Math.max(Math.floor(durationBeforeStoppingMs / 1000), 1),
           createdAt,
         };
 
@@ -701,14 +727,19 @@ export default function NotePracticeScreen() {
         );
         setRecordedFiles([recordedFile]);
         setRecordingUri(stableUri);
+      } else {
+        throw new Error("Không lấy được file sau khi dừng ghi âm.");
       }
     } catch (error) {
       console.warn("Failed to stop audio recording", error);
       Alert.alert(
-        "Không thể dừng ghi âm",
-        "Phiên ghi âm gặp sự cố. Vui lòng thử lại.",
+        "Bản ghi chưa dùng được",
+        error instanceof Error
+          ? error.message
+          : "Phiên ghi âm gặp sự cố. Vui lòng thử lại.",
       );
     } finally {
+      recordingStartedAtRef.current = undefined;
       await configurePlaybackSession().catch(() => undefined);
       recorderOperationRef.current = false;
     }

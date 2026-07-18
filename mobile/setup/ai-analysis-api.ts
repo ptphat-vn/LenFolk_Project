@@ -15,6 +15,7 @@ type BackendAnalysisPayload = BaseAnalysisPayload &
   };
 
 const CHUNK_SIZE = 512 * 1024;
+const MIN_AUDIO_FILE_BYTES = 2 * 1024;
 
 const getWebSocketUrl = async () => {
   const token =
@@ -35,8 +36,8 @@ const getFileSize = async (uri: string) => {
     throw new Error("Không tìm thấy file cần phân tích.");
   }
 
-  if (typeof info.size !== "number" || info.size <= 0) {
-    throw new Error("File phân tích rỗng hoặc không đọc được dung lượng.");
+  if (typeof info.size !== "number" || info.size < MIN_AUDIO_FILE_BYTES) {
+    throw new Error("Bản ghi không hợp lệ hoặc chưa lưu xong. Hãy ghi âm lại ít nhất 1 giây.");
   }
 
   return info.size;
@@ -54,8 +55,8 @@ const isBlobUri = (uri: string) => uri.startsWith("blob:");
 
 const fetchWebBlob = async (uri: string) => {
   const blob = await (await fetch(uri)).blob();
-  if (!blob.size) {
-    throw new Error("File phân tích rỗng hoặc không đọc được dung lượng.");
+  if (blob.size < MIN_AUDIO_FILE_BYTES) {
+    throw new Error("Bản ghi không hợp lệ hoặc chưa lưu xong. Hãy ghi âm lại ít nhất 1 giây.");
   }
   return blob;
 };
