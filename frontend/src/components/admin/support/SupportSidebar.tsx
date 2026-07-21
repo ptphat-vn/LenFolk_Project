@@ -51,7 +51,7 @@ export function SupportSidebar({ tickets, activeTicketId, onSelectTicket, active
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
         {isLoading ? (
           // SKELETON
           Array.from({ length: 4 }).map((_, i) => (

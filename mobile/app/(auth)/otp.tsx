@@ -1,18 +1,18 @@
-import { getApiErrorMessage } from "@/lib/api-error";
-import React, { useState, useEffect } from "react";
-import { Alert, View, Text, TouchableOpacity } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons";
-import { AnimatedBlock } from "@/components/AnimatedPage";
-import { useForgotPassword } from "@/hooks/auth/use-forgot-password";
+import { AnimatedBlock } from '@/components/AnimatedPage';
+import { useForgotPassword } from '@/hooks/auth/use-forgot-password';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 
 const OTP_LENGTH = 6;
 
 export default function OtpScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email?: string }>();
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState('');
   const [timer, setTimer] = useState(59);
   const forgotMutation = useForgotPassword();
 
@@ -35,37 +35,37 @@ export default function OtpScreen() {
   };
 
   const renderSlot = (index: number) => {
-    return index < otp.length ? otp[index] : "";
+    return index < otp.length ? otp[index] : '';
   };
 
   const handleResend = () => {
     if (timer > 0) return;
     if (!email) {
-      Alert.alert("Lỗi", "Thiếu email. Vui lòng quay lại bước trước.");
+      Alert.alert('Lỗi', 'Thiếu email. Vui lòng quay lại bước trước.');
       return;
     }
     forgotMutation.mutate(email, {
       onSuccess: () => {
         setTimer(59);
-        Alert.alert("Đã gửi lại mã", `Mã mới đã được gửi tới ${email}.`);
+        Alert.alert('Đã gửi lại mã', `Mã mới đã được gửi tới ${email}.`);
       },
       onError: (error: any) => {
-        Alert.alert("Lỗi", getApiErrorMessage(error, "Vui lòng thử lại sau."));
+        Alert.alert('Lỗi', getApiErrorMessage(error, 'Vui lòng thử lại sau.'));
       },
     });
   };
 
   const handleVerify = () => {
     if (!email) {
-      Alert.alert("Lỗi", "Thiếu email. Vui lòng quay lại bước trước.");
+      Alert.alert('Lỗi', 'Thiếu email. Vui lòng quay lại bước trước.');
       return;
     }
     if (otp.length !== OTP_LENGTH) {
-      Alert.alert("Mã không hợp lệ", `Mã gồm ${OTP_LENGTH} chữ số.`);
+      Alert.alert('Mã không hợp lệ', `Mã gồm ${OTP_LENGTH} chữ số.`);
       return;
     }
     // Mã được xác thực ở bước đặt lại mật khẩu (POST /auth/reset-password).
-    router.push({ pathname: "/reset-password", params: { email, code: otp } });
+    router.push({ pathname: '/reset-password', params: { email, code: otp } });
   };
 
   return (
@@ -83,11 +83,16 @@ export default function OtpScreen() {
             className="p-2 rounded-full bg-gray-50 mr-4"
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#10120C" className="animate-arrow-left" />
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color="#10120C"
+              className="animate-arrow-left"
+            />
           </TouchableOpacity>
           <Text
             className="text-2xl font-bold text-charcoal"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
+            style={{ fontFamily: 'BeVietnamPro-Medium' }}
           >
             Quên mật khẩu
           </Text>
@@ -97,25 +102,32 @@ export default function OtpScreen() {
         <AnimatedBlock variant="chip" delay={80}>
           <Text
             className="text-sm font-semibold text-charcoal/80 text-center mb-10 px-4 leading-6"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
+            style={{ fontFamily: 'BeVietnamPro-Medium' }}
           >
-            {email ? `Mã xác thực đã được gửi đến ${email}` : "Nhập mã xác thực đã gửi đến email của bạn"}
+            {email
+              ? `Mã xác thực đã được gửi đến ${email}`
+              : 'Nhập mã xác thực đã gửi đến email của bạn'}
           </Text>
         </AnimatedBlock>
 
         {/* OTP Input Slots Container */}
-        <AnimatedBlock variant="card" delay={140} className="flex-row justify-center gap-2 mb-6">
+        <AnimatedBlock
+          variant="card"
+          delay={140}
+          className="flex-row justify-center gap-2 mb-6"
+        >
           {Array.from({ length: OTP_LENGTH }).map((_, index) => {
             const isCurrent = index === otp.length;
             return (
               <View
                 key={index}
-                className={`w-12 h-16 rounded-2xl bg-white shadow-md border-2 items-center justify-center ${isCurrent ? "border-primary" : "border-gray-100"
-                  }`}
+                className={`w-12 h-16 rounded-2xl bg-white shadow-md border-2 items-center justify-center ${
+                  isCurrent ? 'border-primary' : 'border-gray-100'
+                }`}
               >
                 <Text
                   className="text-2xl font-bold text-charcoal"
-                  style={{ fontFamily: "BeVietnamPro-Medium" }}
+                  style={{ fontFamily: 'BeVietnamPro-Medium' }}
                 >
                   {renderSlot(index)}
                 </Text>
@@ -131,8 +143,10 @@ export default function OtpScreen() {
           onPress={handleResend}
         >
           <Text className="text-sm text-gray-500 font-medium">
-            Gửi lại mã trong{" "}
-            <Text className="text-[#0066FF] font-bold">{timer > 0 ? `${timer}s` : "gửi ngay"}</Text>
+            Gửi lại mã trong{' '}
+            <Text className="text-[#0066FF] font-bold">
+              {timer > 0 ? `${timer}s` : 'gửi ngay'}
+            </Text>
           </Text>
         </TouchableOpacity>
       </AnimatedBlock>
@@ -141,7 +155,7 @@ export default function OtpScreen() {
       <AnimatedBlock variant="card" delay={210} className="mb-4">
         {/* Row 1 */}
         <View className="flex-row justify-around py-3">
-          {["1", "2", "3"].map((val) => (
+          {['1', '2', '3'].map((val) => (
             <TouchableOpacity
               key={val}
               className="w-20 h-16 justify-center items-center rounded-2xl active:bg-gray-50"
@@ -149,7 +163,7 @@ export default function OtpScreen() {
             >
               <Text
                 className="text-2xl font-bold text-charcoal"
-                style={{ fontFamily: "BeVietnamPro-Medium" }}
+                style={{ fontFamily: 'BeVietnamPro-Medium' }}
               >
                 {val}
               </Text>
@@ -159,7 +173,7 @@ export default function OtpScreen() {
 
         {/* Row 2 */}
         <View className="flex-row justify-around py-3">
-          {["4", "5", "6"].map((val) => (
+          {['4', '5', '6'].map((val) => (
             <TouchableOpacity
               key={val}
               className="w-20 h-16 justify-center items-center rounded-2xl active:bg-gray-50"
@@ -167,7 +181,7 @@ export default function OtpScreen() {
             >
               <Text
                 className="text-2xl font-bold text-charcoal"
-                style={{ fontFamily: "BeVietnamPro-Medium" }}
+                style={{ fontFamily: 'BeVietnamPro-Medium' }}
               >
                 {val}
               </Text>
@@ -177,7 +191,7 @@ export default function OtpScreen() {
 
         {/* Row 3 */}
         <View className="flex-row justify-around py-3">
-          {["7", "8", "9"].map((val) => (
+          {['7', '8', '9'].map((val) => (
             <TouchableOpacity
               key={val}
               className="w-20 h-16 justify-center items-center rounded-2xl active:bg-gray-50"
@@ -185,7 +199,7 @@ export default function OtpScreen() {
             >
               <Text
                 className="text-2xl font-bold text-charcoal"
-                style={{ fontFamily: "BeVietnamPro-Medium" }}
+                style={{ fontFamily: 'BeVietnamPro-Medium' }}
               >
                 {val}
               </Text>
@@ -200,11 +214,11 @@ export default function OtpScreen() {
 
           <TouchableOpacity
             className="w-20 h-16 justify-center items-center rounded-2xl active:bg-gray-50"
-            onPress={() => handleKeyPress("0")}
+            onPress={() => handleKeyPress('0')}
           >
             <Text
               className="text-2xl font-bold text-charcoal"
-              style={{ fontFamily: "BeVietnamPro-Medium" }}
+              style={{ fontFamily: 'BeVietnamPro-Medium' }}
             >
               0
             </Text>
@@ -228,12 +242,17 @@ export default function OtpScreen() {
         >
           <Text
             className="text-white text-base font-bold ml-4"
-            style={{ fontFamily: "BeVietnamPro-Medium" }}
+            style={{ fontFamily: 'BeVietnamPro-Medium' }}
           >
             Xác Minh
           </Text>
           <View className="w-12 h-12 rounded-full bg-white justify-center items-center">
-            <Ionicons name="arrow-forward" size={22} color="#8E9E6E" className="animate-arrow-right" />
+            <Ionicons
+              name="arrow-forward"
+              size={22}
+              color="#8E9E6E"
+              className="animate-arrow-right"
+            />
           </View>
         </TouchableOpacity>
       </AnimatedBlock>
@@ -241,4 +260,3 @@ export default function OtpScreen() {
     </View>
   );
 }
-

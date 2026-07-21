@@ -36,7 +36,7 @@ export function RowActions({
         <MoreVertical className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[150px]">
+        <div className="absolute right-0 top-9 z-20 max-w-[calc(100vw-2rem)] min-w-37.5 bg-white border border-gray-200 rounded-xl shadow-lg py-1">
           <Link
             href={`/admin/users/user-management/${user._id}`}
             className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors"

@@ -135,7 +135,7 @@ export default function InstructorDetailPage() {
   }
 
   return (
-    <motion.div className="p-6 md:p-8 space-y-6 w-full max-w-5xl mx-auto" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto" variants={container} initial="hidden" animate="show">
       {/* Header */}
       <motion.div variants={item} className="flex items-center gap-4">
         <button
@@ -153,7 +153,7 @@ export default function InstructorDetailPage() {
       </motion.div>
 
       {/* Main Info Card */}
-      <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm flex flex-col md:flex-row gap-8 items-start">
+      <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm flex flex-col md:flex-row gap-8 items-start">
         <div className="flex-shrink-0 flex flex-col items-center gap-3">
           <div className="w-28 h-28 rounded-full bg-violet-100 text-violet-700 text-4xl font-bold flex items-center justify-center shadow-inner">
             <UserCheck className="w-12 h-12" />
@@ -295,7 +295,7 @@ export default function InstructorDetailPage() {
                     placeholder="Lý do từ chối (tùy chọn) — sẽ gửi qua email cho giảng viên..."
                     className="w-full h-24 p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 resize-none"
                   />
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <Button
                       type="button"
                       variant="destructive"

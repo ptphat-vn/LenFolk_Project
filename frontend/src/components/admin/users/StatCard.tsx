@@ -23,12 +23,12 @@ export function StatCard({
         >
           <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
-        <div>
-          <p className="text-xl font-bold text-gray-900 leading-tight">
+        <div className="min-w-0 flex-1">
+          <p className="text-xl font-bold text-gray-900 leading-tight truncate">
             {value}
           </p>
-          <p className="text-[12px] text-gray-500">{label}</p>
-          {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
+          <p className="text-[12px] text-gray-500 truncate">{label}</p>
+          {sub && <p className="text-[11px] text-gray-400 truncate">{sub}</p>}
         </div>
       </div>
     </div>

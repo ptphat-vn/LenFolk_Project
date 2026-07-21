@@ -56,43 +56,46 @@ export function RevenueChart({
 }) {
   const chartData = data?.length ? data : DATA;
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
-        <defs>
-          <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.15} />
-            <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="#f3f4f6"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="month"
-          tick={{ fontSize: 11, fill: '#9ca3af' }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          tick={{ fontSize: 11, fill: '#9ca3af' }}
-          axisLine={false}
-          tickLine={false}
-          tickFormatter={(v: number) => `${v}M`}
-          width={38}
-        />
-        <Tooltip content={<RevenueTooltip periodLabel={periodLabel} />} />
-        <Area
-          type="monotone"
-          dataKey="revenue"
-          stroke="#2d6a4f"
-          strokeWidth={2.5}
-          fill="url(#gradRevenue)"
-          dot={false}
-          activeDot={{ r: 5, fill: '#2d6a4f', strokeWidth: 0 }}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="h-56 w-full sm:h-72">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -8, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="#f3f4f6"
+            vertical={false}
+          />
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 11, fill: '#9ca3af' }}
+            axisLine={false}
+            tickLine={false}
+            interval="preserveStartEnd"
+          />
+          <YAxis
+            tick={{ fontSize: 11, fill: '#9ca3af' }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v: number) => `${v}M`}
+            width={38}
+          />
+          <Tooltip content={<RevenueTooltip periodLabel={periodLabel} />} />
+          <Area
+            type="monotone"
+            dataKey="revenue"
+            stroke="#2d6a4f"
+            strokeWidth={2.5}
+            fill="url(#gradRevenue)"
+            dot={false}
+            activeDot={{ r: 5, fill: '#2d6a4f', strokeWidth: 0 }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

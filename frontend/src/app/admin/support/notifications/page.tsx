@@ -97,7 +97,7 @@ export default function AdminNotificationsPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 md:p-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <Bell className="w-6 h-6 text-[#2d6a4f]" />

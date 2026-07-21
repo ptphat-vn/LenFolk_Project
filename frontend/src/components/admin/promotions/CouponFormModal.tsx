@@ -149,7 +149,7 @@ export function CouponFormModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-md"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 sm:px-6">
           <h2 className="text-[15px] font-bold text-gray-900">
             {isEdit ? 'Chỉnh sửa mã giảm giá' : 'Tạo mã giảm giá mới'}
           </h2>
@@ -160,7 +160,7 @@ export function CouponFormModal({
             <X className="w-4 h-4" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-4 space-y-4 sm:p-6">
           <div>
             <label className="block text-[12px] font-medium text-gray-700 mb-1">
               Mã coupon *
@@ -175,7 +175,7 @@ export function CouponFormModal({
             {renderFieldError('code')}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
                 Loại giảm giá
@@ -211,7 +211,7 @@ export function CouponFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
                 Ngày bắt đầu *
@@ -243,7 +243,7 @@ export function CouponFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
                 Giới hạn lượt dùng

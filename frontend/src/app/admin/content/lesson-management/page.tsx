@@ -250,22 +250,22 @@ export default function LessonManagementPage() {
   ];
 
   return (
-    <div className="p-6 space-y-5 w-full">
+    <div className="p-4 sm:p-6 space-y-5 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Quản lý bài học</h1>
           <p className="text-[13px] text-gray-500 mt-0.5">
             Toàn bộ nội dung bài học trên nền tảng Lenfolk
           </p>
         </div>
-        <ActionButton icon={Plus} onClick={handleCreate}>
+        <ActionButton icon={Plus} onClick={handleCreate} className="w-full sm:w-auto justify-center">
           Thêm bài học
         </ActionButton>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
@@ -335,7 +335,7 @@ export default function LessonManagementPage() {
           value={search}
           onChange={setSearch}
           placeholder="Tìm kiếm bài học..."
-          className="flex-1 min-w-48"
+          className="w-full sm:flex-1 sm:min-w-48"
         />
         <FilterSelect
           value={statusFilter}
@@ -345,7 +345,7 @@ export default function LessonManagementPage() {
             { value: 'draft', label: 'Bản nháp' },
           ]}
           placeholder="Tất cả trạng thái"
-          className="w-36"
+          className="w-full sm:w-36"
         />
         <FilterSelect
           value={freeFilter}
@@ -355,9 +355,9 @@ export default function LessonManagementPage() {
             { value: 'paid', label: 'Trả phí' },
           ]}
           placeholder="Tất cả loại"
-          className="w-32"
+          className="w-full sm:w-32"
         />
-        <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} bài học</span>
+        <span className="text-[12px] text-gray-400 w-full sm:w-auto sm:ml-auto">{filtered.length} bài học</span>
       </div>
 
       {/* Table */}

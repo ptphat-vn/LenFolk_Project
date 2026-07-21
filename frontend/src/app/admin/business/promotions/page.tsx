@@ -296,13 +296,13 @@ export default function PromotionsPage() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 w-full"
+      className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
     >
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">
             Mã giảm giá & Khuyến mãi
@@ -311,8 +311,8 @@ export default function PromotionsPage() {
             Quản lý toàn bộ coupon trên nền tảng
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <ActionButton icon={RefreshCw} variant="outline" onClick={fetchCoupons}>
+        <div className="flex flex-wrap items-center gap-2">
+          <ActionButton icon={RefreshCw} variant="outline" onClick={fetchCoupons} className="w-full sm:w-auto justify-center">
             Làm mới
           </ActionButton>
           <ActionButton
@@ -321,6 +321,7 @@ export default function PromotionsPage() {
               setEditTarget(null);
               setFormOpen(true);
             }}
+            className="w-full sm:w-auto justify-center"
           >
             Tạo mã mới
           </ActionButton>
@@ -385,7 +386,7 @@ export default function PromotionsPage() {
             value={search}
             onChange={setSearch}
             placeholder="Tìm theo mã coupon..."
-            className="flex-1 min-w-48"
+            className="w-full sm:flex-1 sm:min-w-48"
           />
           <FilterSelect
             value={statusFilter}
@@ -396,9 +397,9 @@ export default function PromotionsPage() {
               { value: 'expired', label: 'Hết hạn' },
             ]}
             placeholder="Tất cả trạng thái"
-            className="w-40"
+            className="w-full sm:w-40"
           />
-          <span className="text-[12px] text-gray-400 ml-auto">
+          <span className="w-full sm:w-auto text-[12px] text-gray-400 sm:ml-auto">
             {filtered.length} mã
           </span>
         </div>

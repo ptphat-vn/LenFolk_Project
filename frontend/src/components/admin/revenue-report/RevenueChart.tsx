@@ -28,7 +28,7 @@ const data = [
 
 export function RevenueChart() {
   return (
-    <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6 mt-8">
+    <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 mt-8 sm:p-6">
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900">
           Biểu Đồ Doanh Thu
@@ -37,7 +37,7 @@ export function RevenueChart() {
           Đơn vị: Triệu VNĐ (Chia theo hạng mục)
         </p>
       </div>
-      <div className="h-87.5 w-full">
+      <div className="h-64 w-full sm:h-87.5">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}

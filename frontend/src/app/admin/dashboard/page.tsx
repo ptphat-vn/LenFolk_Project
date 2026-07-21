@@ -12,7 +12,6 @@ import {
   GraduationCap,
   Layers,
   Music,
-  Star,
   TrendingUp,
   Users,
   XCircle,
@@ -22,14 +21,12 @@ import { userApi } from '@/lib/api/user.api';
 import { lessonApi } from '@/lib/api/lesson.api';
 import { paymentApi } from '@/lib/api/payment.api';
 import { courseApi } from '@/lib/api/course.api';
-import { practiceSessionApi } from '@/lib/api/practice-session.api';
 import { instructorApi } from '@/lib/api/instructor.api';
 import { enrollmentApi } from '@/lib/api/enrollment.api';
 import { User } from '@/types/user.types';
 import { Lesson } from '@/types/lesson.types';
 import { TransactionRecord, txUserName } from '@/types/payment.types';
 import { Course } from '@/types/course.types';
-import { PracticeSession } from '@/types/practice-session.types';
 import { InstructorProfile } from '@/types/instructor.types';
 import { Enrollment } from '@/types/enrollment.types';
 
@@ -49,6 +46,13 @@ function formatDate(dateStr?: string | Date): string {
   });
 }
 
+// Tên người đăng ký — userId có thể là id thô hoặc object đã populate
+function enrollmentUserName(userId: Enrollment['userId']): string {
+  if (!userId) return 'Người dùng';
+  if (typeof userId === 'string') return userId;
+  return userId.name || userId.email || 'Người dùng';
+}
+
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return '—';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -61,6 +65,7 @@ function timeAgo(dateStr?: string): string {
 }
 
 // Doanh thu theo từng ngày trong 1 tháng (year, month 0-based) — đơn vị: triệu VND
+// Chỉ tính giao dịch đã hoàn tất (status === 'success')
 function getDailyRevenue(
   payments: TransactionRecord[],
   year: number,
@@ -68,13 +73,15 @@ function getDailyRevenue(
 ): { month: string; revenue: number }[] {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const totals = new Array<number>(daysInMonth).fill(0);
-  payments.forEach((p) => {
-    if (!p.paidAt && !p.createdAt) return;
-    const d = new Date(p.paidAt || p.createdAt!);
-    if (d.getFullYear() === year && d.getMonth() === month) {
-      totals[d.getDate() - 1] += p.amount || 0;
-    }
-  });
+  payments
+    .filter((p) => p.status === 'success')
+    .forEach((p) => {
+      if (!p.paidAt && !p.createdAt) return;
+      const d = new Date(p.paidAt || p.createdAt!);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        totals[d.getDate() - 1] += p.amount || 0;
+      }
+    });
   return totals.map((total, i) => ({
     month: String(i + 1),
     revenue: parseFloat((total / 1_000_000).toFixed(2)),
@@ -182,7 +189,7 @@ export default function DashboardPage() {
   const [totalLessons, setTotalLessons] = useState(0);
   const [totalCourses, setTotalCourses] = useState(0);
   const [totalInstructors, setTotalInstructors] = useState(0);
-  const [avgAiScore, setAvgAiScore] = useState<number | null>(null);
+  const [successTxCount, setSuccessTxCount] = useState(0);
 
   // Lists
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
@@ -209,7 +216,6 @@ export default function DashboardPage() {
           lessonsRes,
           paymentsRes,
           coursesRes,
-          practiceRes,
           instructorsRes,
           subsRes,
         ] = await Promise.allSettled([
@@ -217,7 +223,6 @@ export default function DashboardPage() {
           lessonApi.getAll({ limit: 200 }),
           paymentApi.getAll(),
           courseApi.getAll({ limit: 200 }),
-          practiceSessionApi.getAll(),
           instructorApi.getAll(),
           enrollmentApi.getAll(),
         ]);
@@ -285,11 +290,16 @@ export default function DashboardPage() {
           Array.isArray(paymentsRes.value.data)
             ? paymentsRes.value.data
             : [];
-        const revenue = paymentsData.reduce(
+        // Chỉ giao dịch "Hoàn tất" (success) mới được tính vào doanh thu
+        const successPayments = paymentsData.filter(
+          (p) => p.status === 'success',
+        );
+        const revenue = successPayments.reduce(
           (acc, p) => acc + (p.amount || 0),
           0,
         );
         setTotalRevenue(revenue);
+        setSuccessTxCount(successPayments.length);
         setAllPayments(paymentsData);
         setRecentPayments(
           [...paymentsData]
@@ -317,22 +327,6 @@ export default function DashboardPage() {
             )
             .slice(0, 5),
         );
-
-        // Practice sessions — avg AI score
-        const practiceData: PracticeSession[] =
-          practiceRes.status === 'fulfilled' &&
-          Array.isArray(practiceRes.value.data)
-            ? practiceRes.value.data
-            : [];
-        const scored = practiceData.filter(
-          (p) => typeof p.aiScore === 'number',
-        );
-        if (scored.length > 0) {
-          const avg =
-            scored.reduce((acc, p) => acc + (p.aiScore || 0), 0) /
-            scored.length;
-          setAvgAiScore(Math.round(avg * 10) / 10);
-        }
 
         // Instructors
         const instructorsData: InstructorProfile[] =
@@ -370,6 +364,7 @@ export default function DashboardPage() {
     () =>
       allPayments
         .filter((p) => {
+          if (p.status !== 'success') return false;
           if (!p.paidAt && !p.createdAt) return false;
           const d = new Date(p.paidAt || p.createdAt!);
           return d.getFullYear() === revYear && d.getMonth() === revMonth;
@@ -412,7 +407,7 @@ export default function DashboardPage() {
     {
       label: 'Doanh thu',
       value: formatCurrency(totalRevenue),
-      sub: `${recentPayments.length} giao dịch gần đây`,
+      sub: `${successTxCount.toLocaleString('vi-VN')} giao dịch hoàn tất`,
       icon: DollarSign,
       iconBg: 'bg-emerald-50',
       iconColor: 'text-[#2d6a4f]',
@@ -445,19 +440,11 @@ export default function DashboardPage() {
       iconColor: 'text-rose-500',
       href: '/admin/users/instructor-management',
     },
-    {
-      label: 'Điểm AI trung bình',
-      value: avgAiScore !== null ? `${avgAiScore}/100` : '—',
-      sub: 'Từ các phiên luyện tập',
-      icon: Star,
-      iconBg: 'bg-sky-50',
-      iconColor: 'text-sky-500',
-    },
   ];
 
   return (
     <motion.div
-      className="p-6 space-y-6 w-full"
+      className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full"
       variants={containerVariants}
       initial="hidden"
       animate="show"
@@ -475,7 +462,7 @@ export default function DashboardPage() {
       {/* ── Row 1: KPI ──────────────────────────────────────────────────── */}
       <motion.div
         variants={itemVariants}
-        className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4"
       >
         {KPI_CARDS.map((card) => {
           const Icon = card.icon;
@@ -516,7 +503,7 @@ export default function DashboardPage() {
           onClick={() => router.push('/admin/business/revenue-reports')}
           className="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow"
         >
-          <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between gap-4">
+          <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-[#2d6a4f]" />
@@ -526,7 +513,7 @@ export default function DashboardPage() {
                 Theo từng ngày (đơn vị: triệu VND)
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <input
                 type="month"
                 value={revenueMonth}
@@ -697,26 +684,36 @@ export default function DashboardPage() {
                     : typeof en.performanceId === 'object'
                       ? en.performanceId?.title
                       : undefined;
+                const learner = enrollmentUserName(en.userId);
+                const typeLabel =
+                  en.itemType === 'course' ? 'Khóa học' : 'Tiết mục';
                 const ACTIVE = en.status === 'active';
                 return (
                   <div
                     key={en._id}
                     className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
                   >
+                    <div className="w-8 h-8 rounded-full bg-linear-to-br from-[#2d6a4f] to-[#1a3a2a] text-white font-bold text-[12px] flex items-center justify-center shrink-0">
+                      {learner[0]?.toUpperCase() ?? 'U'}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-gray-900 truncate">
-                        {item ||
-                          (en.itemType === 'course' ? 'Khóa học' : 'Tiết mục')}
+                        {learner}
                       </p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">
-                        {en.itemType === 'course' ? 'Khóa học' : 'Tiết mục'}
+                      <p className="text-[11px] text-gray-400 mt-0.5 truncate">
+                        {typeLabel} · {item || typeLabel}
                       </p>
                     </div>
-                    <span
-                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${ACTIVE ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-600'}`}
-                    >
-                      {ACTIVE ? 'Đã kích hoạt' : 'Chờ duyệt'}
-                    </span>
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ACTIVE ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-600'}`}
+                      >
+                        {ACTIVE ? 'Đã kích hoạt' : 'Chờ duyệt'}
+                      </span>
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        {formatDate(en.startDate || en.createdAt)}
+                      </p>
+                    </div>
                   </div>
                 );
               })

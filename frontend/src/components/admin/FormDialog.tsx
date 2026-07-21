@@ -56,10 +56,10 @@ export function FormDialog({
 }: FormDialogProps) {
   const body = (
     <>
-      <div className="flex-1 space-y-7 overflow-y-auto scrollbar-hide px-6 py-6">
+      <div className="flex-1 space-y-6 sm:space-y-7 overflow-y-auto scrollbar-hide px-4 sm:px-6 py-5 sm:py-6">
         {children}
       </div>
-      <DialogFooter className="mx-0 mb-0 border-t bg-gray-50/70 px-6 py-4">
+      <DialogFooter className="mx-0 mb-0 border-t bg-gray-50/70 px-4 sm:px-6 py-3.5 sm:py-4">
         {footer}
       </DialogFooter>
     </>
@@ -77,7 +77,7 @@ export function FormDialog({
         </DialogClose>
         <DialogHeader
           className={cn(
-            'flex flex-row items-center gap-3.5 border-b bg-linear-to-r px-6 py-5',
+            'flex flex-row items-center gap-3 sm:gap-3.5 border-b bg-linear-to-r px-4 sm:px-6 py-4 sm:py-5 pr-12',
             TONE_GRADIENT[tone],
           )}
         >

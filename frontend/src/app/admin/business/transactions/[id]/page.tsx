@@ -148,13 +148,13 @@ export default function TransactionDetailPage() {
 
   return (
     <motion.div
-      className="p-6 md:p-8 space-y-6 w-full max-w-5xl mx-auto"
+      className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto"
       variants={container}
       initial="hidden"
       animate="show"
     >
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between gap-4">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
