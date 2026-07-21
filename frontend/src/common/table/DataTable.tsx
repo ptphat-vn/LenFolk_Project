@@ -31,7 +31,7 @@ export function DataTable<T>({
   data,
   isLoading,
   emptyIcon: EmptyIcon,
-  emptyMessage = "Không có dữ liệu",
+  emptyMessage = 'Không có dữ liệu',
   keyExtractor,
   onRowClick,
   minRows = 10,
@@ -51,7 +51,7 @@ export function DataTable<T>({
   const columns = showIndex ? [indexColumn, ...rawColumns] : rawColumns;
 
   return (
-    <div className="overflow-x-auto min-h-[400px]">
+    <div className="overflow-x-auto min-h-100">
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-100">
@@ -71,35 +71,44 @@ export function DataTable<T>({
               <tr key={i} className="animate-pulse">
                 {columns.map((_, j) => (
                   <td key={j} className="px-5 py-4">
-                    <div className="h-4 bg-gray-100 rounded-md w-full max-w-[120px]" />
+                    <div className="h-4 bg-gray-100 rounded-md w-full max-w-30" />
                   </td>
                 ))}
               </tr>
             ))
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="text-center py-32 text-gray-400">
-                {EmptyIcon && <EmptyIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />}
+              <td
+                colSpan={columns.length}
+                className="text-center py-32 text-gray-400"
+              >
+                {EmptyIcon && (
+                  <EmptyIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                )}
                 <p className="text-[14px]">{emptyMessage}</p>
               </td>
             </tr>
           ) : (
             <>
               {data.map((item, index) => (
-                <tr 
-                  key={keyExtractor(item)} 
+                <tr
+                  key={keyExtractor(item)}
                   className={`hover:bg-gray-50/60 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
                 >
                   {columns.map((col, idx) => (
-                    <td key={idx} className={`px-5 py-3.5 ${col.className || ''}`}>
+                    <td
+                      key={idx}
+                      className={`px-5 py-3.5 ${col.className || ''}`}
+                    >
                       {col.render(item, index)}
                     </td>
                   ))}
                 </tr>
               ))}
               {/* Padding empty rows to maintain fixed height */}
-              {data.length > 0 && data.length < minRows && (
+              {data.length > 0 &&
+                data.length < minRows &&
                 Array.from({ length: minRows - data.length }).map((_, i) => (
                   <tr key={`empty-row-${i}`} className="pointer-events-none">
                     {columns.map((_, idx) => (
@@ -108,8 +117,7 @@ export function DataTable<T>({
                       </td>
                     ))}
                   </tr>
-                ))
-              )}
+                ))}
             </>
           )}
         </tbody>

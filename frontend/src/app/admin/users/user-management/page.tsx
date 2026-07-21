@@ -232,6 +232,19 @@ export default function UsersPage() {
       },
     },
     {
+      header: 'Gói',
+      render: (u) => {
+        const isSubscribed = u.isSubscribed === true;
+        return (
+          <span
+            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${isSubscribed ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}
+          >
+            {isSubscribed ? 'Technique' : 'Foundation'}
+          </span>
+        );
+      },
+    },
+    {
       header: 'Ngày tạo',
       render: (u) => <span className="text-[13px] text-gray-400">{formatDate(u.createdAt)}</span>,
     },
