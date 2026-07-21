@@ -118,7 +118,7 @@ export default function CouponDetailPage() {
 
   return (
     <motion.div
-      className="p-6 md:p-8 space-y-6 w-full max-w-5xl mx-auto"
+      className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto"
       variants={container}
       initial="hidden"
       animate="show"

@@ -139,9 +139,9 @@ export default function CourseDetailPage() {
   ];
 
   return (
-    <motion.div className="p-6 md:p-8 space-y-6 w-full max-w-7xl mx-auto" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto" variants={container} initial="hidden" animate="show">
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
@@ -156,15 +156,15 @@ export default function CourseDetailPage() {
             <p className="text-[13px] text-gray-500">ID: <span className="font-mono text-gray-900 bg-gray-100 px-1 rounded">{course._id}</span></p>
           </div>
         </div>
-        <Link href="/admin/content/lesson-management">
-          <ActionButton icon={Video}>Quản lý bài học</ActionButton>
+        <Link href="/admin/content/lesson-management" className="w-full sm:w-auto">
+          <ActionButton icon={Video} className="w-full sm:w-auto justify-center">Quản lý bài học</ActionButton>
         </Link>
       </motion.div>
 
       {/* Main Info Card */}
       <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-8 items-start">
         {course.thumbnail ? (
-          <img src={course.thumbnail} alt={course.title} className="w-full md:w-64 aspect-video object-cover rounded-xl shadow-sm" />
+          <img src={course.thumbnail} alt={course.title} className="w-full md:w-64 aspect-video max-w-full h-auto object-cover rounded-xl shadow-sm" />
         ) : (
           <div className="w-full md:w-64 aspect-video bg-gray-100 rounded-xl flex items-center justify-center">
             <BookOpen className="w-12 h-12 text-gray-300" />

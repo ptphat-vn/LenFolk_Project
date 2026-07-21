@@ -158,7 +158,11 @@ export function NotificationBell() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" sideOffset={8} className="w-80 p-0">
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-[calc(100vw-2rem)] max-w-80 p-0 sm:w-80"
+      >
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <h3 className="text-[13px] font-semibold text-gray-900">Thông báo</h3>
           {items.length > 0 && (

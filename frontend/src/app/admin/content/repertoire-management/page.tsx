@@ -262,9 +262,9 @@ export default function RepertoireManagementPage() {
   ];
 
   return (
-    <div className="p-6 space-y-5 w-full">
+    <div className="p-4 sm:p-6 space-y-5 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Music className="w-6 h-6 text-[#2d6a4f]" />
@@ -274,13 +274,13 @@ export default function RepertoireManagementPage() {
             Danh sách các tiết mục biểu diễn, âm nhạc
           </p>
         </div>
-        <ActionButton icon={Plus} onClick={handleCreate}>
+        <ActionButton icon={Plus} onClick={handleCreate} className="w-full sm:w-auto justify-center">
           Thêm tiết mục
         </ActionButton>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
@@ -354,7 +354,7 @@ export default function RepertoireManagementPage() {
           value={search}
           onChange={setSearch}
           placeholder="Tìm kiếm tiết mục..."
-          className="flex-1 min-w-48"
+          className="w-full sm:flex-1 sm:min-w-48"
         />
         <FilterSelect
           value={statusFilter}
@@ -365,9 +365,9 @@ export default function RepertoireManagementPage() {
             { value: 'archived', label: 'Lưu trữ' },
           ]}
           placeholder="Tất cả trạng thái"
-          className="w-40"
+          className="w-full sm:w-40"
         />
-        <span className="text-[12px] text-gray-400 ml-auto">
+        <span className="text-[12px] text-gray-400 w-full sm:w-auto sm:ml-auto">
           {filtered.length} tiết mục
         </span>
       </div>

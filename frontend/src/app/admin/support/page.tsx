@@ -113,7 +113,7 @@ export default function SupportPage() {
   const activeTicket = MOCK_TICKETS.find((t) => t.id === activeTicketId);
 
   return (
-    <div className="p-6 md:p-8 w-full mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 w-full mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-[#0f172a] mb-2">
           Hỗ Trợ Khách Hàng
@@ -123,9 +123,9 @@ export default function SupportPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-175">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-175">
         {/* Left Column - List */}
-        <div className="lg:col-span-4 xl:col-span-3">
+        <div className="h-[50vh] lg:h-full lg:col-span-4 xl:col-span-3">
           <SupportSidebar
             tickets={MOCK_TICKETS}
             activeTicketId={activeTicketId}
@@ -137,7 +137,7 @@ export default function SupportPage() {
         </div>
 
         {/* Right Column - Chat */}
-        <div className="lg:col-span-8 xl:col-span-9">
+        <div className="min-h-[60vh] lg:h-full lg:col-span-8 xl:col-span-9">
           <SupportChat
             ticket={activeTicket}
             messages={MOCK_MESSAGES}

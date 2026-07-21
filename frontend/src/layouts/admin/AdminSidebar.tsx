@@ -22,6 +22,7 @@ import {
   Shield,
   ScrollText,
   Music,
+  X,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -89,6 +90,11 @@ const NAV_GROUPS = [
         icon: CreditCard,
       },
       {
+        label: 'Người dùng & Gói',
+        href: '/admin/business/users-plans',
+        icon: CreditCard,
+      },
+      {
         label: 'Yêu cầu rút tiền',
         href: '/admin/business/payouts',
         icon: Wallet,
@@ -146,10 +152,15 @@ export default function AdminSidebar({
   user,
   isCollapsed = false,
   onToggle,
+  isMobileOpen = false,
+  onMobileClose,
 }: {
   user: User;
+  /** Thu gọn — chỉ có hiệu lực từ lg trở lên; mobile luôn hiện đầy đủ */
   isCollapsed?: boolean;
   onToggle?: () => void;
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -177,17 +188,22 @@ export default function AdminSidebar({
   const toggleGroup = (label: string) =>
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
 
+  // Trạng thái thu gọn chỉ áp dụng từ lg trở lên → dùng class `lg:` thay vì
+  // ẩn/hiện bằng JS, để mobile luôn render sidebar đầy đủ.
+  const hideWhenCollapsed = isCollapsed ? 'lg:hidden' : '';
+
   return (
     <aside
-      className={`fixed top-0 left-0 bottom-0 bg-white border-r border-gray-200 flex flex-col z-50 transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'w-18' : 'w-60'
-      }`}
+      className={`fixed top-0 left-0 bottom-0 bg-white border-r border-gray-200 flex flex-col z-50 w-64 transition-transform duration-300 ease-in-out lg:transition-all lg:translate-x-0 ${
+        isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+      } ${isCollapsed ? 'lg:w-18' : 'lg:w-60'}`}
     >
-      {/* Toggle button */}
+      {/* Toggle thu gọn — chỉ desktop */}
       {onToggle && (
         <button
           onClick={onToggle}
-          className="absolute cursor-pointer -right-3 top-6 bg-white border border-gray-200 text-gray-500 hover:text-gray-900 rounded-full p-1 z-50 shadow-sm transition-colors"
+          aria-label={isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+          className="absolute cursor-pointer -right-3 top-6 bg-white border border-gray-200 text-gray-500 hover:text-gray-900 rounded-full p-1 z-50 shadow-sm transition-colors hidden lg:block"
         >
           {isCollapsed ? (
             <ChevronRight className="w-3.5 h-3.5" />
@@ -199,8 +215,8 @@ export default function AdminSidebar({
 
       {/* Logo */}
       <div
-        className={`flex items-center h-16 border-b border-gray-200 shrink-0 ${
-          isCollapsed ? 'justify-center px-0' : 'px-5 gap-2.5'
+        className={`flex items-center h-16 border-b border-gray-200 shrink-0 px-5 gap-2.5 ${
+          isCollapsed ? 'lg:justify-center lg:px-0' : ''
         }`}
       >
         <div className="w-8 h-8 relative shrink-0">
@@ -213,42 +229,50 @@ export default function AdminSidebar({
             priority
           />
         </div>
-        {!isCollapsed && (
-          <span className="text-[15px] font-bold text-gray-900 overflow-hidden whitespace-nowrap">
-            LenFolk
-            <span className="text-[#2d6a4f]"> Admin</span>
-          </span>
-        )}
+        <span
+          className={`text-[15px] font-bold text-gray-900 overflow-hidden whitespace-nowrap ${hideWhenCollapsed}`}
+        >
+          LenFolk
+          <span className="text-[#2d6a4f]"> Admin</span>
+        </span>
+
+        {/* Đóng drawer — chỉ mobile */}
+        <button
+          onClick={onMobileClose}
+          aria-label="Đóng menu"
+          className="ml-auto -mr-1 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors lg:hidden"
+        >
+          <X className="w-4.5 h-4.5" />
+        </button>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-2.5 py-3 overflow-y-auto space-y-4 overflow-x-hidden custom-scrollbar">
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
-            {!isCollapsed ? (
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.label)}
-                className="w-full flex items-center cursor-pointer  justify-between px-2 mb-1 group/header"
-              >
-                <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-gray-400 whitespace-nowrap group-hover/header:text-gray-600 transition-colors">
-                  {group.label}
-                </p>
-                <ChevronDown
-                  className={`w-3 h-3 text-gray-300 group-hover/header:text-gray-500 transition-all duration-200 ${
-                    openGroups[group.label] ? 'rotate-0' : '-rotate-90'
-                  }`}
-                />
-              </button>
-            ) : (
-              <div className="h-px bg-gray-100 my-2 mx-1" />
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.label)}
+              className={`w-full flex items-center cursor-pointer justify-between px-2 mb-1 group/header ${hideWhenCollapsed}`}
+            >
+              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-gray-400 whitespace-nowrap group-hover/header:text-gray-600 transition-colors">
+                {group.label}
+              </p>
+              <ChevronDown
+                className={`w-3 h-3 text-gray-300 group-hover/header:text-gray-500 transition-all duration-200 ${
+                  openGroups[group.label] ? 'rotate-0' : '-rotate-90'
+                }`}
+              />
+            </button>
+            {isCollapsed && (
+              <div className="h-px bg-gray-100 my-2 mx-1 hidden lg:block" />
             )}
 
             <div
               className={`overflow-hidden transition-all duration-200 ${
-                isCollapsed || openGroups[group.label]
+                openGroups[group.label]
                   ? 'max-h-96 opacity-100'
-                  : 'max-h-0 opacity-0'
+                  : `max-h-0 opacity-0 ${isCollapsed ? 'lg:max-h-96 lg:opacity-100' : ''}`
               }`}
             >
               {group.items.map((item) => {
@@ -268,10 +292,10 @@ export default function AdminSidebar({
                     href={item.href}
                     title={isCollapsed ? item.label : undefined}
                     className={[
-                      'flex items-center py-2 rounded-lg text-[13px] font-medium mb-0.5 transition-all duration-150 cursor-pointer',
+                      'flex items-center py-2 rounded-lg text-[13px] font-medium mb-0.5 transition-all duration-150 cursor-pointer gap-2.5 px-3',
                       isCollapsed
-                        ? 'justify-center px-0 mx-auto w-10'
-                        : 'gap-2.5 px-3',
+                        ? 'lg:justify-center lg:px-0 lg:mx-auto lg:w-10'
+                        : '',
                       isActive
                         ? 'bg-[#1a3a2a] text-white'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
@@ -282,11 +306,11 @@ export default function AdminSidebar({
                         isActive ? 'text-white' : 'text-gray-400'
                       }`}
                     />
-                    {!isCollapsed && (
-                      <span className="whitespace-nowrap overflow-hidden">
-                        {item.label}
-                      </span>
-                    )}
+                    <span
+                      className={`whitespace-nowrap overflow-hidden ${hideWhenCollapsed}`}
+                    >
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}
@@ -298,22 +322,22 @@ export default function AdminSidebar({
       {/* User profile + Logout */}
       <div className="border-t border-gray-100 shrink-0">
         {/* User info */}
-        {!isCollapsed && (
-          <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100">
-            <div className="w-7 h-7 rounded-full bg-[#1a3a2a] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
-              {avatarInitial}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-semibold text-gray-900 truncate">
-                {user.name}
-              </p>
-              <p className="text-[10px] text-gray-400 truncate">{user.email}</p>
-            </div>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#1a3a2a]/10 text-[#1a3a2a] uppercase shrink-0">
-              Admin
-            </span>
+        <div
+          className={`flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 ${hideWhenCollapsed}`}
+        >
+          <div className="w-7 h-7 rounded-full bg-[#1a3a2a] text-white text-[11px] font-bold flex items-center justify-center shrink-0">
+            {avatarInitial}
           </div>
-        )}
+          <div className="flex-1 min-w-0">
+            <p className="text-[12px] font-semibold text-gray-900 truncate">
+              {user.name}
+            </p>
+            <p className="text-[10px] text-gray-400 truncate">{user.email}</p>
+          </div>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#1a3a2a]/10 text-[#1a3a2a] uppercase shrink-0">
+            Admin
+          </span>
+        </div>
         {/* Logout */}
         <div className="p-2.5">
           <button
@@ -321,16 +345,16 @@ export default function AdminSidebar({
             type="button"
             title={isCollapsed ? 'Đăng xuất' : undefined}
             className={[
-              'flex items-center py-2 rounded-lg text-[13px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 w-full',
-              isCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3',
+              'flex items-center py-2 rounded-lg text-[13px] font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150 w-full gap-2.5 px-3',
+              isCollapsed ? 'lg:justify-center lg:px-0' : '',
             ].join(' ')}
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            {!isCollapsed && (
-              <span className="whitespace-nowrap overflow-hidden">
-                Đăng xuất
-              </span>
-            )}
+            <span
+              className={`whitespace-nowrap overflow-hidden ${hideWhenCollapsed}`}
+            >
+              Đăng xuất
+            </span>
           </button>
         </div>
       </div>

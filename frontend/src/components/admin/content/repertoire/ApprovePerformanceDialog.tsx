@@ -199,7 +199,7 @@ export function ApprovePerformanceDialog({
                 <PlayCircle className="w-6 h-6 text-gray-400" />
               </div>
             )}
-            <div>
+            <div className="min-w-0">
               <h3 className="font-semibold text-gray-900 text-sm leading-snug">
                 {performance.title}
               </h3>
@@ -230,7 +230,7 @@ export function ApprovePerformanceDialog({
           )}
 
           {/* Meta info */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {performance.duration !== undefined && (
               <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-3 border border-gray-100">
                 <Clock className="w-4 h-4 text-gray-400 shrink-0" />
@@ -272,7 +272,7 @@ export function ApprovePerformanceDialog({
                 <span className="text-sm font-semibold text-[#2d6a4f]">Thông tin giá</span>
               </div>
               {price ? (
-                <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
                   <div className="bg-white rounded-lg py-2 px-3 border border-emerald-100">
                     <p className="text-[10px] text-gray-400">Giá bán</p>
                     <p className="text-sm font-bold text-gray-900">{formatVND(price)}</p>

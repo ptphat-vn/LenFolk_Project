@@ -211,21 +211,21 @@ export default function AdminPermissionsPage() {
   ];
 
   return (
-    <motion.div className="p-6 space-y-6 w-full" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full" variants={container} initial="hidden" animate="show">
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Phân quyền & Vai trò</h1>
           <p className="text-[13px] text-gray-500 mt-0.5">Quản lý danh sách các quyền hạn trên hệ thống</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ActionButton icon={RefreshCw} variant="outline" onClick={fetchPermissions}>Làm mới</ActionButton>
           <ActionButton icon={Plus} onClick={openCreate}>Tạo quyền mới</ActionButton>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { label: 'Tổng quyền', value: stats.total, color: 'bg-gray-50 text-gray-600' },
           { label: 'Read', value: stats.byAction.read, color: 'bg-blue-50 text-blue-700' },
@@ -251,15 +251,15 @@ export default function AdminPermissionsPage() {
       <motion.div variants={item} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
-          <FilterInput value={search} onChange={setSearch} placeholder="Tìm kiếm tài nguyên, hành động..." className="flex-1 min-w-48" />
+          <FilterInput value={search} onChange={setSearch} placeholder="Tìm kiếm tài nguyên, hành động..." className="w-full sm:flex-1 sm:min-w-48" />
           <FilterSelect
             value={actionFilter}
             onChange={setActionFilter}
             options={COMMON_ACTIONS.map((a) => ({ value: a, label: a.toUpperCase() }))}
             placeholder="Tất cả hành động"
-            className="w-44"
+            className="w-full sm:w-44"
           />
-          <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} quyền</span>
+          <span className="w-full sm:w-auto text-[12px] text-gray-400 sm:ml-auto">{filtered.length} quyền</span>
         </div>
         <DataTable
           columns={columns}

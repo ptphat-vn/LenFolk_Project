@@ -320,13 +320,13 @@ export default function TransactionsPage() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 w-full"
+      className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
     >
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">
             Giao dịch thanh toán
@@ -335,7 +335,7 @@ export default function TransactionsPage() {
             SePay tự động xác nhận thanh toán — theo dõi và hoàn tiền khi cần
           </p>
         </div>
-        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchTxs}>
+        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchTxs} className="w-full sm:w-auto justify-center">
           Làm mới
         </ActionButton>
       </motion.div>
@@ -343,7 +343,7 @@ export default function TransactionsPage() {
       {/* Stats */}
       <motion.div
         variants={item}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
         {[
           {
