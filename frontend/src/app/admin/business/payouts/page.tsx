@@ -200,9 +200,9 @@ useEffect(() => {
   ];
 
   return (
-    <div className="p-6 space-y-5 w-full">
+    <div className="p-4 sm:p-6 space-y-5 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-[#2d6a4f]" />
@@ -212,20 +212,20 @@ useEffect(() => {
             Quản lý các yêu cầu rút tiền từ ví của giảng viên
           </p>
         </div>
-        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchPayouts}>
+        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchPayouts} className="w-full sm:w-auto justify-center">
           Làm mới
         </ActionButton>
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex items-center gap-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3">
         <FilterInput
           value={search}
           onChange={setSearch}
           placeholder="Tìm kiếm theo ID, Tên TK, Ngân hàng..."
-          className="flex-1 max-w-sm"
+          className="w-full sm:flex-1 sm:max-w-sm"
         />
-        <span className="text-[12px] text-gray-400 ml-auto">
+        <span className="w-full sm:w-auto text-[12px] text-gray-400 sm:ml-auto">
           {filteredPayouts.length} yêu cầu
         </span>
       </div>

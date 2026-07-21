@@ -266,13 +266,16 @@ export default function UsersPage() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 w-full"
+      className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
     >
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div
+        variants={item}
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
           <h1 className="text-xl font-bold text-gray-900">
             Quản lý người dùng
@@ -283,6 +286,7 @@ export default function UsersPage() {
         </div>
         <ActionButton
           icon={Plus}
+          className="w-full sm:w-auto justify-center"
           onClick={() => {
             setEditTarget(null);
             setFormOpen(true);
@@ -295,7 +299,7 @@ export default function UsersPage() {
       {/* Stats */}
       <motion.div
         variants={item}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
         <StatCard
           icon={Users}
@@ -337,7 +341,7 @@ export default function UsersPage() {
             value={search}
             onChange={setSearch}
             placeholder="Tìm kiếm tên, email..."
-            className="flex-1 min-w-55"
+            className="w-full sm:flex-1 sm:min-w-48"
           />
 
           <FilterSelect
@@ -358,7 +362,7 @@ export default function UsersPage() {
             placeholder="Tất cả trạng thái"
           />
 
-          <span className="text-[12px] text-gray-400 ml-auto">
+          <span className="text-[12px] text-gray-400 w-full sm:w-auto sm:ml-auto">
             {filtered.length} kết quả
           </span>
         </div>

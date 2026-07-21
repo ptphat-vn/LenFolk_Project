@@ -260,21 +260,21 @@ export default function AdminBadgesPage() {
   ];
 
   return (
-    <motion.div className="p-6 space-y-6 w-full" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full" variants={container} initial="hidden" animate="show">
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Quản lý Huy hiệu</h1>
           <p className="text-[13px] text-gray-500 mt-0.5">Quản lý các danh hiệu, phần thưởng cho học viên</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ActionButton icon={RefreshCw} variant="outline" onClick={fetchBadges}>Làm mới</ActionButton>
           <ActionButton icon={Plus} onClick={openCreate}>Thêm huy hiệu</ActionButton>
         </div>
       </motion.div>
 
       {/* Stats */}
-      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Tổng huy hiệu', value: stats.total, icon: Award, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
           { label: 'Hoạt động', value: stats.active, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-[#2d6a4f]' },
@@ -299,7 +299,7 @@ export default function AdminBadgesPage() {
       <motion.div variants={item} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
-          <FilterInput value={search} onChange={setSearch} placeholder="Tìm kiếm huy hiệu..." className="flex-1 min-w-48" />
+          <FilterInput value={search} onChange={setSearch} placeholder="Tìm kiếm huy hiệu..." className="w-full sm:flex-1 sm:min-w-48" />
           <FilterSelect
             value={typeFilter}
             onChange={(v) => setTypeFilter(v as BadgeType | 'all')}
@@ -307,9 +307,9 @@ export default function AdminBadgesPage() {
               value: t, label: BADGE_TYPE_LABEL[t],
             }))}
             placeholder="Tất cả loại"
-            className="w-36"
+            className="w-full sm:w-36"
           />
-          <span className="text-[12px] text-gray-400 ml-auto">{filtered.length} huy hiệu</span>
+          <span className="w-full sm:w-auto text-[12px] text-gray-400 sm:ml-auto">{filtered.length} huy hiệu</span>
         </div>
         <DataTable
           columns={columns}

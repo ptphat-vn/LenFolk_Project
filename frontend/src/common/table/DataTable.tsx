@@ -51,14 +51,15 @@ export function DataTable<T>({
   const columns = showIndex ? [indexColumn, ...rawColumns] : rawColumns;
 
   return (
-    <div className="overflow-x-auto min-h-100">
-      <table className="w-full text-left border-collapse">
+    // Bảng cuộn ngang trên màn hẹp — `-webkit-overflow-scrolling` mượt trên iOS
+    <div className="overflow-x-auto min-h-100 max-w-full">
+      <table className="w-full min-w-max text-left border-collapse">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-100">
             {columns.map((col, idx) => (
               <th
                 key={idx}
-                className={`text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-5 py-3 ${col.className || ''}`}
+                className={`text-[11px] font-semibold text-gray-500 uppercase tracking-wider px-3 sm:px-5 py-3 whitespace-nowrap ${col.className || ''}`}
               >
                 {col.header}
               </th>
@@ -70,7 +71,7 @@ export function DataTable<T>({
             Array.from({ length: 6 }).map((_, i) => (
               <tr key={i} className="animate-pulse">
                 {columns.map((_, j) => (
-                  <td key={j} className="px-5 py-4">
+                  <td key={j} className="px-3 sm:px-5 py-4">
                     <div className="h-4 bg-gray-100 rounded-md w-full max-w-30" />
                   </td>
                 ))}
@@ -80,7 +81,7 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="text-center py-32 text-gray-400"
+                className="text-center py-20 sm:py-32 text-gray-400"
               >
                 {EmptyIcon && (
                   <EmptyIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
@@ -99,7 +100,7 @@ export function DataTable<T>({
                   {columns.map((col, idx) => (
                     <td
                       key={idx}
-                      className={`px-5 py-3.5 ${col.className || ''}`}
+                      className={`px-3 sm:px-5 py-3.5 ${col.className || ''}`}
                     >
                       {col.render(item, index)}
                     </td>
@@ -112,7 +113,7 @@ export function DataTable<T>({
                 Array.from({ length: minRows - data.length }).map((_, i) => (
                   <tr key={`empty-row-${i}`} className="pointer-events-none">
                     {columns.map((_, idx) => (
-                      <td key={idx} className="px-5 py-3.5">
+                      <td key={idx} className="px-3 sm:px-5 py-3.5">
                         <div className="opacity-0 select-none">&nbsp;</div>
                       </td>
                     ))}

@@ -59,7 +59,7 @@ export function UserDetailDrawer({
         className="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-50 overflow-y-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 sticky top-0 bg-white z-10 sm:px-5">
           <h2 className="text-[14px] font-bold text-gray-900">
             Chi tiết người dùng
           </h2>
@@ -71,7 +71,7 @@ export function UserDetailDrawer({
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-4 space-y-5 sm:p-5">
           {/* Avatar & Name */}
           <div className="flex flex-col items-center gap-3 py-4">
             <div className="w-16 h-16 rounded-full bg-linear-to-br from-[#2d6a4f] to-[#1a3a2a] text-white text-2xl font-bold flex items-center justify-center shadow-lg">

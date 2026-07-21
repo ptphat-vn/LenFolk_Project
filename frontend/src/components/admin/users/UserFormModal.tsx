@@ -159,7 +159,7 @@ export function UserFormModal({
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
         className="bg-white rounded-2xl shadow-xl w-full max-w-lg"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 sm:px-6">
           <h2 className="text-[15px] font-bold text-gray-900">
             {isEdit ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}
           </h2>
@@ -171,7 +171,7 @@ export function UserFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="p-4 space-y-4 sm:p-6">
           <div>
             <label className="block text-[12px] font-medium text-gray-700 mb-1">
               Họ tên *
@@ -220,7 +220,7 @@ export function UserFormModal({
             </>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-[12px] font-medium text-gray-700 mb-1">
                 Vai trò

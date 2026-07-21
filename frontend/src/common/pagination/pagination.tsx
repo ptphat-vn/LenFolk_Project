@@ -204,14 +204,14 @@ export function Pagination({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-between gap-3 py-3',
+        'flex flex-wrap items-center justify-center sm:justify-between gap-2 sm:gap-3 py-3',
         className,
       )}
       aria-label="Phân trang"
     >
       {/* Thông tin tổng số */}
       {showTotal && (
-        <p className="text-sm text-muted-foreground select-none whitespace-nowrap">
+        <p className="w-full sm:w-auto text-center sm:text-left text-xs sm:text-sm text-muted-foreground select-none whitespace-nowrap">
           {total === 0 ? (
             'Không có dữ liệu'
           ) : (
@@ -231,7 +231,7 @@ export function Pagination({
       )}
 
       {/* Controls */}
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex flex-wrap items-center justify-center gap-2 mx-auto sm:mx-0 sm:ml-auto">
         {/* Page size selector */}
         {showPageSizeSelector && (
           <div className="flex items-center gap-1.5">

@@ -73,18 +73,18 @@ export default function LessonDetailPage() {
   };
 
   return (
-    <div className="p-6 space-y-5 w-full">
+    <div className="p-4 sm:p-6 space-y-5 w-full">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-[13px] text-gray-500">
+      <div className="flex items-center gap-2 text-[13px] text-gray-500 min-w-0">
         <Link
           href="/admin/content/lesson-management"
-          className="flex items-center gap-1.5 hover:text-[#2d6a4f] transition-colors"
+          className="flex items-center gap-1.5 hover:text-[#2d6a4f] transition-colors shrink-0"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Quản lý bài học
         </Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium truncate max-w-75">
+        <span className="shrink-0">/</span>
+        <span className="text-gray-900 font-medium truncate max-w-75 min-w-0">
           {isLoading ? (
             <Skeleton className="h-4 w-40 inline-block" />
           ) : (
@@ -93,9 +93,9 @@ export default function LessonDetailPage() {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* ── Main content (left 2/3) ── */}
-        <div className="col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           {/* Hero card */}
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="relative h-40 overflow-hidden bg-linear-to-br from-[#1a3a2a] to-[#2d6a4f] flex items-center justify-center">

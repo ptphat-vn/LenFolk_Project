@@ -197,8 +197,16 @@ export default function RevenueReportsPage() {
     [txs, statusFilter],
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Chỉ giao dịch "Hoàn tất" (success) mới được tính vào doanh thu
+  const filteredSuccessCount = useMemo(
+    () => filtered.filter((t) => t.status === 'success').length,
+    [filtered],
+  );
   const filteredTotal = useMemo(
-    () => filtered.reduce((sum, t) => sum + (t.amount ?? 0), 0),
+    () =>
+      filtered
+        .filter((t) => t.status === 'success')
+        .reduce((sum, t) => sum + (t.amount ?? 0), 0),
     [filtered],
   );
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -267,13 +275,13 @@ export default function RevenueReportsPage() {
 
   return (
     <motion.div
-      className="p-6 space-y-6 w-full"
+      className="p-4 sm:p-6 space-y-4 sm:space-y-6 w-full"
       variants={container}
       initial="hidden"
       animate="show"
     >
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">
             Doanh thu & Báo cáo
@@ -282,7 +290,7 @@ export default function RevenueReportsPage() {
             Phân tích doanh thu và lịch sử giao dịch
           </p>
         </div>
-        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchTxs}>
+        <ActionButton icon={RefreshCw} variant="outline" onClick={fetchTxs} className="w-full sm:w-auto justify-center">
           Làm mới
         </ActionButton>
       </motion.div>
@@ -290,7 +298,7 @@ export default function RevenueReportsPage() {
       {/* Summary Cards */}
       <motion.div
         variants={item}
-        className="grid grid-cols-2 xl:grid-cols-4 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
       >
         {/* Total Revenue */}
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group">
@@ -383,7 +391,7 @@ export default function RevenueReportsPage() {
         variants={item}
         className="bg-white border border-gray-200 rounded-xl shadow-sm"
       >
-        <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between gap-4">
+        <div className="px-5 pt-5 pb-4 border-b border-gray-100 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div>
             <h2 className="text-[14px] font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-[#2d6a4f]" />
@@ -393,7 +401,7 @@ export default function RevenueReportsPage() {
               Theo từng ngày (đơn vị: triệu VND)
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <input
               type="month"
               value={revenueMonth}
@@ -426,13 +434,13 @@ export default function RevenueReportsPage() {
         variants={item}
         className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-baseline gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex flex-wrap items-baseline gap-3">
             <h2 className="text-[14px] font-semibold text-gray-900">
               Lịch sử giao dịch
             </h2>
             <span className="text-[12px] text-gray-400">
-              {filtered.length} giao dịch · Tổng:{' '}
+              {filtered.length} giao dịch · Doanh thu (hoàn tất):{' '}
               <span className="font-semibold text-[#2d6a4f]">
                 {formatCurrency(filteredTotal)}
               </span>
@@ -448,7 +456,7 @@ export default function RevenueReportsPage() {
               { value: 'refunded', label: 'Hoàn tiền' },
             ]}
             placeholder="Tất cả trạng thái"
-            className="w-40"
+            className="w-full sm:w-40"
           />
         </div>
 
@@ -463,7 +471,8 @@ export default function RevenueReportsPage() {
           footer={
             <tr>
               <td colSpan={4} className="px-5 py-3.5 text-right text-[12px] font-semibold uppercase tracking-wider text-gray-500">
-                Tổng cộng ({filtered.length.toLocaleString('vi-VN')} giao dịch)
+                Doanh thu ({filteredSuccessCount.toLocaleString('vi-VN')}/
+                {filtered.length.toLocaleString('vi-VN')} giao dịch hoàn tất)
               </td>
               <td className="px-5 py-3.5 text-[14px] font-bold text-[#2d6a4f]">
                 {filteredTotal.toLocaleString('vi-VN')} ₫

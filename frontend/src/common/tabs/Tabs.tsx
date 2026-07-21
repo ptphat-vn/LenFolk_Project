@@ -16,14 +16,14 @@ interface TabsProps {
 
 export function Tabs({ tabs, activeTab, onTabChange, getBadgeClass, className = "" }: TabsProps) {
   return (
-    <div className={`flex border-b border-gray-100 overflow-x-auto ${className}`}>
+    <div className={`flex border-b border-gray-100 overflow-x-auto max-w-full ${className}`}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`relative flex items-center gap-2 px-5 py-3.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
+            className={`relative flex items-center gap-2 shrink-0 px-3.5 sm:px-5 py-3 sm:py-3.5 text-[13px] font-medium whitespace-nowrap transition-colors ${
               isActive ? 'text-[#1a3a2a]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >

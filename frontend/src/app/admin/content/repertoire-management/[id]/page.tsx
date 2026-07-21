@@ -71,7 +71,7 @@ export default function RepertoireDetailPage() {
   }
 
   return (
-    <motion.div className="p-6 md:p-8 space-y-6 w-full max-w-7xl mx-auto" variants={container} initial="hidden" animate="show">
+    <motion.div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 w-full max-w-7xl mx-auto" variants={container} initial="hidden" animate="show">
       {/* Header */}
       <motion.div variants={item} className="flex items-center gap-4">
         <button
@@ -91,8 +91,8 @@ export default function RepertoireDetailPage() {
       {/* Main Info Card */}
       <motion.div variants={item} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-8 items-start">
         {performance.thumbnail ? (
-          <div className="w-full md:w-80 aspect-video relative rounded-xl overflow-hidden shadow-sm group">
-            <img src={performance.thumbnail} alt={performance.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <div className="w-full md:w-80 aspect-video relative rounded-xl overflow-hidden shadow-sm group max-w-full">
+            <img src={performance.thumbnail} alt={performance.title} className="w-full h-full max-w-full object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <PlayCircle className="w-12 h-12 text-white" />
             </div>
