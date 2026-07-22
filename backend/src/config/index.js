@@ -49,9 +49,9 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().default(''),
   // Model nhận diện tiếng sáo (gác cổng, chỉ nhánh OpenAI dùng riêng). Dùng flash
   // (không phải lite) vì lite yếu ở phân loại audio → dễ cho non-flute lọt qua.
-  GEMINI_DETECTION_MODEL: z.string().default('gemini-flash-lite-latest'),
+  GEMINI_DETECTION_MODEL: z.string().default('gemini-3.1-flash-lite'),
   // Model chấm điểm — cần chất lượng nhận xét cao hơn.
-  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-flash-lite-latest'),
+  GEMINI_ANALYSIS_MODEL: z.string().default('gemini-3.1-flash-lite'),
   // Địa chỉ nhận phản hồi (Reply-To). Nên là hộp thư có người đọc, vd support@domain.
   MAIL_REPLY_TO: z.string().default(''),
   APP_NAME: z.string().default('LenFolk'),
