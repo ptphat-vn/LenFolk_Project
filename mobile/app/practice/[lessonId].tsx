@@ -546,14 +546,30 @@ export default function NotePracticeScreen() {
       setPermissionGranted(permission.granted);
 
       if (permission.granted) {
+        // Do not keep the iOS microphone session open just because this screen
+        // is visible. Besides the orange privacy indicator, a stale
+        // play-and-record session can prevent the next recorder preparation in
+        // a standalone/TestFlight build.
         await setAudioModeAsync({
           playsInSilentMode: true,
-          allowsRecording: true,
+          allowsRecording: false,
+          shouldRouteThroughEarpiece: false,
         });
       }
     };
 
     prepareAudio().catch(() => setPermissionGranted(false));
+
+    return () => {
+      // `allowsRecording: false` releases the AVAudioSession input. This makes
+      // the iOS orange microphone indicator disappear after leaving practice
+      // and prevents this screen from retaining the mic across navigation.
+      setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+        shouldRouteThroughEarpiece: false,
+      }).catch(() => undefined);
+    };
   }, [isLessonLocked, isPrerequisiteLocked]);
 
   const configureRecordingSession = async () => {
