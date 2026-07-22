@@ -16,6 +16,30 @@ type BackendAnalysisPayload = BaseAnalysisPayload &
 
 const CHUNK_SIZE = 512 * 1024;
 const MIN_AUDIO_FILE_BYTES = 2 * 1024;
+const AUDIO_UPLOAD_LOG = "[ai-analysis audio]";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+// Keep upload diagnostics useful in Metro/EAS logs without exposing the bearer
+// token or base64 audio data.
+const logAudioUpload = (
+  event: string,
+  details: Record<string, unknown> = {},
+) => {
+  console.info(AUDIO_UPLOAD_LOG, event, details);
+};
+
+const logAudioUploadError = (
+  event: string,
+  error: unknown,
+  details: Record<string, unknown> = {},
+) => {
+  console.error(AUDIO_UPLOAD_LOG, event, {
+    ...details,
+    error: getErrorMessage(error),
+  });
+};
 
 const getWebSocketUrl = async () => {
   const token =
@@ -81,22 +105,50 @@ export const analyzePracticeMedia = async ({
   mode,
   onUploadProgress,
 }: BackendAnalysisPayload): Promise<AnalysisResult> => {
-  const webBlob = isBlobUri(file.uri) ? await fetchWebBlob(file.uri) : null;
-  const [url, totalSize] = await Promise.all([
-    getWebSocketUrl(),
-    webBlob ? Promise.resolve(webBlob.size) : getFileSize(file.uri),
-  ]);
+  let webBlob: Blob | null;
+  let url: string;
+  let totalSize: number;
+
+  try {
+    webBlob = isBlobUri(file.uri) ? await fetchWebBlob(file.uri) : null;
+    [url, totalSize] = await Promise.all([
+      getWebSocketUrl(),
+      webBlob ? Promise.resolve(webBlob.size) : getFileSize(file.uri),
+    ]);
+  } catch (error) {
+    logAudioUploadError("preflight_failed", error, {
+      fileName: file.name,
+      mimeType: file.type,
+      isBlobUri: isBlobUri(file.uri),
+      mode,
+    });
+    throw error;
+  }
+
   // Web ghi âm ra webm/ogg chứ không phải m4a — báo đúng mime cho backend.
   const mimeType = webBlob?.type || file.type;
+  logAudioUpload("preflight_ok", {
+    fileName: file.name,
+    mimeType,
+    totalSize,
+    mode,
+    useLlm,
+    fast: Boolean(fast),
+  });
 
   return new Promise<AnalysisResult>((resolve, reject) => {
     const ws = new WebSocket(url);
     let settled = false;
     let uploadStarted = false;
 
-    const settleReject = (error: Error) => {
+    const settleReject = (stage: string, error: Error) => {
       if (settled) return;
       settled = true;
+      logAudioUploadError(stage, error, {
+        fileName: file.name,
+        totalSize,
+        mode,
+      });
       ws.close();
       reject(error);
     };
@@ -108,6 +160,11 @@ export const analyzePracticeMedia = async ({
     const uploadChunks = async () => {
       if (uploadStarted) return;
       uploadStarted = true;
+      logAudioUpload("chunk_upload_started", {
+        fileName: file.name,
+        totalSize,
+        chunkCount: Math.ceil(totalSize / CHUNK_SIZE),
+      });
 
       try {
         let position = 0;
@@ -125,14 +182,21 @@ export const analyzePracticeMedia = async ({
         }
 
         sendJson({ type: "end" });
+        logAudioUpload("chunk_upload_finished", {
+          fileName: file.name,
+          totalSize,
+        });
       } catch (error) {
         settleReject(
+          "chunk_upload_failed",
           error instanceof Error ? error : new Error(String(error)),
         );
       }
     };
 
-    ws.onopen = () => undefined;
+    ws.onopen = () => {
+      logAudioUpload("websocket_open", { fileName: file.name, mode });
+    };
 
     ws.onmessage = (event) => {
       try {
@@ -145,6 +209,7 @@ export const analyzePracticeMedia = async ({
         };
 
         if (payload.type === "connected") {
+          logAudioUpload("server_connected", { fileName: file.name });
           sendJson({
             type: "start",
             mode,
@@ -160,6 +225,7 @@ export const analyzePracticeMedia = async ({
         }
 
         if (payload.type === "ready") {
+          logAudioUpload("server_ready_for_chunks", { fileName: file.name });
           uploadChunks();
           return;
         }
@@ -171,6 +237,7 @@ export const analyzePracticeMedia = async ({
 
         if (payload.type === "result") {
           settled = true;
+          logAudioUpload("analysis_result_received", { fileName: file.name });
           onUploadProgress?.(100);
           ws.close();
           resolve(payload.data ?? {});
@@ -182,22 +249,30 @@ export const analyzePracticeMedia = async ({
           if (payload.code) {
             (error as Error & { code?: string }).code = payload.code;
           }
-          settleReject(error);
+          settleReject("server_error", error);
         }
       } catch (error) {
         settleReject(
+          "websocket_message_failed",
           error instanceof Error ? error : new Error(String(error)),
         );
       }
     };
 
     ws.onerror = () => {
-      settleReject(new Error("Không thể kết nối WebSocket AI."));
+      settleReject("websocket_error", new Error("Không thể kết nối WebSocket AI."));
     };
 
     ws.onclose = (event) => {
+      logAudioUpload("websocket_closed", {
+        fileName: file.name,
+        code: event.code,
+        reason: event.reason || undefined,
+        settled,
+      });
       if (!settled && event.code !== 1000) {
         settleReject(
+          "websocket_closed_early",
           new Error(event.reason || "Kết nối WebSocket AI đã bị đóng."),
         );
       }
