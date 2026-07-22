@@ -353,7 +353,6 @@ const detectFluteWithGemini = async (file) => {
           temperature: 0,
           candidateCount: 1,
           maxOutputTokens: 512,
-          thinkingConfig: { thinkingBudget: 0 },
         },
       },
       {
@@ -376,6 +375,13 @@ const detectFluteWithGemini = async (file) => {
     return normalizeAudioDetection(parsed);
   } catch (error) {
     if (error.statusCode) throw error;
+    logger.error('[ai-analysis][gemini-detection] request failed', {
+      status: error.response?.status,
+      model: config.ai.geminiDetectionModel,
+      mimeType: file.mimetype,
+      fileKB: Math.round((file.size || file.buffer.length) / 1024),
+      providerError: error.response?.data?.error || error.response?.data,
+    });
     const err = new Error(getErrorMessage(error));
     err.statusCode = error.response?.status || 502;
     throw err;
@@ -624,7 +630,6 @@ const analyzeGeminiCombined = async ({ file, message, mode, fast }) => {
           temperature: 0,
           candidateCount: 1,
           maxOutputTokens: fast ? 800 : 1100,
-          thinkingConfig: { thinkingBudget: 0 },
         },
       },
       {
@@ -655,6 +660,13 @@ const analyzeGeminiCombined = async ({ file, message, mode, fast }) => {
     });
   } catch (error) {
     if (error.statusCode) throw error;
+    logger.error('[ai-analysis][gemini-analysis] request failed', {
+      status: error.response?.status,
+      model: config.ai.geminiAnalysisModel,
+      mimeType: file.mimetype,
+      fileKB: Math.round((file.size || file.buffer.length) / 1024),
+      providerError: error.response?.data?.error || error.response?.data,
+    });
     const err = new Error(getErrorMessage(error));
     err.statusCode = error.response?.status || 502;
     throw err;

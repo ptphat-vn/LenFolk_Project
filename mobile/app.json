@@ -2,7 +2,7 @@
   "expo": {
     "name": "LenFolk",
     "slug": "lenfolk-app",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "lenfolk",
@@ -49,7 +49,7 @@
       "expo-font",
       "expo-web-browser",
       [
-        "expo-audio",
+        "expo-av",
         {
           "microphonePermission": "Cho phép LenFolk sử dụng micro để ghi âm và phân tích nốt sáo của bạn."
         }

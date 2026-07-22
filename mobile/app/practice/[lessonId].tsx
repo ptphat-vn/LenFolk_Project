@@ -1,14 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  AudioModule,
-  AudioQuality,
-  RecordingPresets,
-  setAudioModeAsync,
-  useAudioPlayer,
-  useAudioPlayerStatus,
-  useAudioRecorder,
-  useAudioRecorderState,
-} from "expo-audio";
+import { Audio } from "expo-av";
 import { Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -20,7 +11,6 @@ import {
   Image as RNImage,
   Modal,
   PanResponder,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -29,7 +19,6 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
-import * as FileSystem from "expo-file-system/legacy";
 
 import SafeScreen from "@/components/SafeScreen";
 import { lessons as allLessons } from "@/constants/lessons";
@@ -73,29 +62,7 @@ import type {
   ReferenceTrackId,
 } from "@/components/practice/lesson-practice/types";
 
-// Preset ghi âm tối ưu cho phân tích sáo: mono, 22.05kHz, 64kbps AAC (giữ .m4a).
-// Nhỏ hơn ~1/2 so với HIGH_QUALITY (stereo/44.1kHz/128kbps) → upload nhanh hơn và
-// AI xử lý audio nhanh hơn, vẫn đủ âm sắc + cao độ cho nhận diện và chấm điểm.
-// KHÔNG dùng RecordingPresets.LOW_QUALITY vì trên Android nó rơi về AMR-NB (codec
-// thoại băng hẹp 8kHz, .3gp) làm hỏng âm sắc sáo.
-const FLUTE_ANALYSIS_RECORDING = {
-  ...RecordingPresets.HIGH_QUALITY,
-  sampleRate: 22050,
-  numberOfChannels: 1,
-  bitRate: 64000,
-  ios: {
-    ...RecordingPresets.HIGH_QUALITY.ios,
-    audioQuality: AudioQuality.MEDIUM,
-  },
-  web: {
-    ...RecordingPresets.HIGH_QUALITY.web,
-    bitsPerSecond: 64000,
-  },
-};
-
-const RECORDINGS_DIRECTORY = `${FileSystem.documentDirectory}practice-recordings`;
 const MIN_RECORDING_DURATION_MS = 800;
-const MIN_RECORDING_FILE_BYTES = 2 * 1024;
 
 // Tập theo vạch chạy (playhead) trong màn xem sheet phóng to.
 const GUIDE_BPM_OPTIONS = [60, 80, 100];
@@ -127,82 +94,6 @@ const splitNoteLines = (noteSequence: string, lineCount: number): number[] => {
       ? Math.max(1, totalNotes - base * (safeLineCount - 1))
       : base,
   );
-};
-
-// recorder.stop() có thể trả về trước khi file .m4a được flush xong xuống đĩa.
-// Chờ đến khi dung lượng đủ lớn và không còn thay đổi rồi mới dùng file đó.
-const waitForRecordedFile = async (uri: string, timeoutMs = 2500) => {
-  const startedAt = Date.now();
-  let previousSize = -1;
-
-  for (;;) {
-    const info = await FileSystem.getInfoAsync(uri).catch(() => null);
-    const size =
-      info && info.exists && typeof info.size === "number" ? info.size : 0;
-    if (
-      info?.exists &&
-      size >= MIN_RECORDING_FILE_BYTES &&
-      size === previousSize
-    ) {
-      return info;
-    }
-
-    previousSize = size;
-    if (Date.now() - startedAt >= timeoutMs) return info;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-};
-
-const persistRecordedAudio = async (sourceUri: string, fileName: string) => {
-  // Web: recorder trả blob: URL, không có documentDirectory — dùng trực tiếp.
-  if (Platform.OS === "web" || sourceUri.startsWith("blob:")) {
-    return sourceUri;
-  }
-
-  if (!FileSystem.documentDirectory) {
-    throw new Error("Thiết bị không cung cấp thư mục lưu bản ghi.");
-  }
-
-  const sourceInfo = await waitForRecordedFile(sourceUri);
-  if (
-    !sourceInfo?.exists ||
-    typeof sourceInfo.size !== "number" ||
-    sourceInfo.size < MIN_RECORDING_FILE_BYTES
-  ) {
-    throw new Error(
-      "Bản ghi chưa hoàn tất hoặc quá ngắn. Hãy ghi âm rõ trong ít nhất 1 giây rồi thử lại.",
-    );
-  }
-
-  await FileSystem.makeDirectoryAsync(RECORDINGS_DIRECTORY, {
-    intermediates: true,
-  });
-  const destinationUri = `${RECORDINGS_DIRECTORY}/${fileName}`;
-  await FileSystem.copyAsync({ from: sourceUri, to: destinationUri });
-
-  const info = await FileSystem.getInfoAsync(destinationUri);
-  if (
-    !info.exists ||
-    typeof info.size !== "number" ||
-    info.size < MIN_RECORDING_FILE_BYTES
-  ) {
-    // Copy hụt (file nguồn đang được flush dở) — thử lại một lần.
-    await FileSystem.deleteAsync(destinationUri, { idempotent: true }).catch(
-      () => undefined,
-    );
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    await FileSystem.copyAsync({ from: sourceUri, to: destinationUri });
-    const retryInfo = await FileSystem.getInfoAsync(destinationUri);
-    if (
-      !retryInfo.exists ||
-      typeof retryInfo.size !== "number" ||
-      retryInfo.size < MIN_RECORDING_FILE_BYTES
-    ) {
-      throw new Error("Bản ghi vừa lưu bị rỗng hoặc không thể đọc lại.");
-    }
-  }
-
-  return destinationUri;
 };
 
 export default function NotePracticeScreen() {
@@ -285,23 +176,16 @@ export default function NotePracticeScreen() {
     note || lesson?.targetNote || mockLesson?.targetNote || "C4",
   );
   const targetNoteLabel = getNoteLabel(targetNote);
-  const recorder = useAudioRecorder(FLUTE_ANALYSIS_RECORDING);
-  const recorderState = useAudioRecorderState(recorder);
-  const playbackPlayer = useAudioPlayer(undefined, { updateInterval: 250 });
-  const playbackStatus = useAudioPlayerStatus(playbackPlayer);
-  const referencePlayer = useAudioPlayer(undefined, { updateInterval: 100 });
-  const referenceStatus = useAudioPlayerStatus(referencePlayer);
   const basicAnalysis = useBasicAnalysis<AnalysisResult>();
   const advancedAnalysis = useAdvancedAnalysis<AnalysisResult>();
   const hasAdvancedAccess = freshUser?.isSubscribed ?? user?.isSubscribed ?? false;
   const analysis = hasAdvancedAccess ? advancedAnalysis : basicAnalysis;
   const [recordingUri, setRecordingUri] = useState<string>();
   const [recordedFiles, setRecordedFiles] = useState<RecordedAudioFile[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDurationMillis, setRecordingDurationMillis] = useState(0);
   const [playingUri, setPlayingUri] = useState<string>();
-  const [pendingPlaybackUri, setPendingPlaybackUri] = useState<string>();
   const [playingReferenceTrackId, setPlayingReferenceTrackId] =
-    useState<ReferenceTrackId>();
-  const [pendingReferenceTrackId, setPendingReferenceTrackId] =
     useState<ReferenceTrackId>();
   const [selectedReferenceTrackId, setSelectedReferenceTrackId] =
     useState<ReferenceTrackId>(
@@ -324,6 +208,9 @@ export default function NotePracticeScreen() {
   const imageViewerTranslateY = useRef(new Animated.Value(0)).current;
   const recorderOperationRef = useRef(false);
   const recordingStartedAtRef = useRef<number | undefined>(undefined);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const playbackSoundRef = useRef<Audio.Sound | null>(null);
+  const referenceSoundRef = useRef<Audio.Sound | null>(null);
   const playbackStartedAtRef = useRef(0);
   const referenceStartedAtRef = useRef(0);
 
@@ -343,6 +230,20 @@ export default function NotePracticeScreen() {
     label: recordingTargetLabel,
     detail: recordingTargetDetail,
   } = getRecordingTarget(practiceFlags, targetNote, targetNoteLabel);
+  const isSingleNotePractice =
+    !isMouthPlacementLesson &&
+    !isBreathingLesson &&
+    !isFingerPracticeLesson &&
+    !isBasicTuneLesson;
+  // A single-note practice must always promote the Vietnamese note name (Đô,
+  // Rê...) and keep the technical pitch (C5, D5...) secondary. This avoids a
+  // stale lesson config reversing their visual hierarchy on device.
+  const targetCardLabel = isSingleNotePractice
+    ? targetNoteLabel
+    : recordingTargetLabel;
+  const targetCardDetail = isSingleNotePractice
+    ? targetNote
+    : recordingTargetDetail;
   const referencePracticeTracks = getReferencePracticeTracks(practiceFlags);
   const selectedReferenceTrack = useMemo(
     () =>
@@ -352,8 +253,7 @@ export default function NotePracticeScreen() {
     [referencePracticeTracks, selectedReferenceTrackId],
   );
   const selectedReferenceTrackIsPlaying =
-    playingReferenceTrackId === selectedReferenceTrack.id &&
-    referenceStatus.playing;
+    playingReferenceTrackId === selectedReferenceTrack.id;
   // Trên iPad, nội dung bị giới hạn 700px nên bề rộng card sheet cũng clamp theo.
   const contentWidth = Math.min(windowWidth, 700);
   const referenceSheetCardWidth = isCompactReferenceSheetLesson
@@ -478,61 +378,6 @@ export default function NotePracticeScreen() {
     [closePracticeImageViewer, imageViewerTranslateY],
   );
 
-  useEffect(() => {
-    if (
-      playingUri &&
-      playbackStatus.didJustFinish &&
-      Date.now() - playbackStartedAtRef.current > 600
-    ) {
-      setPlayingUri(undefined);
-    }
-  }, [playbackStatus.didJustFinish, playingUri]);
-
-  useEffect(() => {
-    if (
-      playingReferenceTrackId &&
-      referenceStatus.didJustFinish &&
-      Date.now() - referenceStartedAtRef.current > 600
-    ) {
-      setPlayingReferenceTrackId(undefined);
-      setPendingReferenceTrackId(undefined);
-    }
-  }, [playingReferenceTrackId, referenceStatus.didJustFinish]);
-
-  useEffect(() => {
-    if (!pendingPlaybackUri || pendingPlaybackUri !== playingUri) return;
-    if (!playbackStatus.isLoaded || playbackStatus.isBuffering) return;
-
-    playbackPlayer.play();
-    setPendingPlaybackUri(undefined);
-  }, [
-    pendingPlaybackUri,
-    playbackPlayer,
-    playbackStatus.isBuffering,
-    playbackStatus.isLoaded,
-    playingUri,
-  ]);
-
-  useEffect(() => {
-    if (
-      !pendingReferenceTrackId ||
-      pendingReferenceTrackId !== playingReferenceTrackId
-    ) {
-      return;
-    }
-    if (!referenceStatus.isLoaded || referenceStatus.isBuffering) return;
-
-    referencePlayer.seekTo(0).catch(() => undefined);
-    referencePlayer.play();
-    setPendingReferenceTrackId(undefined);
-  }, [
-    pendingReferenceTrackId,
-    playingReferenceTrackId,
-    referencePlayer,
-    referenceStatus.isBuffering,
-    referenceStatus.isLoaded,
-  ]);
-
   const selectedRecordedFile = useMemo(
     () => recordedFiles.find((file) => file.uri === recordingUri),
     [recordedFiles, recordingUri],
@@ -542,61 +387,68 @@ export default function NotePracticeScreen() {
     if (isLessonLocked || isPrerequisiteLocked) return;
 
     const prepareAudio = async () => {
-      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      const permission = await Audio.requestPermissionsAsync();
       setPermissionGranted(permission.granted);
 
       if (permission.granted) {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          allowsRecording: true,
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          playThroughEarpieceAndroid: false,
         });
       }
     };
 
     prepareAudio().catch(() => setPermissionGranted(false));
+
+    return () => {
+      const activeRecording = recordingRef.current;
+      recordingRef.current = null;
+      activeRecording?.stopAndUnloadAsync().catch(() => undefined);
+
+      const playbackSound = playbackSoundRef.current;
+      playbackSoundRef.current = null;
+      playbackSound?.unloadAsync().catch(() => undefined);
+
+      const referenceSound = referenceSoundRef.current;
+      referenceSoundRef.current = null;
+      referenceSound?.unloadAsync().catch(() => undefined);
+
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        playThroughEarpieceAndroid: false,
+      }).catch(() => undefined);
+    };
   }, [isLessonLocked, isPrerequisiteLocked]);
 
   const configureRecordingSession = async () => {
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      allowsRecording: true,
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: true,
+      playsInSilentModeIOS: true,
+      playThroughEarpieceAndroid: false,
     });
   };
 
   const configurePlaybackSession = async () => {
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      allowsRecording: false,
-      shouldRouteThroughEarpiece: false,
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+      playThroughEarpieceAndroid: false,
     });
   };
 
-  const prepareRecorderWithRetry = async () => {
-    try {
-      await configureRecordingSession();
-      await recorder.prepareToRecordAsync();
-    } catch {
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: false,
-      }).catch(() => undefined);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      await configureRecordingSession();
-      await recorder.prepareToRecordAsync();
-    }
-  };
-
   const stopPlayback = async () => {
-    playbackPlayer.pause();
-    await playbackPlayer.seekTo(0).catch(() => undefined);
-    setPendingPlaybackUri(undefined);
+    const sound = playbackSoundRef.current;
+    playbackSoundRef.current = null;
+    await sound?.unloadAsync().catch(() => undefined);
     setPlayingUri(undefined);
   };
 
   const stopReferencePlayback = async () => {
-    referencePlayer.pause();
-    await referencePlayer.seekTo(0).catch(() => undefined);
-    setPendingReferenceTrackId(undefined);
+    const sound = referenceSoundRef.current;
+    referenceSoundRef.current = null;
+    await sound?.unloadAsync().catch(() => undefined);
     setPlayingReferenceTrackId(undefined);
   };
 
@@ -604,7 +456,7 @@ export default function NotePracticeScreen() {
     trackId: ReferenceTrackId,
   ) => {
     if (trackId === selectedReferenceTrackId) return;
-    if (recorderState.isRecording || analysis.isPending) return;
+    if (isRecording || analysis.isPending) return;
 
     Haptics.selectionAsync().catch(() => undefined);
     await stopPlayback();
@@ -636,7 +488,7 @@ export default function NotePracticeScreen() {
       return;
     }
 
-    if (recorderOperationRef.current || recorderState.isRecording) return;
+    if (recorderOperationRef.current || isRecording) return;
     if (AppState.currentState !== "active") {
       Alert.alert(
         "Chưa thể bật micro",
@@ -651,8 +503,7 @@ export default function NotePracticeScreen() {
     try {
       let hasPermission = permissionGranted === true;
       if (!hasPermission) {
-        const permission =
-          await AudioModule.requestRecordingPermissionsAsync();
+        const permission = await Audio.requestPermissionsAsync();
         hasPermission = permission.granted;
         setPermissionGranted(permission.granted);
       }
@@ -670,8 +521,15 @@ export default function NotePracticeScreen() {
       analysis.reset();
       setIsResultModalVisible(false);
       setRecordingUri(undefined);
-      await prepareRecorderWithRetry();
-      recorder.record();
+      setRecordingDurationMillis(0);
+      await configureRecordingSession();
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        (status) => setRecordingDurationMillis(status.durationMillis ?? 0),
+        250,
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
       recordingStartedAtRef.current = Date.now();
     } catch (error) {
       console.warn("Failed to start audio recording", error);
@@ -687,28 +545,37 @@ export default function NotePracticeScreen() {
   };
 
   const stopRecording = async () => {
-    if (recorderOperationRef.current || !recorderState.isRecording) return;
+    const activeRecording = recordingRef.current;
+    if (recorderOperationRef.current || !isRecording || !activeRecording) return;
     recorderOperationRef.current = true;
 
     try {
       const durationBeforeStoppingMs = Math.max(
-        recorder.getStatus().durationMillis,
+        recordingDurationMillis,
         Date.now() - (recordingStartedAtRef.current ?? Date.now()),
       );
       if (durationBeforeStoppingMs < MIN_RECORDING_DURATION_MS) {
         throw new Error("Bản ghi quá ngắn để tạo file âm thanh hợp lệ.");
       }
 
-      await recorder.stop();
-      const sourceUri = recorder.uri ?? recorder.getStatus().url;
+      const status = await activeRecording.stopAndUnloadAsync();
+      const sourceUri = activeRecording.getURI();
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDurationMillis(status.durationMillis ?? durationBeforeStoppingMs);
       if (sourceUri) {
         const createdAt = Date.now();
         const fileName = isMouthPlacementLesson
           ? `flute-sound-${createdAt}.m4a`
           : `note-${targetNote}-${createdAt}.m4a`;
-        const stableUri = await persistRecordedAudio(sourceUri, fileName);
+        // expo-av finalizes the recording in stopAndUnloadAsync(). Keep that
+        // exact URI, matching Audio.Recording.createNewLoadedSoundAsync(), so
+        // playback and the API upload read the same completed .m4a file.
+        await activeRecording.createNewLoadedSoundAsync().then(({ sound }) =>
+          sound.unloadAsync(),
+        );
         const recordedFile: RecordedAudioFile = {
-          uri: stableUri,
+          uri: sourceUri,
           name: fileName,
           note: targetNote,
           noteLabel: isMouthPlacementLesson ? "Âm sáo" : targetNoteLabel,
@@ -716,17 +583,8 @@ export default function NotePracticeScreen() {
           createdAt,
         };
 
-        await Promise.all(
-          recordedFiles
-            .filter((file) => file.uri !== stableUri)
-            .map((file) =>
-              FileSystem.deleteAsync(file.uri, { idempotent: true }).catch(
-                () => undefined,
-              ),
-            ),
-        );
         setRecordedFiles([recordedFile]);
-        setRecordingUri(stableUri);
+        setRecordingUri(sourceUri);
       } else {
         throw new Error("Không lấy được file sau khi dừng ghi âm.");
       }
@@ -740,6 +598,8 @@ export default function NotePracticeScreen() {
       );
     } finally {
       recordingStartedAtRef.current = undefined;
+      recordingRef.current = null;
+      setIsRecording(false);
       await configurePlaybackSession().catch(() => undefined);
       recorderOperationRef.current = false;
     }
@@ -773,13 +633,13 @@ export default function NotePracticeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
       () => undefined,
     );
-    if (recorderState.isRecording) {
+    if (isRecording) {
       await stopRecording();
     }
     closePracticeImageViewer();
   }, [
     resetGuide,
-    recorderState.isRecording,
+    isRecording,
     stopRecording,
     closePracticeImageViewer,
   ]);
@@ -792,14 +652,14 @@ export default function NotePracticeScreen() {
   // Dừng giữa chừng.
   const stopGuide = useCallback(async () => {
     resetGuide();
-    if (recorderState.isRecording) {
+    if (isRecording) {
       await stopRecording();
     }
-  }, [resetGuide, recorderState.isRecording, stopRecording]);
+  }, [resetGuide, isRecording, stopRecording]);
 
   // Bắt đầu: đếm ngược 3-2-1 (theo BPM) rồi tự thu âm + chạy vạch.
   const startGuide = useCallback(() => {
-    if (isGuideActive || guideCountdown !== null || recorderState.isRecording) {
+    if (isGuideActive || guideCountdown !== null || isRecording) {
       return;
     }
     clearGuideTimers();
@@ -829,7 +689,7 @@ export default function NotePracticeScreen() {
   }, [
     isGuideActive,
     guideCountdown,
-    recorderState.isRecording,
+    isRecording,
     clearGuideTimers,
     removeGuideListener,
     guidePlayhead,
@@ -897,7 +757,7 @@ export default function NotePracticeScreen() {
     if (isReferenceSheetViewerVisible) return;
     if (isGuideActive || guideCountdown !== null) {
       resetGuide();
-      if (recorderState.isRecording) {
+      if (isRecording) {
         stopRecording();
       }
     }
@@ -908,7 +768,7 @@ export default function NotePracticeScreen() {
   useEffect(() => resetGuide, [resetGuide]);
 
   const selectNote = (pitch: string) => {
-    if (recorderState.isRecording || analysis.isPending) return;
+    if (isRecording || analysis.isPending) return;
 
     Haptics.selectionAsync().catch(() => undefined);
     analysis.reset();
@@ -923,7 +783,7 @@ export default function NotePracticeScreen() {
     setIsResultModalVisible(false);
     setRecordingUri(undefined);
     setRecordedFiles([]);
-    await configureRecordingSession().catch(() => undefined);
+    await configurePlaybackSession().catch(() => undefined);
   };
 
   const practiceAnotherNote = async () => {
@@ -944,7 +804,7 @@ export default function NotePracticeScreen() {
   };
 
   const playRecordedFile = async (file: RecordedAudioFile) => {
-    if (recorderState.isRecording || analysis.isPending) return;
+    if (isRecording || analysis.isPending) return;
 
     Haptics.selectionAsync().catch(() => undefined);
     analysis.reset();
@@ -952,36 +812,52 @@ export default function NotePracticeScreen() {
     setTargetNote(file.note);
     setRecordingUri(file.uri);
 
-    if (playingUri === file.uri && playbackStatus.playing) {
+    if (playingUri === file.uri) {
       await stopPlayback();
       return;
     }
 
     await configurePlaybackSession().catch(() => undefined);
     await stopReferencePlayback();
-    playbackPlayer.pause();
-    setPendingPlaybackUri(file.uri);
-    playbackPlayer.replace({ uri: file.uri });
+    await stopPlayback();
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: file.uri },
+      { shouldPlay: true, progressUpdateIntervalMillis: 250 },
+      (status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingUri(undefined);
+        }
+      },
+    );
+    playbackSoundRef.current = sound;
     playbackStartedAtRef.current = Date.now();
     setPlayingUri(file.uri);
   };
 
   const playReferenceTrack = async (track: ReferencePracticeTrack) => {
     if (!track.audio) return;
-    if (recorderState.isRecording || analysis.isPending) return;
+    if (isRecording || analysis.isPending) return;
 
     Haptics.selectionAsync().catch(() => undefined);
 
-    if (playingReferenceTrackId === track.id && referenceStatus.playing) {
+    if (playingReferenceTrackId === track.id) {
       await stopReferencePlayback();
       return;
     }
 
     await configurePlaybackSession().catch(() => undefined);
     await stopPlayback();
-    referencePlayer.pause();
-    setPendingReferenceTrackId(track.id);
-    referencePlayer.replace(track.audio);
+    await stopReferencePlayback();
+    const { sound } = await Audio.Sound.createAsync(
+      track.audio,
+      { shouldPlay: true, progressUpdateIntervalMillis: 100 },
+      (status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlayingReferenceTrackId(undefined);
+        }
+      },
+    );
+    referenceSoundRef.current = sound;
     referenceStartedAtRef.current = Date.now();
     setPlayingReferenceTrackId(track.id);
   };
@@ -1007,6 +883,8 @@ export default function NotePracticeScreen() {
         file: {
           uri: recordingUri,
           name: fileName,
+          // .m4a is an MP4 container. The backend/Gemini contract accepts it
+          // as audio/mp4; audio/m4a is rejected as an invalid argument.
           type: "audio/mp4",
         },
         message: analysisMessage,
@@ -1027,7 +905,7 @@ export default function NotePracticeScreen() {
     );
   };
 
-  const durationSeconds = Math.floor((recorderState.durationMillis ?? 0) / 1000);
+  const durationSeconds = Math.floor(recordingDurationMillis / 1000);
 
   if (coursesLoading || subscriptionLoading) {
     return (
@@ -1185,7 +1063,7 @@ export default function NotePracticeScreen() {
           <LessonFourBreathingPractice
             analysisPending={analysis.isPending}
             isPreparingRecorder={isPreparingRecorder}
-            isRecording={recorderState.isRecording}
+            isRecording={isRecording}
             referencePracticeTracks={referencePracticeTracks}
             referenceSheetCardHeight={referenceSheetCardHeight}
             referenceSheetCardImageWidth={referenceSheetCardImageWidth}
@@ -1203,7 +1081,7 @@ export default function NotePracticeScreen() {
           <LessonFiveFingerPractice
             analysisPending={analysis.isPending}
             isPreparingRecorder={isPreparingRecorder}
-            isRecording={recorderState.isRecording}
+            isRecording={isRecording}
             referencePracticeTracks={referencePracticeTracks}
             referenceSheetCardHeight={referenceSheetCardHeight}
             referenceSheetCardImageWidth={referenceSheetCardImageWidth}
@@ -1221,7 +1099,7 @@ export default function NotePracticeScreen() {
           <LessonEightBasicTunePractice
             analysisPending={analysis.isPending}
             isPreparingRecorder={isPreparingRecorder}
-            isRecording={recorderState.isRecording}
+            isRecording={isRecording}
             referencePracticeTracks={referencePracticeTracks}
             referenceSheetCardHeight={referenceSheetCardHeight}
             referenceSheetCardImageWidth={referenceSheetCardImageWidth}
@@ -1265,21 +1143,21 @@ export default function NotePracticeScreen() {
               adjustsFontSizeToFit
               maxFontSizeMultiplier={1.2}
               className={`mt-2 text-center font-bold text-white ${
-                isMouthPlacementLesson ? "text-3xl" : "text-4xl"
+                isSingleNotePractice ? "text-5xl" : "text-3xl"
               }`}
               style={{
                 fontFamily: "BeVietnamPro-Medium",
                 letterSpacing: 0.3,
               }}
             >
-              {recordingTargetLabel}
+              {targetCardLabel}
             </Text>
             <Text
               numberOfLines={2}
               maxFontSizeMultiplier={1.2}
               className="mt-1.5 text-center text-xs font-bold leading-5 text-white/60"
             >
-              {recordingTargetDetail}
+              {targetCardDetail}
             </Text>
           </View>
         </View>
@@ -1298,7 +1176,7 @@ export default function NotePracticeScreen() {
                   key={practiceNote.pitch}
                   activeOpacity={0.8}
                   disabled={
-                    recorderState.isRecording ||
+                    isRecording ||
                     analysis.isPending ||
                     isPreparingRecorder
                   }
@@ -1349,7 +1227,7 @@ export default function NotePracticeScreen() {
                 <View
                   key={`${height}-${index}`}
                   className={`w-1.5 rounded-full ${
-                    recorderState.isRecording ? "bg-[#D96C5F]" : "bg-[#D6DDC6]"
+                    isRecording ? "bg-[#D96C5F]" : "bg-[#D6DDC6]"
                   }`}
                   style={{ height }}
                 />
@@ -1360,9 +1238,9 @@ export default function NotePracticeScreen() {
           <TouchableOpacity
             activeOpacity={0.85}
             disabled={analysis.isPending || isPreparingRecorder}
-            onPress={recorderState.isRecording ? stopRecording : startRecording}
+            onPress={isRecording ? stopRecording : startRecording}
             className={`h-24 w-24 items-center justify-center rounded-full ${
-              recorderState.isRecording ? "bg-[#D96C5F]" : "bg-[#10120C]"
+              isRecording ? "bg-[#D96C5F]" : "bg-[#10120C]"
             }`}
           >
             <View className="h-20 w-20 items-center justify-center rounded-full border-2 border-white/25">
@@ -1370,7 +1248,7 @@ export default function NotePracticeScreen() {
                 name={
                   isPreparingRecorder
                     ? "hourglass-outline"
-                    : recorderState.isRecording
+                    : isRecording
                       ? "stop"
                       : "mic"
                 }
@@ -1383,7 +1261,7 @@ export default function NotePracticeScreen() {
           <Text selectable className="mt-5 text-sm text-[#777B70]">
             {isPreparingRecorder
               ? "Đang chuẩn bị micro..."
-              : recorderState.isRecording
+              : isRecording
               ? "Chạm để dừng ghi âm"
                 : recordingUri
                   ? "Bản ghi đã sẵn sàng để phân tích"
@@ -1406,13 +1284,13 @@ export default function NotePracticeScreen() {
 
             {recordedFiles.map((file) => {
               const isSelected = file.uri === recordingUri;
-              const isPlaying = file.uri === playingUri && playbackStatus.playing;
+              const isPlaying = file.uri === playingUri;
 
               return (
                 <TouchableOpacity
                   key={file.uri}
                   activeOpacity={0.85}
-                  disabled={recorderState.isRecording || analysis.isPending}
+                  disabled={isRecording || analysis.isPending}
                   onPress={() => playRecordedFile(file)}
                   className={`flex-row items-center gap-3 rounded-[18px] border px-4 py-3 ${
                     isSelected
@@ -1455,7 +1333,7 @@ export default function NotePracticeScreen() {
           </View>
         )}
 
-        {recordingUri && !recorderState.isRecording && (
+        {recordingUri && !isRecording && (
           <TouchableOpacity
             activeOpacity={0.9}
             disabled={analysis.isPending}
